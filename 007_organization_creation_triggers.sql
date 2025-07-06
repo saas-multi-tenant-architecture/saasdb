@@ -1,4 +1,4 @@
--- 006_organization_creation_triggers.sql
+-- 007_organization_creation_triggers.sql
 -- Purpose: Automate creation of metadata and platform registry rows when a new organization is added
 -- Requires 005_organization_meta.sql and 002_platform_schema.sql to be applied first
 

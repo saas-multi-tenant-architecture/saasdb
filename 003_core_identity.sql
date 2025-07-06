@@ -1,4 +1,4 @@
--- 008_core_identity.sql
+-- 003_core_identity.sql
 -- Purpose: Core identity and access control tables
 -- Includes organizations, units, memberships, roles, and audit logs
 -- Requires utils schema for timestamp trigger

@@ -1,4 +1,4 @@
--- 003_users_meta.sql
+-- 004_users_meta.sql
 -- Purpose: Defines metadata table for users
 -- This file assumes utils schema is already loaded for updated_at triggers
 

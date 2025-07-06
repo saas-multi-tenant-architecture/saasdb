@@ -1,4 +1,4 @@
--- 004_users_meta_trigger.sql
+-- 005_users_meta_trigger.sql
 -- Purpose: Automatically create a users_meta row after new user signup via Supabase auth
 -- This file assumes core.users_meta is already defined (see 003_users_meta.sql)
 

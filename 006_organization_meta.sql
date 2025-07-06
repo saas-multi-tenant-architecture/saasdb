@@ -1,4 +1,4 @@
--- 005_organization_meta.sql
+-- 006_organization_meta.sql
 -- Purpose: Metadata table for tenant organizations (1:1 with core.organizations)
 -- Assumes utils schema is present for timestamp updates
 

@@ -1,4 +1,4 @@
--- 007_platform_tenant_secrets.sql
+-- 008_platform_tenant_secrets.sql
 -- Purpose: Define secure storage reference table for tenant secrets using Supabase Vault
 
 -- ========================================
