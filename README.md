@@ -244,6 +244,54 @@ deleted_by UUID
 
 ```
 
+## 📡 Public RPC Function Conventions
+
+Public functions serve as the client-facing API for the database. They are always defined in the `public` schema and operate under the privileges of the **calling user** (`SECURITY INVOKER`).
+
+### ✅ Naming Conventions
+
+Use `verb_noun[_context]` structure for clarity and consistency:
+
+| Verb      | Description                            | Example                       |
+| --------- | -------------------------------------- | ----------------------------- |
+| `get_`    | Fetch a single record                  | `get_user_profile()`          |
+| `list_`   | Fetch a collection                     | `list_org_members(org_id)`    |
+| `create_` | Insert a new record                    | `create_project(...)`         |
+| `update_` | Modify a record                        | `update_document_status(...)` |
+| `delete_` | Soft delete a record                   | `delete_unit(unit_id)`        |
+| `sync_`   | Idempotent state sync or recalculation | `sync_billing(...)`           |
+| `log_`    | Track events or custom logs            | `log_invitation(...)`         |
+
+Functions should:
+
+- Use `auth.uid()` where applicable to avoid passing user IDs from the client
+- Validate input and verify access control via helper functions or RLS
+- Return structured JSON or typed rows for client parsing
+
+---
+
+### 🛡️ Security Practices
+
+- All public functions are `SECURITY INVOKER`
+- RLS on underlying tables must be enforced
+- No direct access to core or platform tables by clients
+
+---
+
+### 🧾 Audit Logging in RPC
+
+To support traceability, public functions that mutate data (create, update, delete) should log activity using:
+
+```sql
+core.log_audit(
+  action_type TEXT,
+  target_table TEXT,
+  target_id UUID,
+  summary TEXT,
+  metadata JSONB
+)
+```
+
 ### Best Practices
 
 - Avoid abbreviations like `org_id`; prefer `organization_id`
@@ -263,11 +311,3 @@ deleted_by UUID
 - No direct use of Supabase Edge Functions for CRUD unless necessary
 
 ---
-
-## 🧭 Next Options
-
-- Finalize `platform` schema table definitions and generate DDL
-
-- Model first `app` table with full RLS and function access
-
-- Set up schema migration structure and test data loaders

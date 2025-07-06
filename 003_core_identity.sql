@@ -119,14 +119,18 @@ FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 -- ========================================
 CREATE TABLE core.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  actor_id UUID,
+  actor_id UUID, -- auth.uid()
   organization_id UUID REFERENCES core.organizations(id),
   target_table TEXT NOT NULL,
   target_id UUID,
-  action TEXT NOT NULL,
+  action TEXT NOT NULL, -- 'insert', 'update', 'delete', 'login', etc.
   summary TEXT,
+  metadata JSONB, -- optional structure: changed fields, reason, etc.
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE INDEX idx_audit_logs_metadata ON core.audit_logs USING GIN (metadata);
+
 
 -- No update trigger as audit logs should be immutable
 
