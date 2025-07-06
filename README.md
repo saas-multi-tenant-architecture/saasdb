@@ -4,15 +4,15 @@
 
 Create a reusable, secure, and modular SaaS backend using Supabase as the backend service. The system supports:
 
-\- Multi-tenant architecture with shared database
+- Multi-tenant architecture with shared database
 
-\- Fine-grained role-based access at both the organization and sub-entity ("unit") level
+- Fine-grained role-based access at both the organization and sub-entity ("unit") level
 
-\- PostgreSQL RLS (Row-Level Security) for tenant isolation
+- PostgreSQL RLS (Row-Level Security) for tenant isolation
 
-\- Soft deletion, auditing, and Stripe-based billing
+- Soft deletion, auditing, and Stripe-based billing
 
-\- Clear schema boundaries and API control via SQL functions
+- Clear schema boundaries and API control via SQL functions
 
 ## ✅ Key Features
 
@@ -28,27 +28,27 @@ Create a reusable, secure, and modular SaaS backend using Supabase as the backen
 
 ### Schemas
 
-- \`core\`: identity, access, helper functions, audit logs
+- `core`: identity, access, helper functions, audit logs
 
-- \`app\`: all tenant-specific application logic (e.g., documents, tasks)
+- `app`: all tenant-specific application logic (e.g., documents, tasks)
 
-- \`platform\`: SaaS-wide management, logs, and overrides (service role only)
+- `platform`: SaaS-wide management, logs, and overrides (service role only)
 
-- \`public\`: only for exposing SQL functions callable by clients (RPC)
+- `public`: only for exposing SQL functions callable by clients (RPC)
 
 ### Access Control
 
 - PostgreSQL RLS enforced on all tenant-aware tables
 
-\- Centralized helper functions (e.g., \`is_org_member\`) enforce membership and role checks
+- Centralized helper functions (e.g., `is_org_member`) enforce membership and role checks
 
-- \`roles.priority\` enables scalable role comparison logic
+- `roles.priority` enables scalable role comparison logic
 
 ### Platform Schema Security
 
-- Platform functionality (\`platform.\*\`) is strictly backend-only (SaaS operator only)
+- Platform functionality (`platform.*`) is strictly backend-only (SaaS operator only)
 
-- Supabase roles (\`authenticated\`, \`anon\`) are \*\*explicitly revoked\*\* from accessing the \`platform\` schema:
+- Supabase roles (`authenticated`, `anon`) are **explicitly revoked** from accessing the `platform` schema:
 
 ```sql
 
@@ -58,27 +58,27 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 ```
 
-- No SQL functions or tables from \`platform\` are exposed in the \`public\` schema
+- No SQL functions or tables from `platform` are exposed in the `public` schema
 
-- All platform functionality is accessed exclusively via Edge Functions using the Supabase \*\*service role\*\*
+- All platform functionality is accessed exclusively via Edge Functions using the Supabase **service role**
 
-\- (Optional) RLS policies can be applied to \`platform.\*\` tables with \`USING (false)\` for defense in depth
+- (Optional) RLS policies can be applied to `platform.*` tables with `USING (false)` for defense in depth
 
 ### Soft Deletion
 
 - All identity/domain tables include:
 
-- \`is_deleted BOOLEAN\`
+- `is_deleted BOOLEAN`
 
-- \`deleted_at TIMESTAMPTZ\`
+- `deleted_at TIMESTAMPTZ`
 
-- \`deleted_by UUID\`
+- `deleted_by UUID`
 
 - All soft deletes are logged in audit log
 
 ### Audit Logging
 
-- Central \`core.audit_logs\` table records:
+- Central `core.audit_logs` table records:
 
 - Who acted, on what, and when
 
@@ -86,23 +86,23 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - Action type and change summary
 
-- Platform admin actions are recorded in \`platform_action_logs\` for traceability
+- Platform admin actions are recorded in `platform_action_logs` for traceability
 
 ### Billing
 
 - Stripe integration using Edge Functions
 
-- \`billing_customers\`, \`billing_subscriptions\`, and \`billing_plans\` tables
+- `billing_customers`, `billing_subscriptions`, and `billing_plans` tables
 
 - Feature limits enforced via plan metadata, not RLS
 
 ### Secrets Management
 
-- Secrets such as API keys and SMTP credentials are securely referenced via \`platform.tenant_secrets\`
+- Secrets such as API keys and SMTP credentials are securely referenced via `platform.tenant_secrets`
 
-- Secrets are scoped per organization or per user using a \`scope\` column (\`'organization'\` or \`'user'\`)
+- Secrets are scoped per organization or per user using a `scope` column (`'organization'` or `'user'`)
 
-- Actual secret values are stored in Supabase Vault, and only the \`vault_key_id\` is saved in the database
+- Actual secret values are stored in Supabase Vault, and only the `vault_key_id` is saved in the database
 
 - RLS support ensures tenant/user isolation for secret access
 
@@ -110,15 +110,15 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 ### API & Client Access
 
-- Tables only exist in \`core\`, \`app\`, \`platform\` schemas
+- Tables only exist in `core`, `app`, `platform` schemas
 
-- Supabase client accesses only \`public\` RPC functions
+- Supabase client accesses only `public` RPC functions
 
-- SQL functions in \`public\` execute in the context of the calling user (not SECURITY DEFINER)
+- SQL functions in `public` execute in the context of the calling user (not SECURITY DEFINER)
 
 - Edge Functions used only when needed (Stripe hooks, admin)
 
-- Application-specific logic may reside in a single \`app\` schema
+- Application-specific logic may reside in a single `app` schema
 
 ---
 
@@ -126,51 +126,51 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 ### core
 
-- \`users_meta\`
+- `users_meta`
 
-- \`organizations\`
+- `organizations`
 
-- \`organization_meta\`
+- `organization_meta`
 
-- \`units\`
+- `units`
 
-- \`unit_meta\`
+- `unit_meta`
 
-- \`memberships\`
+- `memberships`
 
-- \`unit_memberships\`
+- `unit_memberships`
 
-- \`roles\`
+- `roles`
 
-- \`audit_logs\`
+- `audit_logs`
 
 ### app
 
-- Domain-specific tables (e.g. \`documents\`, \`projects\`, etc.)
+- Domain-specific tables (e.g. `documents`, `projects`, etc.)
 
-- Each table includes \`organization_id\`, optional \`unit_id\`, and full audit fields
+- Each table includes `organization_id`, optional `unit_id`, and full audit fields
 
 ### platform
 
-- \`platform_users\` (SaaS admins)
+- `platform_users` (SaaS admins)
 
-- \`platform_organizations\` (platform control layer)
+- `platform_organizations` (platform control layer)
 
-- \`platform_subscription_overrides\`
+- `platform_subscription_overrides`
 
-- \`platform_action_logs\` (tracks all admin-level activity)
+- `platform_action_logs` (tracks all admin-level activity)
 
-- \`platform_settings\` (central configuration flags in JSONB)
+- `platform_settings` (central configuration flags in JSONB)
 
-- \`platform_feature_flags\` (per-tenant and global toggles)
+- `platform_feature_flags` (per-tenant and global toggles)
 
-- \`platform_system_events\` (platform-wide activity stream, failures, notices)
+- `platform_system_events` (platform-wide activity stream, failures, notices)
 
-- \`platform.tenant_secrets\` (Vault-based secret references with scope control)
+- `platform.tenant_secrets` (Vault-based secret references with scope control)
 
 ### public
 
-- SQL functions only (e.g., \`create_project\`, \`get_user_profile\`)
+- SQL functions only (e.g., `create_project`, `get_user_profile`)
 
 - All functions execute under the privileges of the calling user (not SECURITY DEFINER)
 
@@ -182,25 +182,25 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - On creation of:
 
-- a user → auto-create \`users_meta\`
+- a user → auto-create `users_meta`
 
-- an organization → auto-create \`organization_meta\` and \`platform_organizations\`
+- an organization → auto-create `organization_meta` and `platform_organizations`
 
-- a unit → auto-create \`unit_meta\`
+- a unit → auto-create `unit_meta`
 
-- Shared \`updated_at\` trigger function for all tables
+- Shared `updated_at` trigger function for all tables
 
 - Centralized helper functions for org/unit membership and role checks
 
 - Platform-facing automation functions for:
 
-- creating \`platform_action_logs\`
+- creating `platform_action_logs`
 
-- applying \`platform_subscription_overrides\`
+- applying `platform_subscription_overrides`
 
-- registering feature flags via \`platform_feature_flags\`
+- registering feature flags via `platform_feature_flags`
 
-- logging system-wide failures, syncs, or alerts via \`platform_system_events\`
+- logging system-wide failures, syncs, or alerts via `platform_system_events`
 
 ---
 
@@ -208,47 +208,47 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 ### Table Naming
 
-- Use \`snake_case\`, all lowercase
+- Use `snake_case`, all lowercase
 
-- Use plural nouns unless singular makes more sense (e.g. \`audit_logs\`, \`documents\`)
+- Use plural nouns unless singular makes more sense (e.g. `audit_logs`, `documents`)
 
-- Prefix platform tables with \`platform\_\` (e.g. \`platform_users\`) to reduce ambiguity
+- Prefix platform tables with `platform_` (e.g. `platform_users`) to reduce ambiguity
 
 ### Column Naming
 
-- Primary key: \`id\`
+- Primary key: `id`
 
-- Foreign keys: \`\<entity>\_id\` (e.g. \`organization_id\`, \`unit_id\`)
+- Foreign keys: `<entity>_id` (e.g. `organization_id`, `unit_id`)
 
-- Timestamps: \`\<action>\_at\` (e.g. \`created_at\`, \`updated_at\`, \`deleted_at\`)
+- Timestamps: `<action>_at` (e.g. `created_at`, `updated_at`, `deleted_at`)
 
-- Actors: \`\<action>\_by\` (e.g. \`created_by\`, \`deleted_by\`)
+- Actors: `<action>_by` (e.g. `created_by`, `deleted_by`)
 
-- Booleans: \`is\_\` or \`has\_\` prefix (e.g. \`is_deleted\`, \`has_access\`)
+- Booleans: `is_` or `has_` prefix (e.g. `is_deleted`, `has_access`)
 
 ### Standard Audit Fields
 
 ```sql
 
-created\_at TIMESTAMPTZ DEFAULT now(),
+created_at TIMESTAMPTZ DEFAULT now(),
 
-updated\_at TIMESTAMPTZ DEFAULT now(),
+updated_at TIMESTAMPTZ DEFAULT now(),
 
-created\_by UUID,
+created_by UUID,
 
-is\_deleted BOOLEAN DEFAULT false,
+is_deleted BOOLEAN DEFAULT false,
 
-deleted\_at TIMESTAMPTZ,
+deleted_at TIMESTAMPTZ,
 
-deleted\_by UUID
+deleted_by UUID
 
 ```
 
 ### Best Practices
 
-- Avoid abbreviations like \`org_id\`; prefer \`organization_id\`
+- Avoid abbreviations like `org_id`; prefer `organization_id`
 
-- Use consistent names across tables (e.g. always use \`unit_id\` when referencing \`units\`)
+- Use consistent names across tables (e.g. always use `unit_id` when referencing `units`)
 
 - Fully qualify fields in joins for readability and traceability
 
@@ -266,8 +266,8 @@ deleted\_by UUID
 
 ## 🧭 Next Options
 
-- Finalize \`platform\` schema table definitions and generate DDL
+- Finalize `platform` schema table definitions and generate DDL
 
-- Model first \`app\` table with full RLS and function access
+- Model first `app` table with full RLS and function access
 
 - Set up schema migration structure and test data loaders

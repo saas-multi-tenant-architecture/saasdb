@@ -9,6 +9,7 @@ CREATE TABLE app.users_meta (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   first_name TEXT,
   last_name TEXT,
+  email TEXT,
   avatar_url TEXT,
   timezone TEXT,
   locale TEXT,
