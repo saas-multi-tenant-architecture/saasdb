@@ -5,7 +5,7 @@
 -- ========================================
 -- TABLE CREATION
 -- ========================================
-CREATE TABLE app.users_meta (
+CREATE TABLE core.users_meta (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   first_name TEXT,
   last_name TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE app.users_meta (
 -- TRIGGERS
 -- ========================================
 CREATE TRIGGER trg_users_meta_updated
-BEFORE UPDATE ON app.users_meta
+BEFORE UPDATE ON core.users_meta
 FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 
 -- ========================================

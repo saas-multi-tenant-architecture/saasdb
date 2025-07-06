@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION app.handle_new_organization()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Insert org metadata (same UUID)
-  INSERT INTO app.organization_meta (id)
+  INSERT INTO core.organization_meta (id)
   VALUES (NEW.id);
 
   -- Insert into platform registry
@@ -24,11 +24,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- TRIGGER
 -- ========================================
 CREATE TRIGGER trg_on_organization_created
-AFTER INSERT ON app.organizations
+AFTER INSERT ON core.organizations
 FOR EACH ROW EXECUTE FUNCTION app.handle_new_organization();
 
 -- ========================================
 -- NOTES
 -- ========================================
 -- This keeps platform and tenant-level structures synchronized
--- Assumes that organization name in `app.organizations` maps to label in platform
+-- Assumes that organization name in `core.organizations` maps to label in platform
