@@ -292,6 +292,86 @@ core.log_audit(
 )
 ```
 
+## 📡 Proposed Public RPC Functions
+
+This section defines the client-facing SQL functions exposed via the `public` schema. All functions:
+
+* Are `SECURITY INVOKER`
+* Use `auth.uid()` internally to ensure identity context
+* Respect RLS policies on underlying tables
+* Perform input validation and enforce business rules (where applicable)
+
+### 🧾 Core Identity & Membership Functions
+
+| Function Name                                              | Description                                                 |
+| ---------------------------------------------------------- | ----------------------------------------------------------- |
+| `get_user_profile()`                                       | Returns metadata for the currently authenticated user       |
+| `update_user_profile(data JSON)`                           | Updates profile fields for the current user                 |
+| `list_my_organizations()`                                  | Lists all organizations the user belongs to                 |
+| `get_organization(id UUID)`                                | Returns metadata for a specific organization                |
+| `list_organization_members(id UUID)`                       | Lists members (users) in the specified organization         |
+| `get_user_role(org_id UUID)`                               | Returns the role of the calling user within an organization |
+| `create_organization(name TEXT)`                           | Creates a new organization (with plan/user limits enforced) |
+| `invite_user_to_organization(email TEXT, role_id UUID)`    | Sends invite to another user to join org                    |
+| `remove_user_from_organization(user_id UUID, org_id UUID)` | Removes a user from the org                                 |
+
+### 🏢 Unit Functions
+
+| Function Name                                                   | Description                                         |
+| --------------------------------------------------------------- | --------------------------------------------------- |
+| `list_my_units()`                                               | Lists all units the user belongs to across all orgs |
+| `get_unit(id UUID)`                                             | Returns metadata for a specific unit                |
+| `create_unit(org_id UUID, name TEXT)`                           | Creates a new unit in an organization               |
+| `assign_user_to_unit(user_id UUID, unit_id UUID, role_id UUID)` | Assigns a user to a unit                            |
+| `remove_user_from_unit(user_id UUID, unit_id UUID)`             | Removes user from unit                              |
+
+### 🧾 Audit and Admin
+
+| Function Name                           | Description                                        |
+| --------------------------------------- | -------------------------------------------------- |
+| `get_audit_log(org_id UUID, limit INT)` | Returns audit log entries for a given organization |
+
+---
+
+## ✅ Sample: `get_user_profile()`
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_profile()
+RETURNS TABLE (
+  id UUID,
+  email TEXT,
+  first_name TEXT,
+  last_name TEXT,
+  avatar_url TEXT,
+  timezone TEXT,
+  locale TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    u.id,
+    u.email,
+    m.first_name,
+    m.last_name,
+    m.avatar_url,
+    m.timezone,
+    m.locale
+  FROM auth.users u
+  JOIN core.users_meta m ON u.id = m.id
+  WHERE u.id = auth.uid();
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER;
+```
+
+### 🔒 Notes
+
+* Uses `auth.uid()` to determine the user
+* Safe to expose directly to clients
+* Can be extended to include roles or membership context
+
+
+
+
 ### Best Practices
 
 - Avoid abbreviations like `org_id`; prefer `organization_id`
