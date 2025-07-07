@@ -182,11 +182,11 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - On creation of:
 
-- a user → auto-create `users_meta`
+  - a user → auto-create `users_meta`
 
-- an organization → auto-create `organization_meta` and `platform_organizations`
+  - an organization → auto-create `organization_meta` and `platform_organizations`
 
-- a unit → auto-create `unit_meta`
+  - a unit → auto-create `unit_meta`
 
 - Shared `updated_at` trigger function for all tables
 
@@ -194,13 +194,13 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - Platform-facing automation functions for:
 
-- creating `platform_action_logs`
+  - creating `platform_action_logs`
 
-- applying `platform_subscription_overrides`
+  - applying `platform_subscription_overrides`
 
-- registering feature flags via `platform_feature_flags`
+  - registering feature flags via `platform_feature_flags`
 
-- logging system-wide failures, syncs, or alerts via `platform_system_events`
+  - logging system-wide failures, syncs, or alerts via `platform_system_events`
 
 ---
 
@@ -292,14 +292,14 @@ core.log_audit(
 )
 ```
 
-## 📡 Proposed Public RPC Functions
+## 📡 Public RPC Functions
 
 This section defines the client-facing SQL functions exposed via the `public` schema. All functions:
 
-* Are `SECURITY INVOKER`
-* Use `auth.uid()` internally to ensure identity context
-* Respect RLS policies on underlying tables
-* Perform input validation and enforce business rules (where applicable)
+- Are `SECURITY INVOKER`
+- Use `auth.uid()` internally to ensure identity context
+- Respect RLS policies on underlying tables
+- Perform input validation and enforce business rules (where applicable)
 
 ### 🧾 Core Identity & Membership Functions
 
@@ -365,12 +365,11 @@ $$ LANGUAGE plpgsql SECURITY INVOKER;
 
 ### 🔒 Notes
 
-* Uses `auth.uid()` to determine the user
-* Safe to expose directly to clients
-* Can be extended to include roles or membership context
+- Uses `auth.uid()` to determine the user
+- Safe to expose directly to clients
+- Can be extended to include roles or membership context
 
-
-## 🛠️ Platform Functions
+## 🛠️ Platform RPC Functions
 
 These SQL functions live in the `platform` schema and are executed by trusted platform users (e.g., SaaS admins). They are protected by RLS policies (`USING (false)`) and are invoked with elevated privileges using `SECURITY DEFINER`. Each function validates the caller's identity and role via `platform.ensure_platform_admin()`.
 
@@ -378,30 +377,32 @@ All write operations should log an entry in `platform.platform_action_logs` for 
 
 ### 📋 Proposed Platform Functions
 
-| Function Name                                          | Description                                                       |
-|-------------------------------------------------------|-------------------------------------------------------------------|
-| `create_platform_user(user_id UUID, role TEXT)`         | Adds a new platform user with a specific role                     |
-| `update_platform_user_role(user_id UUID, role TEXT)`  | Changes the assigned role for a platform user                    |
-| `delete_platform_user(user_id UUID)`                  | Soft-deletes a platform user                                      |
-| `create_platform_organization(org_id UUID)`           | Registers a new org in the platform control layer                |
-| `set_platform_override(org_id UUID, key TEXT, value JSONB)` | Stores or updates a subscription override for an org     |
-| `delete_platform_override(org_id UUID, key TEXT)`     | Removes a subscription override                                   |
-| `create_platform_feature_flag(key TEXT, value JSONB, org_id UUID DEFAULT NULL)` | Registers a global or per-org feature toggle |
-| `log_platform_event(event_type TEXT, message TEXT, metadata JSONB)` | Records a system-level or admin-triggered event        |
-| `get_platform_user_role()`                            | Returns the current user's platform role                          |
-| `create_tenant_secret(scope TEXT, id UUID, name TEXT, secret TEXT, user_id UUID)` | Creates a new tenant secret for an organization or user     |
-| `delete_tenant_secret(secret_id UUID, user_id UUID)` | Deletes a tenant secret for an organization or user          |
-| `get_platform_action_log(limit INT DEFAULT 100)`      | Fetches recent platform actions for monitoring or audit          |
+| Function Name                                                                     | Description                                             |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `create_platform_user(user_id UUID, role TEXT)`                                   | Adds a new platform user with a specific role           |
+| `update_platform_user_role(user_id UUID, role TEXT)`                              | Changes the assigned role for a platform user           |
+| `delete_platform_user(user_id UUID)`                                              | Soft-deletes a platform user                            |
+| `create_platform_organization(org_id UUID)`                                       | Registers a new org in the platform control layer       |
+| `set_platform_override(org_id UUID, key TEXT, value JSONB)`                       | Stores or updates a subscription override for an org    |
+| `delete_platform_override(org_id UUID, key TEXT)`                                 | Removes a subscription override                         |
+| `create_platform_feature_flag(key TEXT, value JSONB, org_id UUID DEFAULT NULL)`   | Registers a global or per-org feature toggle            |
+| `log_platform_event(event_type TEXT, message TEXT, metadata JSONB)`               | Records a system-level or admin-triggered event         |
+| `get_platform_user_role()`                                                        | Returns the current user's platform role                |
+| `create_tenant_secret(scope TEXT, id UUID, name TEXT, secret TEXT, user_id UUID)` | Creates a new tenant secret for an organization or user |
+| `delete_tenant_secret(secret_id UUID, user_id UUID)`                              | Deletes a tenant secret for an organization or user     |
+| `get_platform_action_log(limit INT DEFAULT 100)`                                  | Fetches recent platform actions for monitoring or audit |
 
 ### 🔒 Security Model
 
 - Where scope is referenced it is either `organization` or `user`, and id refers to `organization_id` or `user_id`
-- Functions must validate if the user is a platform admin. 
+- Functions must validate if the user is a platform admin.
 - A platform or tenant user can never access an unencrypted secret directly
   - The secret will be retrieved by the system as part of other functionality
 - For tenant_secrets, validate if the user is part of the organization, or if the user is the actual user.
-  - This may require that the user_id (tenant) is retrieved by the frontend and included in the function parameters. 
+
+  - This may require that the user_id (tenant) is retrieved by the frontend and included in the function parameters.
   - Example:
+
   ```sql
     -- Ensure caller is a valid member of the org/user they are targeting
     IF NOT EXISTS (
@@ -414,18 +415,19 @@ All write operations should log an entry in `platform.platform_action_logs` for 
         RAISE EXCEPTION 'You are not authorized to manage secrets for this organization.';
       END IF;
   ```
-    Or for user secrets:
-    ```sql
-    IF NOT EXISTS (
-        SELECT 1
-        FROM auth.users
-        WHERE id = userid
-          AND user_id = _user_id
-      ) THEN
-        RAISE EXCEPTION 'You are not authorized to manage secrets for this user.';
-      END IF;
-    ```
 
+  Or for user secrets:
+
+  ```sql
+  IF NOT EXISTS (
+      SELECT 1
+      FROM auth.users
+      WHERE id = userid
+        AND user_id = _user_id
+    ) THEN
+      RAISE EXCEPTION 'You are not authorized to manage secrets for this user.';
+    END IF;
+  ```
 
 - All functions use `SECURITY DEFINER`
 - Access is only granted through explicit role validation inside each function
@@ -433,12 +435,11 @@ All write operations should log an entry in `platform.platform_action_logs` for 
 
 #### 🔐 Final Access Flow for Platform Functions: Belt & Suspenders
 
-| Layer                   | Responsibility                   | Enforced? |
-| ----------------------- | -------------------------------- | --------- |
-| Edge Function           | Auth + role validation           | ✅         |
-| SQL Function            | Membership and/or identity check (platform or tenant)     | ✅         |
-| RLS on platform tables  | `USING (false)` fallback barrier | ✅         |
-
+| Layer                  | Responsibility                                        | Enforced? |
+| ---------------------- | ----------------------------------------------------- | --------- |
+| Edge Function          | Auth + role validation                                | ✅        |
+| SQL Function           | Membership and/or identity check (platform or tenant) | ✅        |
+| RLS on platform tables | `USING (false)` fallback barrier                      | ✅        |
 
 ### 🧾 Logging Convention
 
@@ -450,7 +451,6 @@ Every time a function is invoked, add a row to `platform.platform_action_logs` w
 - `summary` and `metadata` to describe the action
 
 This enforces accountability and traceability across platform operations.
-
 
 ### Best Practices
 
