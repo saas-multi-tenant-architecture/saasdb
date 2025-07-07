@@ -11,11 +11,23 @@ CREATE SCHEMA IF NOT EXISTS platform;
 -- TABLES
 -- ========================================
 
+
+-- platform_roles: internal admin roles
+CREATE TABLE platform.platform_roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  priority INT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- platform_users: internal admin users (linked to auth.users.id via FK)
 CREATE TABLE platform.platform_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   supabase_user_id UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
+  role_id UUID NOT NULL REFERENCES platform.platform_roles(id),
   first_name TEXT,
   last_name TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
