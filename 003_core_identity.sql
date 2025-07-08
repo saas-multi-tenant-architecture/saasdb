@@ -31,6 +31,7 @@ CREATE TABLE core.units (
   name TEXT NOT NULL,
   description TEXT,
   created_by UUID,
+  updated_by UUID,
   is_deleted BOOLEAN DEFAULT FALSE,
   deleted_at TIMESTAMPTZ,
   deleted_by UUID,
@@ -48,6 +49,11 @@ FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 CREATE TABLE core.unit_meta (
   id UUID PRIMARY KEY REFERENCES core.units(id) ON DELETE CASCADE,
   notes TEXT,
+  created_by UUID,
+  updated_by UUID,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ,
+  deleted_by UUID,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

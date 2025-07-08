@@ -1,14 +1,15 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const unitsSchema = z.object({
-  id: z.string().uuid(),
-  organization_id: z.string().uuid(),
+  id: z.uuid(),
+  organization_id: z.uuid(),
   name: z.string(),
-  description: z.string().nullable(),
-  created_by: z.string().uuid().nullable(),
-  is_deleted: z.boolean().optional(),
-  deleted_at: z.string().nullable(),
-  deleted_by: z.string().uuid().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  description: z.string(),
+  created_by: z.uuid(),
+  updated_by: z.uuid(),
+  is_deleted: z.boolean(),
+  deleted_at: z.date().optional(),
+  deleted_by: z.uuid().optional(),
+  created_at: z.date(),
+  updated_at: z.date(),
 });

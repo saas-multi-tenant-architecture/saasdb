@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const organization_metaSchema = z.object({
-  id: z.string().uuid(),
-  logo_url: z.string().nullable(),
-  address: z.string().nullable(),
-  timezone: z.string().nullable(),
-  locale: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  id: z.uuid(),
+  logo_file_id: z.uuid().optional(), // FK relationship to organization_files
+  address: z.string().optional(),
+  timezone: z.string().optional(),
+  locale: z.string().optional(),
+  created_at: z.date(),
+  updated_at: z.date(),
 });

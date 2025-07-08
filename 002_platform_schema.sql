@@ -30,6 +30,11 @@ CREATE TABLE platform.platform_users (
   role_id UUID NOT NULL REFERENCES platform.platform_roles(id),
   first_name TEXT,
   last_name TEXT,
+  created_by UUID,
+  updated_by UUID,
+  is_deleted BOOLEAN DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by UUID,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -63,6 +68,7 @@ CREATE TABLE platform.platform_settings (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
   description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -73,6 +79,10 @@ CREATE TABLE platform.platform_subscription_overrides (
   plan_override TEXT,
   features JSONB,
   reason TEXT,
+  created_by UUID,
+  is_deleted BOOLEAN DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by UUID,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

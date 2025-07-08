@@ -7,7 +7,7 @@
 -- ========================================
 CREATE TABLE core.organization_meta (
   id UUID PRIMARY KEY REFERENCES core.organizations(id) ON DELETE CASCADE,
-  logo_url TEXT,
+  logo_file_id UUID REFERENCES core.organization_files(id) ON DELETE SET NULL,
   address TEXT,
   timezone TEXT,
   locale TEXT,

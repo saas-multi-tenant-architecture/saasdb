@@ -1,13 +1,13 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const audit_logsSchema = z.object({
-  id: z.string().uuid(),
-  actor_id: z.string().uuid().nullable(),
-  organization_id: z.string().uuid().nullable(),
+  id: z.uuid(),  
+  actor_id: z.uuid().optional(),
+  organization_id: z.uuid().optional(),
   target_table: z.string(),
-  target_id: z.string().uuid().nullable(),
+  target_id: z.uuid().optional(),
   action: z.string(),
-  summary: z.string().nullable(),
-  metadata: z.any().nullable(),
-  created_at: z.string(),
+  summary: z.string().optional(),
+  metadata: z.any().optional(),
+  created_at: z.date()
 });

@@ -24,6 +24,7 @@ CREATE TABLE platform.subscription_products (
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   created_by UUID,
+  updated_by UUID,
   is_deleted BOOLEAN DEFAULT false,
   deleted_at TIMESTAMPTZ,
   deleted_by UUID
@@ -53,6 +54,7 @@ RETURNS TABLE (
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
+  updated_by UUID,
   is_deleted BOOLEAN,
   deleted_at TIMESTAMPTZ,
   deleted_by UUID
@@ -74,6 +76,7 @@ BEGIN
     created_at,
     updated_at,
     created_by,
+    updated_by,
     is_deleted,
     deleted_at,
     deleted_by
@@ -106,6 +109,7 @@ RETURNS TABLE (
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   created_by UUID,
+  updated_by UUID,
   is_deleted BOOLEAN,
   deleted_at TIMESTAMPTZ,
   deleted_by UUID
@@ -122,7 +126,8 @@ BEGIN
     amount,
     is_active,
     metadata,
-    created_by
+    created_by,
+    updated_by
   ) VALUES (
     p_stripe_price_id,
     p_name,
@@ -131,6 +136,7 @@ BEGIN
     p_amount,
     p_is_active,
     p_metadata,
+    auth.uid(),
     auth.uid()
   ) RETURNING *;
 

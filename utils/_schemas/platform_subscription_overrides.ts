@@ -1,11 +1,15 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const platform_subscription_overridesSchema = z.object({
-  id: z.string().uuid(),
-  organization_id: z.string().uuid().nullable(),
-  plan_override: z.string().nullable(),
-  features: z.any().nullable(),
-  reason: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  id: z.uuid(),
+  organization_id: z.uuid(),
+  plan_override: z.string(),
+  features: z.any(), // Consider this a JSONB field - maybe structure this in the future
+  reason: z.string(),
+  created_by: z.uuid(),
+  is_deleted: z.boolean(),
+  deleted_at: z.date().optional(),
+  deleted_by: z.uuid().optional(),
+  created_at: z.date(),
+  updated_at: z.date(),
 });

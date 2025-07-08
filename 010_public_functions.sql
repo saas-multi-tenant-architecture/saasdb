@@ -278,13 +278,20 @@ RETURNS TABLE (
   id UUID,
   organization_id UUID,
   name TEXT,
-  created_at TIMESTAMPTZ
+  description TEXT,
+  created_by UUID,
+  updated_by UUID,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ,
+  deleted_by UUID,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
 ) AS $$
 DECLARE
   v_unit_id UUID;
 BEGIN
-  INSERT INTO core.units (organization_id, name, created_by)
-  VALUES (p_org_id, p_name, auth.uid())
+  INSERT INTO core.units (organization_id, name, description, created_by, updated_by)
+  VALUES (p_org_id, p_name, p_description, auth.uid(), auth.uid())
   RETURNING id INTO v_unit_id;
 
   PERFORM core.log_audit('insert', 'core.units', v_unit_id, 'create_unit', jsonb_build_object('organization_id', p_org_id, 'name', p_name));

@@ -1,10 +1,10 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const rolesSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   priority: z.number().int(),
-  description: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  description: z.string().optional(),
+  created_at: z.date(),
+  updated_at: z.date(),
 });

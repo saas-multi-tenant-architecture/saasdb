@@ -1,12 +1,12 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const platform_action_logsSchema = z.object({
-  id: z.string().uuid(),
-  platform_user_id: z.string().uuid().nullable(),
-  action_type: z.string(),
-  target_table: z.string().nullable(),
-  target_id: z.string().uuid().nullable(),
-  summary: z.string().nullable(),
-  metadata: z.any().nullable(),
-  created_at: z.string(),
+  id: z.uuid(),
+  platform_user_id: z.uuid(),
+  action_type: z.enum(['select', 'create', 'update', 'delete', 'log', 'override']),
+  target_table: z.string().optional(),
+  target_id: z.uuid().optional(),
+  summary: z.string().optional(),
+  metadata: z.any().optional(),
+  created_at: z.date()
 });

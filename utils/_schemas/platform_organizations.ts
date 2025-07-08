@@ -1,12 +1,12 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const platform_organizationsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   label: z.string(),
-  notes: z.string().nullable(),
-  is_deleted: z.boolean().optional(),
-  deleted_at: z.string().nullable(),
-  deleted_by: z.string().uuid().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  notes: z.string().optional(),
+  is_deleted: z.boolean(),
+  deleted_at: z.date().optional(),
+  deleted_by: z.uuid().optional(),
+  created_at: z.date(),
+  updated_at: z.date(),
 });
