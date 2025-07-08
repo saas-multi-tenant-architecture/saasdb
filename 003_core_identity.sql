@@ -114,6 +114,41 @@ CREATE TRIGGER trg_unit_memberships_updated
 BEFORE UPDATE ON core.unit_memberships
 FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 
+
+-- ========================================
+-- TABLE: core.files - Define table for storing references to organization-owned files stored in Supabase Storage
+-- ========================================
+CREATE TABLE core.organization_files (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- URL or storage path to the file in Supabase bucket
+  file_url TEXT NOT NULL,
+  -- MIME type (e.g. 'image/png', 'application/pdf')
+  file_type TEXT NOT NULL,
+  -- Optional structured info about the file (e.g., image dimensions, metadata)
+  file_specs JSONB,
+  -- Size in bytes
+  file_size INTEGER,
+  organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  created_by UUID,
+  updated_by UUID,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ,
+  deleted_by UUID
+);
+
+-- ========================================
+-- Indexes (optional but useful for querying by org or type)
+-- ========================================
+CREATE INDEX idx_organization_files_organization_id ON core.organization_files (organization_id);
+CREATE INDEX idx_organization_files_file_type ON core.organization_files (file_type);
+
+CREATE TRIGGER trg_organization_files_updated
+BEFORE UPDATE ON core.organization_files
+FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
+
+
 -- ========================================
 -- TABLE: core.audit_logs
 -- ========================================
@@ -130,7 +165,6 @@ CREATE TABLE core.audit_logs (
 );
 
 CREATE INDEX idx_audit_logs_metadata ON core.audit_logs USING GIN (metadata);
-
 
 -- No update trigger as audit logs should be immutable
 

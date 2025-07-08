@@ -77,6 +77,7 @@ ALTER TABLE core.unit_meta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.unit_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE core.organization_files ENABLE ROW LEVEL SECURITY;
 
 -- ========================================
 -- RLS POLICIES
@@ -159,3 +160,13 @@ CREATE POLICY unit_memberships_update ON core.unit_memberships
 CREATE POLICY audit_logs_select ON core.audit_logs
   FOR SELECT USING (core.has_org_role(organization_id, 'admin'));
 
+-- organization_files: org admins only
+CREATE POLICY organization_files_select ON core.organization_files
+  FOR SELECT USING (core.is_org_member(organization_id));
+
+CREATE POLICY organization_files_insert ON core.organization_files
+  FOR INSERT WITH CHECK (core.has_org_role(organization_id, 'admin'));
+
+CREATE POLICY organization_files_update ON core.organization_files
+  FOR UPDATE USING (core.has_org_role(organization_id, 'admin'))
+  WITH CHECK (core.has_org_role(organization_id, 'admin'));
