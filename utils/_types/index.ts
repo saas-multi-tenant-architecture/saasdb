@@ -1,0 +1,25 @@
+import { z } from 'zod';
+import * as schemas from '../_schemas';
+
+export type PlatformRole = z.infer<typeof schemas.platform_rolesSchema>;
+export type PlatformUser = z.infer<typeof schemas.platform_usersSchema>;
+export type PlatformOrganization = z.infer<typeof schemas.platform_organizationsSchema>;
+export type PlatformActionLog = z.infer<typeof schemas.platform_action_logsSchema>;
+export type PlatformSetting = z.infer<typeof schemas.platform_settingsSchema>;
+export type PlatformSubscriptionOverride = z.infer<typeof schemas.platform_subscription_overridesSchema>;
+export type PlatformFeatureFlag = z.infer<typeof schemas.platform_feature_flagsSchema>;
+export type PlatformSystemEvent = z.infer<typeof schemas.platform_system_eventsSchema>;
+export type Organization = z.infer<typeof schemas.organizationsSchema>;
+export type Unit = z.infer<typeof schemas.unitsSchema>;
+export type UnitMeta = z.infer<typeof schemas.unit_metaSchema>;
+export type Role = z.infer<typeof schemas.rolesSchema>;
+export type Membership = z.infer<typeof schemas.membershipsSchema>;
+export type UnitMembership = z.infer<typeof schemas.unit_membershipsSchema>;
+export type OrganizationFile = z.infer<typeof schemas.organization_filesSchema>;
+export type AuditLog = z.infer<typeof schemas.audit_logsSchema>;
+export type UsersMeta = z.infer<typeof schemas.users_metaSchema>;
+export type OrganizationMeta = z.infer<typeof schemas.organization_metaSchema>;
+export type TenantSecret = z.infer<typeof schemas.tenant_secretsSchema>;
+export type BillingCustomer = z.infer<typeof schemas.billing_customersSchema>;
+export type BillingSubscription = z.infer<typeof schemas.billing_subscriptionsSchema>;
+export type SubscriptionProduct = z.infer<typeof schemas.subscription_productsSchema>;
