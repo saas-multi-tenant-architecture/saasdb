@@ -6,7 +6,7 @@ export const audit_logsSchema = z.object({
   organization_id: z.uuid().optional(),
   target_table: z.string(),
   target_id: z.uuid().optional(),
-  action: z.string(),
+  action: z.enum(['select', 'create', 'update', 'delete', 'log', 'override']),
   summary: z.string().optional(),
   metadata: z.any().optional(),
   created_at: z.date()
