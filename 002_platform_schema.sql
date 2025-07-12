@@ -55,7 +55,7 @@ CREATE TABLE platform.platform_organizations (
 CREATE TABLE platform.platform_action_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   platform_user_id UUID REFERENCES platform.platform_users(id) ON DELETE SET NULL,
-  action_type TEXT NOT NULL,
+  action_type TEXT NOT NULL, -- enum: select, create, update, delete, log, override 
   target_table TEXT,
   target_id UUID,
   summary TEXT,

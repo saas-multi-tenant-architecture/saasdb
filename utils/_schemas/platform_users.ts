@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from "zod/v4";
 
 export const platform_usersSchema = z.object({
   id: z.uuid(),
@@ -11,7 +11,7 @@ export const platform_usersSchema = z.object({
   updated_at: z.date(),
   created_by: z.uuid(),
   updated_by: z.uuid(),
-  is_deleted: z.boolean(),
+  is_deleted: z.boolean().optional(),
   deleted_at: z.date().optional(),
   deleted_by: z.uuid().optional(),
 });
