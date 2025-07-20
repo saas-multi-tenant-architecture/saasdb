@@ -1,5 +1,6 @@
 
 import { z } from 'zod/v4';
+import { shared_auditSchema } from './_shared_audit';
 
 export const tenant_secretsSchema = z.object({
   id: z.uuid(),
@@ -9,13 +10,7 @@ export const tenant_secretsSchema = z.object({
   secret_name: z.string(),
   vault_key_id: z.uuid(),
   is_active: z.boolean().optional(),
-  created_at: z.date(),
-  created_by: z.uuid().optional(),
-  updated_at: z.date(),
-  updated_by: z.uuid().optional(),
-  is_deleted: z.boolean().optional(),
-  deleted_at: z.date().optional(),
-  deleted_by: z.uuid().optional(),
+  ...shared_auditSchema,
 }).check((ctx) => {
   const { value: data, issues } = ctx;
   if (data.scope === 'organization' && !data.organization_id) {

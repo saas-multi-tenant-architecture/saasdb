@@ -1,4 +1,5 @@
 import { z } from 'zod/v4';
+import { shared_auditSchema } from './_shared_audit';
 
 export const billing_subscriptionsSchema = z.object({
   id: z.uuid(),
@@ -8,6 +9,5 @@ export const billing_subscriptionsSchema = z.object({
   status: z.string(),
   current_period_end: z.date().optional(),
   cancel_at_period_end: z.boolean().optional(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  ...shared_auditSchema,
 });

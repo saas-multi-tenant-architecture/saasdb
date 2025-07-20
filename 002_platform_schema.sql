@@ -18,8 +18,13 @@ CREATE TABLE platform.platform_roles (
   name TEXT NOT NULL UNIQUE,
   description TEXT,
   priority INT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- platform_users: internal admin users (linked to auth.users.id via FK)
@@ -30,13 +35,13 @@ CREATE TABLE platform.platform_users (
   role_id UUID NOT NULL REFERENCES platform.platform_roles(id),
   first_name TEXT,
   last_name TEXT,
-  created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN DEFAULT false,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- platform_organizations: control layer for tenant visibility
@@ -44,11 +49,13 @@ CREATE TABLE platform.platform_organizations (
   id UUID PRIMARY KEY,
   label TEXT NOT NULL,
   notes TEXT,
-  is_deleted BOOLEAN DEFAULT false,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- platform_action_logs: tracks all admin activity
@@ -60,7 +67,7 @@ CREATE TABLE platform.platform_action_logs (
   target_id UUID,
   summary TEXT,
   metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
 );
 
 -- platform_settings: global key-value config
@@ -68,8 +75,13 @@ CREATE TABLE platform.platform_settings (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
   description TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- platform_subscription_overrides: plan & feature overrides per org
@@ -79,12 +91,13 @@ CREATE TABLE platform.platform_subscription_overrides (
   plan_override TEXT,
   features JSONB,
   reason TEXT,
-  created_by UUID,
-  is_deleted BOOLEAN DEFAULT false,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- platform_feature_flags: global or per-org feature toggles
@@ -95,8 +108,13 @@ CREATE TABLE platform.platform_feature_flags (
   description TEXT,
   value JSONB NOT NULL,
   is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- platform_system_events: infra-level activity or notices
@@ -105,7 +123,7 @@ CREATE TABLE platform.platform_system_events (
   event_type TEXT NOT NULL,
   summary TEXT,
   details JSONB,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ========================================

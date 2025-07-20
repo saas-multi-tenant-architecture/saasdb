@@ -1,4 +1,5 @@
 import { z } from 'zod/v4';
+import { shared_auditSchema } from './_shared_audit';
 
 export const organization_metaSchema = z.object({
   id: z.uuid(),
@@ -6,6 +7,5 @@ export const organization_metaSchema = z.object({
   address: z.string().optional(),
   timezone: z.string().optional(),
   locale: z.string().optional(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  ...shared_auditSchema,
 });

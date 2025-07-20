@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { shared_auditSchema } from "./_shared_audit";
 
 export const platform_usersSchema = z.object({
   id: z.uuid(),
@@ -7,11 +8,5 @@ export const platform_usersSchema = z.object({
   role_id: z.uuid(),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
-  created_at: z.date(),
-  updated_at: z.date(),
-  created_by: z.uuid(),
-  updated_by: z.uuid(),
-  is_deleted: z.boolean().optional(),
-  deleted_at: z.date().optional(),
-  deleted_by: z.uuid().optional(),
+  ...shared_auditSchema,
 });

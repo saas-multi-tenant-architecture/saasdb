@@ -28,3 +28,15 @@ $$ LANGUAGE plpgsql;
 --   CREATE TRIGGER trg_update_table
 --   BEFORE UPDATE ON some_schema.some_table
 --   FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
+
+-- ========================================
+-- BASE COMPOSITE AUDIT FIELDS
+-- USED ONLY TO COPY & PASTE INTO TABLES (FIELDS, NOT TYPE)
+-- ========================================
+-- created_by uuid,
+-- updated_by uuid,
+-- is_deleted boolean DEFAULT false,
+-- deleted_at TIMESTAMPTZ,
+-- deleted_by uuid,
+-- created_at TIMESTAMPTZ DEFAULT NOW(),
+-- updated_at TIMESTAMPTZ DEFAULT NOW()

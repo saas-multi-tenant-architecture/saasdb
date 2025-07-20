@@ -10,12 +10,13 @@ CREATE TABLE core.organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
-  created_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TRIGGER trg_organizations_updated
@@ -30,13 +31,13 @@ CREATE TABLE core.units (
   organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
-  created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TRIGGER trg_units_updated
@@ -49,13 +50,13 @@ FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 CREATE TABLE core.unit_meta (
   id UUID PRIMARY KEY REFERENCES core.units(id) ON DELETE CASCADE,
   notes TEXT,
-  created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TRIGGER trg_unit_meta_updated
@@ -70,8 +71,13 @@ CREATE TABLE core.roles (
   name TEXT UNIQUE NOT NULL,
   priority INTEGER NOT NULL,
   description TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TRIGGER trg_roles_updated
@@ -86,12 +92,13 @@ CREATE TABLE core.memberships (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
   role_id UUID NOT NULL REFERENCES core.roles(id),
-  created_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, organization_id)
 );
 
@@ -107,12 +114,13 @@ CREATE TABLE core.unit_memberships (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   unit_id UUID NOT NULL REFERENCES core.units(id) ON DELETE CASCADE,
   role_id UUID NOT NULL REFERENCES core.roles(id),
-  created_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, unit_id)
 );
 
@@ -135,13 +143,13 @@ CREATE TABLE core.organization_files (
   -- Size in bytes
   file_size INTEGER,
   organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ========================================

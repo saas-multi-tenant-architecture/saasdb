@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import * as schemas from '../_schemas';
 
 export type PlatformRole = z.infer<typeof schemas.platform_rolesSchema>;

@@ -6,28 +6,24 @@
 -- ========================================
 CREATE TABLE platform.subscription_products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
   -- Stripe Price ID for this plan (maps to Stripe dashboard)
   stripe_price_id TEXT NOT NULL UNIQUE,
-
   -- Display information
   name TEXT NOT NULL,
   description TEXT,
   interval TEXT NOT NULL, -- e.g., 'monthly', 'yearly'
   amount INTEGER NOT NULL, -- amount in cents
   is_active BOOLEAN DEFAULT true,
-
   -- Optional metadata for internal use or future extension
   metadata JSONB,
-
   -- Standard audit fields
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN DEFAULT false,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ========================================
@@ -51,13 +47,13 @@ RETURNS TABLE (
   amount INTEGER,
   is_active BOOLEAN,
   metadata JSONB,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ,
-  created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID
+  deleted_by uuid,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
 ) AS $$
 BEGIN
 
@@ -73,13 +69,13 @@ BEGIN
     amount,
     is_active,
     metadata,
-    created_at,
-    updated_at,
     created_by,
     updated_by,
     is_deleted,
     deleted_at,
-    deleted_by
+    deleted_by,
+    created_at,
+    updated_at
   FROM platform.subscription_products
   WHERE is_deleted = false;
 END;
@@ -106,13 +102,13 @@ RETURNS TABLE (
   amount INTEGER,
   is_active BOOLEAN,
   metadata JSONB,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ,
-  created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN,
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID
+  deleted_by uuid,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
 ) AS $$
 BEGIN
   PERFORM platform.ensure_platform_admin();
@@ -127,7 +123,7 @@ BEGIN
     is_active,
     metadata,
     created_by,
-    updated_by
+    updated_by,
   ) VALUES (
     p_stripe_price_id,
     p_name,

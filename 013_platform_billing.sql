@@ -8,8 +8,13 @@ CREATE TABLE platform.billing_customers (
   organization_id UUID PRIMARY KEY REFERENCES core.organizations(id) ON DELETE CASCADE,
   stripe_customer_id TEXT NOT NULL UNIQUE,
   billing_email TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ========================================
@@ -23,8 +28,13 @@ CREATE TABLE platform.billing_subscriptions (
   status TEXT NOT NULL,
   current_period_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- Note: The core.organizations table is used to link to billing to keep all tenant data
 -- isolated from platform data. This is why it is not connected to the platform_organizations table.

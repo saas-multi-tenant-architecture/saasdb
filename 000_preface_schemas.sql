@@ -26,3 +26,4 @@ CREATE SCHEMA IF NOT EXISTS platform;
 -- Lock down platform schema to prevent tenant access
 REVOKE ALL ON SCHEMA platform FROM authenticated, anon, public;
 REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon, public;
+

@@ -15,13 +15,21 @@ CREATE TABLE platform.tenant_secrets (
   vault_key_id UUID NOT NULL, -- Supabase Vault secret key reference
 
   is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  created_by UUID,
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  updated_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
+
+  -- Audit fields
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TRIGGER trg_tenant_secrets_updated
+BEFORE UPDATE ON platform.tenant_secrets
+FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
+
 
   CHECK (
     (scope = 'organization' AND organization_id IS NOT NULL AND user_id IS NULL) OR

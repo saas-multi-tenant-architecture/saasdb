@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { shared_auditSchema } from "./_shared_audit";
 
 export const platform_subscription_overridesSchema = z.object({
   id: z.uuid(),
@@ -6,10 +7,5 @@ export const platform_subscription_overridesSchema = z.object({
   plan_override: z.string(),
   features: z.unknown(),
   reason: z.string(),
-  created_by: z.uuid(),
-  is_deleted: z.boolean().optional(),
-  deleted_at: z.date().optional(),
-  deleted_by: z.uuid().optional(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  ...shared_auditSchema,
 });

@@ -13,8 +13,13 @@ CREATE TABLE core.users_meta (
   avatar_url TEXT,
   timezone TEXT,
   locale TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  created_by uuid,
+  updated_by uuid,
+  is_deleted boolean DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  deleted_by uuid,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ========================================

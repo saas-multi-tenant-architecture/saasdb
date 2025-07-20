@@ -60,8 +60,6 @@ This document catalogs mismatches and logical/design errors between Zod schemas 
   - `is_deleted`: Zod required, SQL `DEFAULT false` (see above).
   - All others match.
 
-# TODO: Start Here!
-
 ### platform.platform_feature_flags
 
 - **Zod**: `platform_feature_flagsSchema`
