@@ -110,10 +110,11 @@ RETURNS TABLE (
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ
 ) AS $$
+DECLARE
+  v_row platform.subscription_products%ROWTYPE;
 BEGIN
   PERFORM platform.ensure_platform_admin();
 
-  RETURN QUERY
   INSERT INTO platform.subscription_products (
     stripe_price_id,
     name,
@@ -123,7 +124,7 @@ BEGIN
     is_active,
     metadata,
     created_by,
-    updated_by,
+    updated_by
   ) VALUES (
     p_stripe_price_id,
     p_name,
@@ -134,11 +135,27 @@ BEGIN
     p_metadata,
     auth.uid(),
     auth.uid()
-  ) RETURNING *;
+  ) RETURNING * INTO v_row;
 
-  PERFORM platform.log_platform_action('create', 'platform.subscription_products', p_user_id,
+  PERFORM platform.log_platform_action('create', 'platform.subscription_products', v_row.id,
     'create_subscription_product', jsonb_build_object('name', p_name));
 
+  RETURN QUERY SELECT
+    v_row.id,
+    v_row.stripe_price_id,
+    v_row.name,
+    v_row.description,
+    v_row.interval,
+    v_row.amount,
+    v_row.is_active,
+    v_row.metadata,
+    v_row.created_by,
+    v_row.updated_by,
+    v_row.is_deleted,
+    v_row.deleted_at,
+    v_row.deleted_by,
+    v_row.created_at,
+    v_row.updated_at;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
