@@ -5,7 +5,7 @@ export const users_metaSchema = z.object({
   id: z.uuid(),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
-  email: z.string(),
+  email: z.string().optional(),
   avatar_url: z.string().optional(),
   timezone: z.string().optional(),
   locale: z.string().optional(),

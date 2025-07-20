@@ -5,6 +5,6 @@ export const unitsSchema = z.object({
   id: z.uuid(),
   organization_id: z.uuid(),
   name: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
   ...shared_auditSchema,
 });
