@@ -5,7 +5,7 @@
 -- ========================================
 -- FUNCTION
 -- ========================================
-CREATE OR REPLACE FUNCTION app.handle_new_organization()
+CREATE OR REPLACE FUNCTION core.handle_new_organization()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Insert org metadata (same UUID)
@@ -25,7 +25,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ========================================
 CREATE TRIGGER trg_on_organization_created
 AFTER INSERT ON core.organizations
-FOR EACH ROW EXECUTE FUNCTION app.handle_new_organization();
+FOR EACH ROW EXECUTE FUNCTION core.handle_new_organization();
 
 -- ========================================
 -- NOTES

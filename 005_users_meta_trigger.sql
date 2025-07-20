@@ -5,7 +5,7 @@
 -- ========================================
 -- FUNCTION
 -- ========================================
-CREATE OR REPLACE FUNCTION app.handle_new_user()
+CREATE OR REPLACE FUNCTION core.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO core.users_meta (id, email)
@@ -19,7 +19,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ========================================
 CREATE TRIGGER trg_on_auth_user_created
 AFTER INSERT ON auth.users
-FOR EACH ROW EXECUTE FUNCTION app.handle_new_user();
+FOR EACH ROW EXECUTE FUNCTION core.handle_new_user();
 
 -- ========================================
 -- NOTES

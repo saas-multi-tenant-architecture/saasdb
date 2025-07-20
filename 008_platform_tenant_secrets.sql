@@ -23,19 +23,18 @@ CREATE TABLE platform.tenant_secrets (
   deleted_at TIMESTAMPTZ,
   deleted_by uuid,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TRIGGER trg_tenant_secrets_updated
-BEFORE UPDATE ON platform.tenant_secrets
-FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
-
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   CHECK (
     (scope = 'organization' AND organization_id IS NOT NULL AND user_id IS NULL) OR
     (scope = 'user' AND user_id IS NOT NULL AND organization_id IS NULL)
   )
 );
+
+CREATE TRIGGER trg_tenant_secrets_updated
+BEFORE UPDATE ON platform.tenant_secrets
+FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
+
 
 -- ========================================
 -- NOTES

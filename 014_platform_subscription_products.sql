@@ -11,7 +11,7 @@ CREATE TABLE platform.subscription_products (
   -- Display information
   name TEXT NOT NULL,
   description TEXT,
-  interval TEXT NOT NULL, -- e.g., 'monthly', 'yearly'
+  billing_interval TEXT NOT NULL, -- e.g., 'monthly', 'yearly'
   amount INTEGER NOT NULL, -- amount in cents
   is_active BOOLEAN DEFAULT true,
   -- Optional metadata for internal use or future extension
@@ -43,7 +43,7 @@ RETURNS TABLE (
   stripe_price_id TEXT,
   name TEXT,
   description TEXT,
-  interval TEXT,
+  billing_interval TEXT,
   amount INTEGER,
   is_active BOOLEAN,
   metadata JSONB,
@@ -65,7 +65,7 @@ BEGIN
     stripe_price_id,
     name,
     description,
-    interval,
+    billing_interval,
     amount,
     is_active,
     metadata,
@@ -88,7 +88,7 @@ CREATE OR REPLACE FUNCTION platform.add_subscription_product(
   p_stripe_price_id TEXT,
   p_name TEXT,
   p_description TEXT,
-  p_interval TEXT,
+  p_billing_interval TEXT,
   p_amount INTEGER,
   p_is_active BOOLEAN,
   p_metadata JSONB
@@ -98,7 +98,7 @@ RETURNS TABLE (
   stripe_price_id TEXT,
   name TEXT,
   description TEXT,
-  interval TEXT,
+  billing_interval TEXT,
   amount INTEGER,
   is_active BOOLEAN,
   metadata JSONB,
@@ -119,7 +119,7 @@ BEGIN
     stripe_price_id,
     name,
     description,
-    interval,
+    billing_interval,
     amount,
     is_active,
     metadata,
@@ -129,7 +129,7 @@ BEGIN
     p_stripe_price_id,
     p_name,
     p_description,
-    p_interval,
+    p_billing_interval,
     p_amount,
     p_is_active,
     p_metadata,
@@ -145,7 +145,7 @@ BEGIN
     v_row.stripe_price_id,
     v_row.name,
     v_row.description,
-    v_row.interval,
+    v_row.billing_interval,
     v_row.amount,
     v_row.is_active,
     v_row.metadata,
@@ -168,8 +168,12 @@ RETURNS TABLE (
   id UUID,
   name TEXT,
   description TEXT,
-  interval TEXT,
-  amount INTEGER
+  billing_interval TEXT,
+  amount INTEGER,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_by UUID
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -177,8 +181,12 @@ BEGIN
     id,
     name,
     description,
-    interval,
-    amount
+    billing_interval,
+    amount,
+    created_at,
+    updated_at,
+    created_by,
+    updated_by
   FROM platform.subscription_products
   WHERE is_active = true AND is_deleted = false;
 END;

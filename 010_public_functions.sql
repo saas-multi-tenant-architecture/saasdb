@@ -124,12 +124,17 @@ RETURNS TABLE (
   id UUID,
   name TEXT,
   description TEXT,
+  created_by UUID,
+  updated_by UUID,
+  is_deleted BOOLEAN,
+  deleted_at TIMESTAMPTZ,
+  deleted_by UUID,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT id, name, description, created_at, updated_at
+  SELECT id, name, description, created_by, created_at, updated_by, updated_at, is_deleted, deleted_at, deleted_by
   FROM core.organizations
   WHERE id = p_id
     AND is_deleted = false;
@@ -284,12 +289,7 @@ RETURNS TABLE (
   name TEXT,
   description TEXT,
   created_by UUID,
-  updated_by UUID,
-  is_deleted BOOLEAN DEFAULT FALSE,
-  deleted_at TIMESTAMPTZ,
-  deleted_by UUID,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
+  updated_by UUID
 ) AS $$
 DECLARE
   v_unit_id UUID;
@@ -300,7 +300,7 @@ BEGIN
 
   PERFORM core.log_audit('insert', 'core.units', v_unit_id, 'create_unit', jsonb_build_object('organization_id', p_org_id, 'name', p_name));
 
-  RETURN QUERY SELECT id, organization_id, name, created_at FROM core.units WHERE id = v_unit_id;
+  RETURN QUERY SELECT id, organization_id, name, created_by, updated_by FROM core.units WHERE id = v_unit_id;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER;
 

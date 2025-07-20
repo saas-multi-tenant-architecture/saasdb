@@ -1,4 +1,4 @@
-- 010_platform_rls_lockdown.sql
+-- 011_platform_rls_lockdown.sql
 -- Purpose: Lock down all platform tables using RLS with USING (false), and create a secure access guard function
 
 -- ========================================

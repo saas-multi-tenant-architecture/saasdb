@@ -67,7 +67,7 @@ CREATE TABLE platform.platform_action_logs (
   target_id UUID,
   summary TEXT,
   metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- platform_settings: global key-value config
