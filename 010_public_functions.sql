@@ -273,7 +273,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY INVOKER;
 
 -- Create a new unit within an organization
-CREATE OR REPLACE FUNCTION public.create_unit(p_org_id UUID, p_name TEXT)
+CREATE OR REPLACE FUNCTION public.create_unit(
+  p_org_id UUID,
+  p_name TEXT,
+  p_description TEXT DEFAULT NULL
+)
 RETURNS TABLE (
   id UUID,
   organization_id UUID,
@@ -347,7 +351,7 @@ RETURNS TABLE (
 DECLARE
   v_file_id UUID;
 BEGIN
-  INSERT INTO core.files (
+  INSERT INTO core.organization_files (
     organization_id, file_url, file_type, file_size, file_specs, created_by
   )
   VALUES (
@@ -356,7 +360,7 @@ BEGIN
   RETURNING id INTO v_file_id;
 
   PERFORM core.log_audit(
-    'insert', 'core.files', v_file_id, 'create_file',
+    'insert', 'core.organization_files', v_file_id, 'create_file',
     jsonb_build_object(
       'file_url', p_file_url,
       'file_type', p_file_type,
@@ -367,7 +371,7 @@ BEGIN
 
   RETURN QUERY
   SELECT id, organization_id, file_url, file_type, created_at
-  FROM core.files
+  FROM core.organization_files
   WHERE id = v_file_id;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER;
@@ -387,7 +391,7 @@ RETURNS TABLE (
   updated_at TIMESTAMPTZ
 ) AS $$
 BEGIN
-  UPDATE core.files
+  UPDATE core.organization_files
   SET
     file_specs = COALESCE(p_file_specs, file_specs),
     file_size = COALESCE(p_file_size, file_size),
@@ -396,7 +400,7 @@ BEGIN
   WHERE id = p_file_id;
 
   PERFORM core.log_audit(
-    'update', 'core.files', p_file_id, 'update_file_metadata',
+    'update', 'core.organization_files', p_file_id, 'update_file_metadata',
     jsonb_build_object(
       'file_specs', p_file_specs,
       'file_size', p_file_size
@@ -404,7 +408,7 @@ BEGIN
   );
 
   RETURN QUERY
-  SELECT id, file_url, file_type, updated_at FROM core.files WHERE id = p_file_id;
+  SELECT id, file_url, file_type, updated_at FROM core.organization_files WHERE id = p_file_id;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER;
 
@@ -423,7 +427,7 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   SELECT id, organization_id, file_url, file_type, created_at, updated_at
-  FROM core.files
+  FROM core.organization_files
   WHERE id = p_file_id;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER;
@@ -443,7 +447,7 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   SELECT id, organization_id, file_url, file_type, created_at, updated_at
-  FROM core.files
+  FROM core.organization_files
   WHERE organization_id = p_org_id;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER;
@@ -454,7 +458,7 @@ $$ LANGUAGE plpgsql SECURITY INVOKER;
 CREATE OR REPLACE FUNCTION public.delete_file(p_file_id UUID)
 RETURNS VOID AS $$
 BEGIN
-  UPDATE core.files
+  UPDATE core.organization_files
   SET
     is_deleted = true,
     deleted_at = now(),
@@ -462,7 +466,7 @@ BEGIN
   WHERE id = p_file_id;
 
   PERFORM core.log_audit(
-    'delete', 'core.files', p_file_id, 'delete_file',
+    'delete', 'core.organization_files', p_file_id, 'delete_file',
     jsonb_build_object(
       'file_id', p_file_id
     )

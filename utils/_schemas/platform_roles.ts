@@ -5,6 +5,6 @@ export const platform_rolesSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   description: z.string().optional(),
-  priority: z.  number().int(),
+  priority: z.number().int(),
   ...shared_auditSchema,
 });
