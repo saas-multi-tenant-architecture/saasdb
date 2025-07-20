@@ -49,18 +49,18 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   SELECT
-    u.id,
-    u.email,
+    m.id,
+    m.email,
     m.first_name,
     m.last_name,
     m.avatar_url,
     m.timezone,
     m.locale
-  FROM auth.users u
-  JOIN core.users_meta m ON u.id = m.id
-  WHERE u.id = auth.uid();
+  FROM core.users_meta m
+  WHERE m.id = auth.uid();
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER;
+
 
 -- Update profile fields for the current user
 CREATE OR REPLACE FUNCTION public.update_user_profile(p_data JSON)

@@ -23,6 +23,12 @@ CREATE SCHEMA IF NOT EXISTS platform;
 -- ========================================
 -- ACCESS CONTROL
 -- ========================================
+-- Grant access to utils, core, and app schemas to authenticated users
+GRANT USAGE ON SCHEMA utils TO authenticated;
+GRANT USAGE ON SCHEMA core TO authenticated;
+GRANT USAGE ON SCHEMA app TO authenticated;
+
+
 -- Lock down platform schema to prevent tenant access
 REVOKE ALL ON SCHEMA platform FROM authenticated, anon, public;
 REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon, public;
