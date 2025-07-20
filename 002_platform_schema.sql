@@ -87,10 +87,10 @@ CREATE TABLE platform.platform_settings (
 -- platform_subscription_overrides: plan & feature overrides per org
 CREATE TABLE platform.platform_subscription_overrides (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES platform.platform_organizations(id) ON DELETE CASCADE,
-  plan_override TEXT,
-  features JSONB,
-  reason TEXT,
+  organization_id UUID REFERENCES platform.platform_organizations(id) ON DELETE CASCADE NOT NULL,
+  plan_override TEXT NOT NULL,
+  features JSONB NOT NULL,
+  reason TEXT NOT NULL,
   created_by uuid,
   updated_by uuid,
   is_deleted boolean DEFAULT false,
