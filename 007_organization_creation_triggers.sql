@@ -6,7 +6,11 @@
 -- FUNCTION
 -- ========================================
 CREATE OR REPLACE FUNCTION core.handle_new_organization()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = core
+AS $$
 BEGIN
   -- Insert org metadata (same UUID)
   INSERT INTO core.organization_meta (id)
@@ -18,7 +22,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- ========================================
 -- TRIGGER

@@ -21,7 +21,7 @@ BEGIN
     RAISE EXCEPTION 'Access denied: platform admin role required';
   END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- ========================================
 -- RLS Lockdown: Enable RLS and deny all for platform tables

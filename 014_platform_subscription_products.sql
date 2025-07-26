@@ -79,7 +79,7 @@ BEGIN
   FROM platform.subscription_products
   WHERE is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- ========================================
 -- FUNCTION: platform.add_subscription_product()
@@ -157,7 +157,7 @@ BEGIN
     v_row.created_at,
     v_row.updated_at;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 
 -- ========================================
@@ -190,4 +190,4 @@ BEGIN
   FROM platform.subscription_products
   WHERE is_active = true AND is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

@@ -75,7 +75,7 @@ BEGIN
     jsonb_build_object('stripe_customer_id', p_stripe_customer_id, 'email', p_billing_email)
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- ========================================
 -- FUNCTION: platform.record_subscription_update
@@ -118,7 +118,7 @@ BEGIN
     )
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- ========================================
 -- NOTES:
