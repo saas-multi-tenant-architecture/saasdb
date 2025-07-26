@@ -205,7 +205,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- utils.update_timestamp
 -- =====================
 CREATE OR REPLACE FUNCTION utils.update_timestamp()
-
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = utils
+AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
 
 -- =====================
 -- platform.log_platform_action
@@ -587,6 +595,17 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- core.handle_new_user
 -- =====================
 CREATE OR REPLACE FUNCTION core.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = core
+AS $$
+BEGIN
+  INSERT INTO core.users_meta (id, email)
+  VALUES (NEW.id, NEW.email);
+  RETURN NEW;
+END;
+$$;
 
 
 -- =====================
@@ -692,6 +711,23 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- core.handle_new_organization
 -- =====================
 CREATE OR REPLACE FUNCTION core.handle_new_organization()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = core
+AS $$
+BEGIN
+  -- Insert org metadata (same UUID)
+  INSERT INTO core.organization_meta (id)
+  VALUES (NEW.id);
+
+  -- Insert into platform registry
+  INSERT INTO platform.platform_organizations (id, label, created_at, updated_at)
+  VALUES (NEW.id, NEW.name, now(), now());
+
+  RETURN NEW;
+END;
+$$;
 
 
 -- =====================
@@ -705,7 +741,7 @@ RETURNS BOOLEAN AS $$
       AND organization_id = p_org_id
       AND is_deleted = false
   );
-$$ LANGUAGE sql STABLE
+$$ LANGUAGE sql STABLE SET search_path = core;
 
 
 -- =====================
@@ -719,7 +755,7 @@ RETURNS BOOLEAN AS $$
       AND unit_id = p_unit_id
       AND is_deleted = false
   );
-$$ LANGUAGE sql STABLE
+$$ LANGUAGE sql STABLE set search_path = core;
 
 
 -- =====================
@@ -734,7 +770,7 @@ RETURNS TEXT AS $$
     AND m.organization_id = p_org_id
     AND m.is_deleted = false
   LIMIT 1;
-$$ LANGUAGE sql STABLE
+$$ LANGUAGE sql STABLE set search_path = core;
 
 
 -- =====================
@@ -743,7 +779,7 @@ $$ LANGUAGE sql STABLE
 CREATE OR REPLACE FUNCTION core.has_org_role(p_org_id UUID, p_role TEXT)
 RETURNS BOOLEAN AS $$
   SELECT core.get_org_role(p_org_id) = p_role;
-$$ LANGUAGE sql STABLE
+$$ LANGUAGE sql STABLE set search_path = core;
 
 
 -- =====================
@@ -760,7 +796,7 @@ RETURNS BOOLEAN AS $$
       AND um.is_deleted = false
       AND r.name = p_role
   );
-$$ LANGUAGE sql STABLE
+$$ LANGUAGE sql STABLE set search_path = core;
 
 
 -- =====================
@@ -777,7 +813,7 @@ RETURNS BOOLEAN AS $$
       AND m1.is_deleted = false
       AND m2.is_deleted = false
   );
-$$ LANGUAGE sql STABLE
+$$ LANGUAGE sql STABLE set search_path = core;
 
 
 -- =====================
