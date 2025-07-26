@@ -12,7 +12,8 @@ RETURNS BOOLEAN AS $$
       AND organization_id = p_org_id
       AND is_deleted = false
   );
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = core
 
 CREATE OR REPLACE FUNCTION core.is_unit_member(p_unit_id UUID)
 RETURNS BOOLEAN AS $$
@@ -22,7 +23,8 @@ RETURNS BOOLEAN AS $$
       AND unit_id = p_unit_id
       AND is_deleted = false
   );
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = core
 
 CREATE OR REPLACE FUNCTION core.get_org_role(p_org_id UUID)
 RETURNS TEXT AS $$
@@ -33,12 +35,14 @@ RETURNS TEXT AS $$
     AND m.organization_id = p_org_id
     AND m.is_deleted = false
   LIMIT 1;
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = core
 
 CREATE OR REPLACE FUNCTION core.has_org_role(p_org_id UUID, p_role TEXT)
 RETURNS BOOLEAN AS $$
   SELECT core.get_org_role(p_org_id) = p_role;
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = core
 
 CREATE OR REPLACE FUNCTION core.has_unit_role(p_unit_id UUID, p_role TEXT)
 RETURNS BOOLEAN AS $$
@@ -51,7 +55,8 @@ RETURNS BOOLEAN AS $$
       AND um.is_deleted = false
       AND r.name = p_role
   );
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = core
 
 CREATE OR REPLACE FUNCTION core.shares_organization(p_user_id UUID)
 RETURNS BOOLEAN AS $$
@@ -64,7 +69,8 @@ RETURNS BOOLEAN AS $$
       AND m1.is_deleted = false
       AND m2.is_deleted = false
   );
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = core
 
 -- ========================================
 -- RLS ENABLEMENT

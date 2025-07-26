@@ -6,13 +6,17 @@
 -- FUNCTION
 -- ========================================
 CREATE OR REPLACE FUNCTION core.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = core
+AS $$
 BEGIN
   INSERT INTO core.users_meta (id, email)
   VALUES (NEW.id, NEW.email);
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- ========================================
 -- TRIGGER

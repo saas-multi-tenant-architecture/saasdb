@@ -29,7 +29,7 @@ BEGIN
     p_metadata
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- ========================================
 -- PLATFORM FUNCTIONS
@@ -62,7 +62,7 @@ BEGIN
   PERFORM platform.log_platform_action('create', 'platform.platform_users', p_user_id,
     'create_platform_user', jsonb_build_object('role', p_role));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Change the assigned role for a platform user
 CREATE OR REPLACE FUNCTION platform.update_platform_user_role(
@@ -87,7 +87,7 @@ BEGIN
   PERFORM platform.log_platform_action('update', 'platform.platform_users', p_user_id,
     'update_platform_user_role', jsonb_build_object('role', p_role));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Soft-delete a platform user
 CREATE OR REPLACE FUNCTION platform.delete_platform_user(
@@ -102,7 +102,7 @@ BEGIN
   PERFORM platform.log_platform_action('delete', 'platform.platform_users', p_user_id,
     'delete_platform_user', NULL);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Register a new organization in the platform control layer
 CREATE OR REPLACE FUNCTION platform.create_platform_organization(
@@ -124,7 +124,7 @@ BEGIN
   PERFORM platform.log_platform_action('create', 'platform.platform_organizations', p_organization_id,
     'create_platform_organization', NULL);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Store or update a subscription override for an organization
 CREATE OR REPLACE FUNCTION platform.set_platform_override(
@@ -154,7 +154,7 @@ BEGIN
   PERFORM platform.log_platform_action('override', 'platform.platform_subscription_overrides', v_id,
     'set_platform_override', jsonb_build_object('key', p_key));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Remove a subscription override
 CREATE OR REPLACE FUNCTION platform.delete_platform_override(
@@ -179,7 +179,7 @@ BEGIN
   PERFORM platform.log_platform_action('override', 'platform.platform_subscription_overrides', v_id,
     'delete_platform_override', jsonb_build_object('key', p_key));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Register a global or per-organization feature flag
 CREATE OR REPLACE FUNCTION platform.create_platform_feature_flag(
@@ -199,7 +199,7 @@ BEGIN
   PERFORM platform.log_platform_action('create', 'platform.platform_feature_flags', v_id,
     'create_platform_feature_flag', jsonb_build_object('organization_id', p_organization_id));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Record a system-level or admin-triggered event
 CREATE OR REPLACE FUNCTION platform.log_platform_event(
@@ -219,7 +219,7 @@ BEGIN
   PERFORM platform.log_platform_action('log', 'platform.platform_system_events', v_id,
     'log_platform_event', jsonb_build_object('event_type', p_event_type));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Returns the current user\'s platform role
 CREATE OR REPLACE FUNCTION platform.get_platform_user_role()
@@ -236,7 +236,7 @@ BEGIN
 
   RETURN v_role;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Creates a new tenant secret for an organization or user
 CREATE OR REPLACE FUNCTION platform.create_tenant_secret(
@@ -295,7 +295,7 @@ BEGIN
 
   RETURN v_secret_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Deletes a tenant secret for an organization or user
 CREATE OR REPLACE FUNCTION platform.delete_tenant_secret(
@@ -315,7 +315,7 @@ BEGIN
   PERFORM platform.log_platform_action('delete', 'platform.tenant_secrets', p_secret_id,
     'delete_tenant_secret', NULL);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- Fetch recent platform actions for monitoring or audit
 CREATE OR REPLACE FUNCTION platform.get_platform_action_log(
@@ -343,5 +343,5 @@ BEGIN
   ORDER BY created_at DESC
   LIMIT p_limit;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 

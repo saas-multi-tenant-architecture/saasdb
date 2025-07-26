@@ -29,7 +29,7 @@ BEGIN
     metadata
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core;
 
 -- ========================================
 -- PUBLIC FUNCTIONS
@@ -59,7 +59,7 @@ BEGIN
   FROM core.users_meta m
   WHERE m.id = auth.uid();
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 
 -- Update profile fields for the current user
@@ -96,7 +96,7 @@ BEGIN
     v_row.timezone,
     v_row.locale;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- List organizations the current user belongs to
 CREATE OR REPLACE FUNCTION public.list_my_organizations()
@@ -116,7 +116,7 @@ BEGIN
     AND m.is_deleted = false
     AND o.is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Get a single organization by id
 CREATE OR REPLACE FUNCTION public.get_organization(p_id UUID)
@@ -139,7 +139,7 @@ BEGIN
   WHERE id = p_id
     AND is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- List members of an organization
 CREATE OR REPLACE FUNCTION public.list_organization_members(p_id UUID)
@@ -164,7 +164,7 @@ BEGIN
   WHERE m.organization_id = p_id
     AND m.is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Get the role of the current user within an organization
 CREATE OR REPLACE FUNCTION public.get_user_role(p_org_id UUID)
@@ -172,7 +172,7 @@ RETURNS TEXT AS $$
 BEGIN
   RETURN core.get_org_role(p_org_id);
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Create a new organization and assign creator as admin
 CREATE OR REPLACE FUNCTION public.create_organization(p_name TEXT)
@@ -197,7 +197,7 @@ BEGIN
 
   RETURN QUERY SELECT id, name, created_at FROM core.organizations WHERE id = v_org_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Invite another user to an organization
 CREATE OR REPLACE FUNCTION public.invite_user_to_organization(p_email TEXT, p_role_id UUID)
@@ -220,7 +220,7 @@ BEGIN
 
   PERFORM core.log_audit('insert', 'core.memberships', v_user_id, 'invite_user_to_organization', jsonb_build_object('organization_id', v_org_id));
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Remove a user from an organization (soft delete)
 CREATE OR REPLACE FUNCTION public.remove_user_from_organization(p_user_id UUID, p_org_id UUID)
@@ -236,7 +236,7 @@ BEGIN
 
   PERFORM core.log_audit('delete', 'core.memberships', p_user_id, 'remove_user_from_organization', jsonb_build_object('organization_id', p_org_id));
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- List units for the current user
 CREATE OR REPLACE FUNCTION public.list_my_units()
@@ -256,7 +256,7 @@ BEGIN
     AND um.is_deleted = false
     AND u.is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Get unit metadata
 CREATE OR REPLACE FUNCTION public.get_unit(p_id UUID)
@@ -275,7 +275,7 @@ BEGIN
   WHERE id = p_id
     AND is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Create a new unit within an organization
 CREATE OR REPLACE FUNCTION public.create_unit(
@@ -302,7 +302,7 @@ BEGIN
 
   RETURN QUERY SELECT id, organization_id, name, created_by, updated_by FROM core.units WHERE id = v_unit_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Assign a user to a unit
 CREATE OR REPLACE FUNCTION public.assign_user_to_unit(p_user_id UUID, p_unit_id UUID, p_role_id UUID)
@@ -313,7 +313,7 @@ BEGIN
 
   PERFORM core.log_audit('insert', 'core.unit_memberships', p_user_id, 'assign_user_to_unit', jsonb_build_object('unit_id', p_unit_id));
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Remove a user from a unit (soft delete)
 CREATE OR REPLACE FUNCTION public.remove_user_from_unit(p_user_id UUID, p_unit_id UUID)
@@ -329,7 +329,7 @@ BEGIN
 
   PERFORM core.log_audit('delete', 'core.unit_memberships', p_user_id, 'remove_user_from_unit', jsonb_build_object('unit_id', p_unit_id));
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
 -- FUNCTION: public.create_file
@@ -374,7 +374,7 @@ BEGIN
   FROM core.organization_files
   WHERE id = v_file_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
 -- FUNCTION: public.update_file_metadata
@@ -410,7 +410,7 @@ BEGIN
   RETURN QUERY
   SELECT id, file_url, file_type, updated_at FROM core.organization_files WHERE id = p_file_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
 -- FUNCTION: public.get_file
@@ -430,7 +430,7 @@ BEGIN
   FROM core.organization_files
   WHERE id = p_file_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
 -- FUNCTION: public.list_files  
@@ -450,7 +450,7 @@ BEGIN
   FROM core.organization_files
   WHERE organization_id = p_org_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
 -- FUNCTION: public.delete_file
@@ -472,7 +472,7 @@ BEGIN
     )
   );
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 
 -- Get audit log entries for an organization
@@ -495,5 +495,5 @@ BEGIN
   ORDER BY created_at DESC
   LIMIT p_limit;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 

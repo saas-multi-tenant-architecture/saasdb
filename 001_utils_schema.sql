@@ -13,12 +13,15 @@ CREATE SCHEMA IF NOT EXISTS utils;
 
 -- update_timestamp(): updates updated_at column on any table
 CREATE OR REPLACE FUNCTION utils.update_timestamp()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = utils
+AS $$
 BEGIN
   NEW.updated_at := now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ========================================
 -- NOTES
