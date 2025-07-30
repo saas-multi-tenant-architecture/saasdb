@@ -91,12 +91,12 @@ ALTER TABLE core.organization_files ENABLE ROW LEVEL SECURITY;
 -- users_meta: viewable by same org members, editable by owner
 CREATE POLICY users_meta_select ON core.users_meta
   FOR SELECT USING (
-    auth.uid() = id OR core.shares_organization(id)
+    (SELECT auth.uid()) = id OR core.shares_organization(id)
   );
 
 CREATE POLICY users_meta_update ON core.users_meta
-  FOR UPDATE USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
+  FOR UPDATE USING ((SELECT auth.uid()) = id)
+  WITH CHECK ((SELECT auth.uid()) = id);
 
 -- organization_meta: viewable by org members, editable by org admins
 CREATE POLICY organization_meta_select ON core.organization_meta
@@ -115,7 +115,7 @@ CREATE POLICY organizations_update ON core.organizations
   WITH CHECK (core.has_org_role(id, 'admin'));
 
 CREATE POLICY organizations_insert ON core.organizations
-  FOR INSERT WITH CHECK (auth.uid() = created_by);
+  FOR INSERT WITH CHECK ((SELECT auth.uid()) = created_by);
 
 -- units: org members read, admins insert/update
 CREATE POLICY units_select ON core.units
@@ -139,7 +139,7 @@ CREATE POLICY unit_meta_update ON core.unit_meta
 -- memberships: users see their own rows, admins manage
 CREATE POLICY memberships_select ON core.memberships
   FOR SELECT USING (
-    user_id = auth.uid() OR core.has_org_role(organization_id, 'admin')
+    (SELECT auth.uid()) = user_id OR core.has_org_role(organization_id, 'admin')
   );
 
 CREATE POLICY memberships_insert ON core.memberships
@@ -152,7 +152,7 @@ CREATE POLICY memberships_update ON core.memberships
 -- unit_memberships: similar logic scoped to unit
 CREATE POLICY unit_memberships_select ON core.unit_memberships
   FOR SELECT USING (
-    user_id = auth.uid() OR core.has_unit_role(unit_id, 'admin')
+   (SELECT auth.uid()) = user_id OR core.has_unit_role(unit_id, 'admin')
   );
 
 CREATE POLICY unit_memberships_insert ON core.unit_memberships
