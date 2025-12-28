@@ -33,7 +33,7 @@ Create a reusable, secure, and modular SaaS backend using Supabase as the backen
 
 - Role-based access at both organization and unit level
 
-- Roles defined in a lookup table (no Postgres enums)
+- Roles based on [CASL](https://casl.js.org/v6/en/guide/intro) access control system
 
 ### Schemas
 
@@ -53,7 +53,7 @@ The following schemas complement those provided by Supabase. These are designed 
 
 - Centralized helper functions (e.g., `is_org_member`) enforce membership and role checks
 
-- `roles.priority` enables scalable role comparison logic
+- `roles.name` enables scalable role comparison logic using CASL-style permissions
 
 ### Platform Schema Security
 
@@ -481,7 +481,9 @@ This enforces accountability and traceability across platform operations.
 
 - Zod v4 and Typescript for type-safe integration with any front/backend
 
-- pgTap for Testing
+- [CASL](https://casl.js.org) - role-based abilities for rapid role-based access control
+
+- pgTap for Database Testing
 
 ---
 

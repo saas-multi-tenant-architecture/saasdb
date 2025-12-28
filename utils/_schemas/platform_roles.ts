@@ -5,6 +5,6 @@ export const platform_rolesSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   description: z.string().optional(),
-  priority: z.number().int(),
+  casl_rules: z.any(), // JSONB column to store role CASL rules
   ...shared_auditSchema,
 });
