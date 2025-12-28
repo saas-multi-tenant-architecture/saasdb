@@ -1,9 +1,8 @@
--- 005_users_meta_trigger.sql
+-- new_user.sql
 -- Purpose: Automatically create a users_meta row after new user signup via Supabase auth
--- This file assumes core.users_meta is already defined (see 003_users_meta.sql)
 
 -- ========================================
--- FUNCTION
+-- FUNCTION: core.handle_new_user()
 -- ========================================
 CREATE OR REPLACE FUNCTION core.handle_new_user()
 RETURNS TRIGGER

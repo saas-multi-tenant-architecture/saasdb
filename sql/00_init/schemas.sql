@@ -1,4 +1,4 @@
--- 000_preface_schemas.sql
+-- schemas.sql
 -- Purpose: Create all foundational schemas for the project
 -- Run this file first before any schema-specific DDL
 
@@ -41,4 +41,3 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA core GRANT SELECT ON TABLES TO authenticated;
 -- Lock down platform schema to prevent tenant access
 REVOKE ALL ON SCHEMA platform FROM authenticated, anon, public;
 REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon, public;
-

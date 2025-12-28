@@ -1,76 +1,5 @@
--- 009_rls_policies.sql
--- Purpose: Define helper functions and RLS policies for tenant isolation
-
--- ========================================
--- HELPER FUNCTIONS
--- ========================================
-CREATE OR REPLACE FUNCTION core.is_org_member(p_org_id UUID)
-RETURNS BOOLEAN AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM core.memberships
-    WHERE user_id = auth.uid()
-      AND organization_id = p_org_id
-      AND is_deleted = false
-  );
-$$ LANGUAGE sql STABLE
-SET search_path = core
-
-CREATE OR REPLACE FUNCTION core.is_unit_member(p_unit_id UUID)
-RETURNS BOOLEAN AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM core.unit_memberships
-    WHERE user_id = auth.uid()
-      AND unit_id = p_unit_id
-      AND is_deleted = false
-  );
-$$ LANGUAGE sql STABLE
-SET search_path = core
-
-CREATE OR REPLACE FUNCTION core.get_org_role(p_org_id UUID)
-RETURNS TEXT AS $$
-  SELECT r.name
-  FROM core.memberships m
-  JOIN core.roles r ON r.id = m.role_id
-  WHERE m.user_id = auth.uid()
-    AND m.organization_id = p_org_id
-    AND m.is_deleted = false
-  LIMIT 1;
-$$ LANGUAGE sql STABLE
-SET search_path = core
-
-CREATE OR REPLACE FUNCTION core.has_org_role(p_org_id UUID, p_role TEXT)
-RETURNS BOOLEAN AS $$
-  SELECT core.get_org_role(p_org_id) = p_role;
-$$ LANGUAGE sql STABLE
-SET search_path = core
-
-CREATE OR REPLACE FUNCTION core.has_unit_role(p_unit_id UUID, p_role TEXT)
-RETURNS BOOLEAN AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM core.unit_memberships um
-    JOIN core.roles r ON r.id = um.role_id
-    WHERE um.user_id = auth.uid()
-      AND um.unit_id = p_unit_id
-      AND um.is_deleted = false
-      AND r.name = p_role
-  );
-$$ LANGUAGE sql STABLE
-SET search_path = core
-
-CREATE OR REPLACE FUNCTION core.shares_organization(p_user_id UUID)
-RETURNS BOOLEAN AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM core.memberships m1
-    JOIN core.memberships m2 ON m1.organization_id = m2.organization_id
-    WHERE m1.user_id = auth.uid()
-      AND m2.user_id = p_user_id
-      AND m1.is_deleted = false
-      AND m2.is_deleted = false
-  );
-$$ LANGUAGE sql STABLE
-SET search_path = core
+-- policies.sql
+-- Purpose: Enable RLS and define policies for core tables
 
 -- ========================================
 -- RLS ENABLEMENT
@@ -86,9 +15,9 @@ ALTER TABLE core.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.organization_files ENABLE ROW LEVEL SECURITY;
 
 -- ========================================
--- RLS POLICIES
+-- POLICIES: users_meta
 -- ========================================
--- users_meta: viewable by same org members, editable by owner
+-- Viewable by same org members, editable by owner
 CREATE POLICY users_meta_select ON core.users_meta
   FOR SELECT USING (
     (SELECT auth.uid()) = id OR core.shares_organization(id)
@@ -98,7 +27,10 @@ CREATE POLICY users_meta_update ON core.users_meta
   FOR UPDATE USING ((SELECT auth.uid()) = id)
   WITH CHECK ((SELECT auth.uid()) = id);
 
--- organizations_meta: viewable by org members, editable by org admins
+-- ========================================
+-- POLICIES: organizations_meta
+-- ========================================
+-- Viewable by org members, editable by org admins
 CREATE POLICY organizations_meta_select ON core.organizations_meta
   FOR SELECT USING (core.is_org_member(id));
 
@@ -106,7 +38,10 @@ CREATE POLICY organizations_meta_update ON core.organizations_meta
   FOR UPDATE USING (core.has_org_role(id, 'admin'))
   WITH CHECK (core.has_org_role(id, 'admin'));
 
--- organizations: members can read, admins can update
+-- ========================================
+-- POLICIES: organizations
+-- ========================================
+-- Members can read, admins can update
 CREATE POLICY organizations_select ON core.organizations
   FOR SELECT USING (core.is_org_member(id));
 
@@ -117,7 +52,10 @@ CREATE POLICY organizations_update ON core.organizations
 CREATE POLICY organizations_insert ON core.organizations
   FOR INSERT WITH CHECK ((SELECT auth.uid()) = created_by);
 
--- units: org members read, admins insert/update
+-- ========================================
+-- POLICIES: units
+-- ========================================
+-- Org members read, admins insert/update
 CREATE POLICY units_select ON core.units
   FOR SELECT USING (core.is_org_member(organization_id));
 
@@ -128,7 +66,10 @@ CREATE POLICY units_update ON core.units
   FOR UPDATE USING (core.has_org_role(organization_id, 'admin'))
   WITH CHECK (core.has_org_role(organization_id, 'admin'));
 
--- unit_meta: unit members read, unit admins update
+-- ========================================
+-- POLICIES: unit_meta
+-- ========================================
+-- Unit members read, unit admins update
 CREATE POLICY unit_meta_select ON core.unit_meta
   FOR SELECT USING (core.is_unit_member(id));
 
@@ -136,7 +77,10 @@ CREATE POLICY unit_meta_update ON core.unit_meta
   FOR UPDATE USING (core.has_unit_role(id, 'admin'))
   WITH CHECK (core.has_unit_role(id, 'admin'));
 
--- memberships: users see their own rows, admins manage
+-- ========================================
+-- POLICIES: memberships
+-- ========================================
+-- Users see their own rows, admins manage
 CREATE POLICY memberships_select ON core.memberships
   FOR SELECT USING (
     (SELECT auth.uid()) = user_id OR core.has_org_role(organization_id, 'admin')
@@ -149,7 +93,10 @@ CREATE POLICY memberships_update ON core.memberships
   FOR UPDATE USING (core.has_org_role(organization_id, 'admin'))
   WITH CHECK (core.has_org_role(organization_id, 'admin'));
 
--- unit_memberships: similar logic scoped to unit
+-- ========================================
+-- POLICIES: unit_memberships
+-- ========================================
+-- Similar logic scoped to unit
 CREATE POLICY unit_memberships_select ON core.unit_memberships
   FOR SELECT USING (
    (SELECT auth.uid()) = user_id OR core.has_unit_role(unit_id, 'admin')
@@ -162,11 +109,17 @@ CREATE POLICY unit_memberships_update ON core.unit_memberships
   FOR UPDATE USING (core.has_unit_role(unit_id, 'admin'))
   WITH CHECK (core.has_unit_role(unit_id, 'admin'));
 
--- audit_logs: org admins only
+-- ========================================
+-- POLICIES: audit_logs
+-- ========================================
+-- Org admins only
 CREATE POLICY audit_logs_select ON core.audit_logs
   FOR SELECT USING (core.has_org_role(organization_id, 'admin'));
 
--- organization_files: org admins only
+-- ========================================
+-- POLICIES: organization_files
+-- ========================================
+-- Org members can read, admins can insert/update
 CREATE POLICY organization_files_select ON core.organization_files
   FOR SELECT USING (core.is_org_member(organization_id));
 

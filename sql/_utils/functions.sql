@@ -1,17 +1,11 @@
--- 001_utils_schema.sql
--- Purpose: Shared utility schema for reusable functions and triggers
+-- functions.sql
+-- Purpose: Shared utility functions for reusable triggers
 -- This file should be run before any others that depend on shared triggers/functions
 
 -- ========================================
--- SCHEMA CREATION
+-- FUNCTION: utils.update_timestamp()
 -- ========================================
-CREATE SCHEMA IF NOT EXISTS utils;
-
--- ========================================
--- FUNCTIONS
--- ========================================
-
--- update_timestamp(): updates updated_at column on any table
+-- Updates updated_at column on any table
 CREATE OR REPLACE FUNCTION utils.update_timestamp()
 RETURNS TRIGGER
 LANGUAGE plpgsql

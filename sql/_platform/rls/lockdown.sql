@@ -1,4 +1,4 @@
--- 011_platform_rls_lockdown.sql
+-- lockdown.sql
 -- Purpose: Lock down all platform tables using RLS with USING (false), and create a secure access guard function
 
 -- ========================================
@@ -24,7 +24,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- ========================================
--- RLS Lockdown: Enable RLS and deny all for platform tables
+-- RLS LOCKDOWN: Enable RLS and deny all for platform tables
 -- ========================================
 ALTER TABLE platform.platform_users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY deny_all_platform_users ON platform.platform_users

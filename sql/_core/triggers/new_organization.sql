@@ -1,9 +1,8 @@
--- 007_organization_creation_triggers.sql
+-- new_organization.sql
 -- Purpose: Automate creation of metadata and platform registry rows when a new organization is added
--- Requires 005_organizations_meta.sql and 002_platform_schema.sql to be applied first
 
 -- ========================================
--- FUNCTION
+-- FUNCTION: core.handle_new_organization()
 -- ========================================
 CREATE OR REPLACE FUNCTION core.handle_new_organization()
 RETURNS TRIGGER

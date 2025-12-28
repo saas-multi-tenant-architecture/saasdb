@@ -1,9 +1,8 @@
--- 006_organizations_meta.sql
+-- organizations_meta.sql
 -- Purpose: Metadata table for tenant organizations (1:1 with core.organizations)
--- Assumes utils schema is present for timestamp updates
 
 -- ========================================
--- TABLE CREATION
+-- TABLE: core.organizations_meta
 -- ========================================
 CREATE TABLE core.organizations_meta (
   id UUID PRIMARY KEY REFERENCES core.organizations(id) ON DELETE CASCADE,

@@ -1,5 +1,5 @@
--- 008_platform_tenant_secrets.sql
--- Purpose: Define secure storage reference table for tenant secrets using Supabase Vault
+-- tenant_secrets.sql
+-- Purpose: Secure storage reference table for tenant secrets using Supabase Vault
 
 -- ========================================
 -- TABLE: platform.tenant_secrets
@@ -31,10 +31,12 @@ CREATE TABLE platform.tenant_secrets (
   )
 );
 
+-- ========================================
+-- TRIGGERS
+-- ========================================
 CREATE TRIGGER trg_tenant_secrets_updated
 BEFORE UPDATE ON platform.tenant_secrets
 FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
-
 
 -- ========================================
 -- NOTES

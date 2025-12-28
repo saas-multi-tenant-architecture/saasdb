@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "description": "SQL script execution order for SMTA (SaaS Multi-Tenant Architecture). Scripts are executed in the order listed to respect dependencies.",
+  "notes": {
+    "app_schema": "The _app/ folder is a placeholder for developers using SMTA to add their application-specific tables. No scripts from this project will be placed there.",
+    "master_script": "Use this file to generate a combined master SQL script for deployment."
+  },
+  "scripts": [
+    "sql/00_init/schemas.sql",
+
+    "sql/_utils/functions.sql",
+
+    "sql/_platform/tables/roles.sql",
+    "sql/_platform/tables/users.sql",
+    "sql/_platform/tables/organizations.sql",
+    "sql/_platform/tables/action_logs.sql",
+    "sql/_platform/tables/settings.sql",
+    "sql/_platform/tables/subscription_overrides.sql",
+    "sql/_platform/tables/feature_flags.sql",
+    "sql/_platform/tables/system_events.sql",
+
+    "sql/_core/tables/organizations.sql",
+    "sql/_core/tables/units.sql",
+    "sql/_core/tables/roles.sql",
+    "sql/_core/tables/memberships.sql",
+    "sql/_core/tables/users_meta.sql",
+    "sql/_core/tables/organization_files.sql",
+    "sql/_core/tables/organizations_meta.sql",
+    "sql/_core/tables/audit_logs.sql",
+
+    "sql/_core/triggers/new_user.sql",
+    "sql/_core/triggers/new_organization.sql",
+
+    "sql/_platform/tables/tenant_secrets.sql",
+    "sql/_platform/tables/billing_customers.sql",
+    "sql/_platform/tables/billing_subscriptions.sql",
+    "sql/_platform/tables/subscription_products.sql",
+
+    "sql/_core/rls/helpers.sql",
+    "sql/_core/rls/policies.sql",
+    "sql/_platform/rls/lockdown.sql",
+
+    "sql/_core/functions/log_audit.sql",
+
+    "sql/_public/functions/user_profile.sql",
+    "sql/_public/functions/organizations.sql",
+    "sql/_public/functions/units.sql",
+    "sql/_public/functions/files.sql",
+    "sql/_public/functions/audit.sql",
+
+    "sql/_platform/functions/log_action.sql",
+    "sql/_platform/functions/users.sql",
+    "sql/_platform/functions/organizations.sql",
+    "sql/_platform/functions/overrides.sql",
+    "sql/_platform/functions/feature_flags.sql",
+    "sql/_platform/functions/events.sql",
+    "sql/_platform/functions/secrets.sql",
+    "sql/_platform/functions/audit.sql",
+    "sql/_platform/functions/billing.sql",
+    "sql/_platform/functions/products.sql",
+
+    "sql/_public/functions/products.sql"
+  ]
+}

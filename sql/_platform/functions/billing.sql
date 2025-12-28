@@ -1,59 +1,8 @@
--- 013_platform_billing.sql
--- Purpose: Define billing integration tables for Payment Processor and functions for mapping and tracking billing status
+-- billing.sql
+-- Purpose: Platform functions for billing integration
 
 -- ========================================
--- TABLE: platform.billing_customers
--- ========================================
-CREATE TABLE platform.billing_customers (
-  organization_id UUID PRIMARY KEY REFERENCES core.organizations(id) ON DELETE CASCADE,
-  paymentprocessor_customer_id TEXT NOT NULL UNIQUE,
-  billing_email TEXT,
-  created_by uuid,
-  updated_by uuid,
-  is_deleted boolean DEFAULT false,
-  deleted_at TIMESTAMPTZ,
-  deleted_by uuid,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ========================================
--- TABLE: platform.billing_subscriptions
--- ========================================
-CREATE TABLE platform.billing_subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
-  paymentprocessor_subscription_id TEXT NOT NULL UNIQUE,
-  plan TEXT NOT NULL,
-  status TEXT NOT NULL,
-  current_period_end TIMESTAMPTZ,
-  cancel_at_period_end BOOLEAN DEFAULT FALSE,
-  created_by uuid,
-  updated_by uuid,
-  is_deleted boolean DEFAULT false,
-  deleted_at TIMESTAMPTZ,
-  deleted_by uuid,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
--- Note: The core.organizations table is used to link to billing to keep all tenant data
--- isolated from platform data. This is why it is not connected to the platform_organizations table.
--- The paymentprocessor customer/subscription is conceptually tied to the tenant, not the platform’s record of that tenant
-
-
--- ========================================
--- RLS Lockdown for Billing Tables
--- ========================================
-ALTER TABLE platform.billing_customers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_billing_customers ON platform.billing_customers
-  FOR ALL TO public USING (false);
-
-ALTER TABLE platform.billing_subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_billing_subscriptions ON platform.billing_subscriptions
-  FOR ALL TO public USING (false);
-
--- ========================================
--- FUNCTION: platform.link_paymentprocessor_customer
+-- FUNCTION: platform.link_paymentprocessor_customer()
 -- ========================================
 CREATE OR REPLACE FUNCTION platform.link_paymentprocessor_customer(
   p_org_id UUID,
@@ -78,7 +27,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
 -- ========================================
--- FUNCTION: platform.record_subscription_update
+-- FUNCTION: platform.record_subscription_update()
 -- ========================================
 CREATE OR REPLACE FUNCTION platform.record_subscription_update(
   p_org_id UUID,
@@ -126,11 +75,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- All platform functions should be run by Supabase Edge Functions
 -- using the service role only. These tables are not exposed to clients.
 -- Need the following Edge Functions:
-   -- create-checkout-session: Called when user clicks “Subscribe”
+   -- create-checkout-session: Called when user clicks "Subscribe"
    -- handle-paymentprocessor-webhook: Called by Payment Processor on payment/subscription events
    -- billing-portal: Generates a link to the Payment Processor customer portal
 -- Payment Processor Webhook Events are handled by a Supabase Edge Function and db function(s):
    -- Webhook will need to validate Payment Processor signature
    -- A list of webhook events will be created at a later date
-
-

@@ -1,38 +1,5 @@
--- 014_platform_subscription_products.sql
--- Purpose: Define table for subscription plans/products offered by the platform
-
--- ========================================
--- TABLE: platform.subscription_products
--- ========================================
-CREATE TABLE platform.subscription_products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  -- Payment Processor Price ID for this plan (maps to Payment Processor dashboard)
-  paymentprocessor_price_id TEXT NOT NULL UNIQUE,
-  -- Display information
-  name TEXT NOT NULL,
-  description TEXT,
-  billing_interval TEXT NOT NULL, -- e.g., 'monthly', 'yearly'
-  amount INTEGER NOT NULL, -- amount in cents
-  is_active BOOLEAN DEFAULT true,
-  -- Optional metadata for internal use or future extension
-  metadata JSONB,
-  -- Standard audit fields
-  created_by uuid,
-  updated_by uuid,
-  is_deleted boolean DEFAULT false,
-  deleted_at TIMESTAMPTZ,
-  deleted_by uuid,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ========================================
--- RLS Lockdown
--- ========================================
-ALTER TABLE platform.subscription_products ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY deny_all_subscription_products ON platform.subscription_products
-  FOR ALL TO public USING (false);
+-- products.sql
+-- Purpose: Platform functions for subscription product management
 
 -- ========================================
 -- FUNCTION: platform.list_all_subscription_products()
@@ -58,7 +25,7 @@ RETURNS TABLE (
 BEGIN
 
   PERFORM platform.ensure_platform_admin();
-  
+
   RETURN QUERY
   SELECT
     id,
@@ -158,36 +125,3 @@ BEGIN
     v_row.updated_at;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
-
-
--- ========================================
--- FUNCTION: public.list_subscription_products()
--- ========================================
-CREATE OR REPLACE FUNCTION public.list_subscription_products()
-RETURNS TABLE (
-  id UUID,
-  name TEXT,
-  description TEXT,
-  billing_interval TEXT,
-  amount INTEGER,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ,
-  created_by UUID,
-  updated_by UUID
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    id,
-    name,
-    description,
-    billing_interval,
-    amount,
-    created_at,
-    updated_at,
-    created_by,
-    updated_by
-  FROM platform.subscription_products
-  WHERE is_active = true AND is_deleted = false;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

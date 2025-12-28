@@ -1,0 +1,87 @@
+-- secrets.sql
+-- Purpose: Platform functions for tenant secret management
+
+-- ========================================
+-- FUNCTION: platform.create_tenant_secret()
+-- ========================================
+-- Creates a new tenant secret for an organization or user
+CREATE OR REPLACE FUNCTION platform.create_tenant_secret(
+  p_scope TEXT,
+  p_id UUID,
+  p_name TEXT,
+  p_secret TEXT,
+  p_user_id UUID
+) RETURNS UUID AS $$
+DECLARE
+  v_key_id UUID;
+  v_secret_id UUID;
+BEGIN
+  PERFORM platform.ensure_platform_admin();
+
+  IF p_scope = 'organization' THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM core.memberships m
+      JOIN core.roles r ON r.id = m.role_id
+      WHERE m.user_id = p_user_id
+        AND m.organization_id = p_id
+        AND r.name = 'admin'
+        AND m.is_deleted = false
+    ) THEN
+      RAISE EXCEPTION 'You are not authorized to manage secrets for this organization.';
+    END IF;
+  ELSIF p_scope = 'user' THEN
+    IF p_user_id <> p_id THEN
+      RAISE EXCEPTION 'You are not authorized to manage secrets for this user.';
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Invalid scope';
+  END IF;
+
+  SELECT vault.create_secret(p_name, p_secret) INTO v_key_id;
+
+  INSERT INTO platform.tenant_secrets (
+    scope,
+    organization_id,
+    user_id,
+    secret_name,
+    vault_key_id,
+    created_by
+  ) VALUES (
+    p_scope,
+    CASE WHEN p_scope = 'organization' THEN p_id ELSE NULL END,
+    CASE WHEN p_scope = 'user' THEN p_id ELSE NULL END,
+    p_name,
+    v_key_id,
+    p_user_id
+  ) RETURNING id INTO v_secret_id;
+
+  PERFORM platform.log_platform_action('create', 'platform.tenant_secrets', v_secret_id,
+    'create_tenant_secret', jsonb_build_object('scope', p_scope));
+
+  RETURN v_secret_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+
+-- ========================================
+-- FUNCTION: platform.delete_tenant_secret()
+-- ========================================
+-- Deletes a tenant secret for an organization or user
+CREATE OR REPLACE FUNCTION platform.delete_tenant_secret(
+  p_secret_id UUID,
+  p_user_id UUID
+) RETURNS VOID AS $$
+BEGIN
+  PERFORM platform.ensure_platform_admin();
+
+  UPDATE platform.tenant_secrets
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = p_user_id
+  WHERE id = p_secret_id
+    AND is_deleted = false;
+
+  PERFORM platform.log_platform_action('delete', 'platform.tenant_secrets', p_secret_id,
+    'delete_tenant_secret', NULL);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
