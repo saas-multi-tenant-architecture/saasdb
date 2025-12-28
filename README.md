@@ -41,11 +41,13 @@ The following schemas complement those provided by Supabase. These are designed 
 
 - `core`: identity, access, helper functions, audit logs
 
-- `app`: all tenant-specific application logic (e.g., documents, tasks)
+- `utils`: Utility functions shared across all tenants and schemas
 
 - `platform`: SaaS-wide management, logs, and overrides (service role only)
 
 - `public`: only for exposing SQL functions callable by clients (RPC)
+
+- `app`: all tenant-specific application logic (customized for each SaaS application)
 
 ### Access Control
 
