@@ -1,6 +1,6 @@
 -- 007_organization_creation_triggers.sql
 -- Purpose: Automate creation of metadata and platform registry rows when a new organization is added
--- Requires 005_organization_meta.sql and 002_platform_schema.sql to be applied first
+-- Requires 005_organizations_meta.sql and 002_platform_schema.sql to be applied first
 
 -- ========================================
 -- FUNCTION
@@ -13,7 +13,7 @@ SET search_path = core
 AS $$
 BEGIN
   -- Insert org metadata (same UUID)
-  INSERT INTO core.organization_meta (id)
+  INSERT INTO core.organizations_meta (id)
   VALUES (NEW.id);
 
   -- Insert into platform registry

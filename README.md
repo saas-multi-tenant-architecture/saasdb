@@ -1,4 +1,13 @@
-# SaaS Backend Architecture Plan (Supabase + PostgreSQL)
+# SaaS Multi-Tenant Architecture - SMTA 
+### Based on Supabase + PostgreSQL 
+
+## General Overview
+
+Building a multi-tenant database can be a daunting task, particularly for a newly developing product. In many fledgling projects it is typically relagated to 'phase 2' in the interest of expedinecy, but this creates a substantial amount of technical debt. When an application gains success, establishing multi-tenancy involves limitations or awkward workarounds that are annoying to the customer end-user. The limitations of the initial database design are often just too costly to re-write. In some cases, multi-tenancy is achieved using a 'per-database multi-tenancy model', that is more costly to maintain and can lack cross-tenant integration (such as user log-ins across multiple tenants or macro-analytics). Still worse, sometimes a multi-tenant database is designed on top of the original database, lacking isolation, security, or performance, and sometimes all three.
+
+This *SaaS Multi-Tenant Architecture*, aka **SMTA**, is designed to address these challenges by providing a ready-made solution that can be used to quickly bootstrap your SaaS. The architecture is designed to be modular, scalable, and extensible to customize it to your needs. **SMTA**, combined with Supabase, removes all of the comlexity of multi-tenancy so that you can focus on building your MVP. 
+
+To accomplish this **SMTA** relies heavily on Supabase and PostgreSQL. Supabase provides excellent integration with its authentication layer and the database, including via Row Level Security (RLS) and user-specific functions (like ```auth.uid()```). This integration makes security and tenant isolation much easier to implement. This is also true of other database-adjacent features that Supabase brings, such as the Vault and an s3 compatible storage, both of which are an inherent part of almost every SaaS.
 
 ## 🎯 Goal
 
@@ -92,7 +101,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 ### Billing
 
-- Stripe integration using Edge Functions
+- Common structure for integration with a billing provider such as Stripe or Lemon Squeezy
 
 - `billing_customers`, `billing_subscriptions`, and `billing_plans` tables
 
@@ -116,7 +125,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - SQL functions in `public` execute in the context of the calling user (not SECURITY DEFINER)
 
-- Edge Functions used only when needed (Stripe hooks, admin)
+- Edge Functions used only when needed (e.g. for Stripe hooks, admin)
 
 - Application-specific logic resides in the `app` schema to make the SaaS database more extensible and portable
 
@@ -130,11 +139,11 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - `organizations`
 
-- `organization_meta`
+- `organizations_meta`
 
 - `units`
 
-- `unit_meta`
+- `units_meta`
 
 - `memberships`
 
@@ -156,7 +165,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - `platform_organizations` (platform control layer)
 
-- `platform_subscription_overrides`
+- `platform_subscription_overrides` (non-standard plan/feature exceptions)
 
 - `platform_action_logs` (tracks all admin-level activity)
 
@@ -172,21 +181,21 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - SQL functions only (e.g., `create_project`, `get_user_profile`)
 
-- All functions execute under the privileges of the calling user (not SECURITY DEFINER)
+- All functions execute under the privileges of the calling user (not SECURITY DEFINER) to ensure RLS validates context
 
-- Functions explicitly validate context. RLS is implemented at the table level for added security
+- Functions (RPCs) also explicitly validate context to create a 'belt and suspenders' approach to tenant isolation and security.
 
 ---
 
-## 🔧 Planned Automation
+## ⚙️ Planned Automation
 
 - On creation of:
 
   - a user → auto-create `users_meta`
 
-  - an organization → auto-create `organization_meta` and `platform_organizations`
+  - an organization → auto-create `organizations_meta` and `platform_organizations`
 
-  - a unit → auto-create `unit_meta`
+  - a unit → auto-create `units_meta`
 
 - Shared `updated_at` trigger function for all tables
 
@@ -463,6 +472,14 @@ This enforces accountability and traceability across platform operations.
 - Use consistent names across tables (e.g. always use `unit_id` when referencing `units`)
 
 - Fully qualify fields in joins for readability and traceability
+
+---
+
+## 🔧 Technology
+
+- PostgreSQL and plpgsql for database and functions
+
+- Zod v4 and Typescript for type-safe integration with any front/backend
 
 ---
 

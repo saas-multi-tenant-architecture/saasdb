@@ -21,19 +21,19 @@ SELECT auth.set_uid(:tenant_user_id);
 DO $$
 BEGIN
   PERFORM test.assert_raises(
-    $$UPDATE core.organization_meta SET address='Hack St' WHERE id='10000000-0000-0000-0000-000000000001'$$,
-    'user cannot update organization_meta'
+    $$UPDATE core.s SET address='Hack St' WHERE id='10000000-0000-0000-0000-000000000001'$$,
+    'user cannot update organizations_meta'
   );
 END;$$;
 
 -- Test: admin can update organization metadata
 SELECT auth.set_uid(:tenant_admin_id);
-UPDATE core.organization_meta SET address='456 Main St' WHERE id='10000000-0000-0000-0000-000000000001';
+UPDATE core.organizations_meta SET address='456 Main St' WHERE id='10000000-0000-0000-0000-000000000001';
 DO $$
 DECLARE v_addr TEXT;
 BEGIN
-  SELECT address INTO v_addr FROM core.organization_meta WHERE id='10000000-0000-0000-0000-000000000001';
-  PERFORM test.assert_true(v_addr = '456 Main St', 'admin updated organization_meta');
+  SELECT address INTO v_addr FROM core.organizations_meta WHERE id='10000000-0000-0000-0000-000000000001';
+  PERFORM test.assert_true(v_addr = '456 Main St', 'admin updated organizations_meta');
 END;$$;
 
 -- Test: list_my_organizations works for normal user

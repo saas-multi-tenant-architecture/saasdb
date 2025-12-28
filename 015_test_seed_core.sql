@@ -15,14 +15,14 @@
 INSERT INTO core.organizations (id, name, created_by)
 VALUES ('10000000-0000-0000-0000-000000000001', 'Acme Corp', :'tenant_admin_id');
 
-INSERT INTO core.organization_meta (id, address, logo_url)
+INSERT INTO core.organizations_meta (id, address, logo_url)
 VALUES ('10000000-0000-0000-0000-000000000001', '123 Main St', NULL);
 
 -- Second organization
 INSERT INTO core.organizations (id, name, created_by)
 VALUES ('10000000-0000-0000-0000-000000000002', 'Beta LLC', :'other_admin_id');
 
-INSERT INTO core.organization_meta (id, address, logo_url)
+INSERT INTO core.organizations_meta (id, address, logo_url)
 VALUES ('10000000-0000-0000-0000-000000000002', '456 Beta Rd', NULL);
 
 -- ========================================

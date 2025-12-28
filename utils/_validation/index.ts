@@ -15,7 +15,7 @@ export * from './unit_memberships';
 export * from './organization_files';
 export * from './audit_logs';
 export * from './users_meta';
-export * from './organization_meta';
+export * from './organizations_meta';
 export * from './tenant_secrets';
 export * from './billing_customers';
 export * from './billing_subscriptions';

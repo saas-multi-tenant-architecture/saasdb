@@ -718,7 +718,7 @@ SET search_path = core
 AS $$
 BEGIN
   -- Insert org metadata (same UUID)
-  INSERT INTO core.organization_meta (id)
+  INSERT INTO core.organizations_meta (id)
   VALUES (NEW.id);
 
   -- Insert into platform registry

@@ -76,7 +76,7 @@ SET search_path = core
 -- RLS ENABLEMENT
 -- ========================================
 ALTER TABLE core.users_meta ENABLE ROW LEVEL SECURITY;
-ALTER TABLE core.organization_meta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE core.organizations_meta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.units ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.unit_meta ENABLE ROW LEVEL SECURITY;
@@ -98,11 +98,11 @@ CREATE POLICY users_meta_update ON core.users_meta
   FOR UPDATE USING ((SELECT auth.uid()) = id)
   WITH CHECK ((SELECT auth.uid()) = id);
 
--- organization_meta: viewable by org members, editable by org admins
-CREATE POLICY organization_meta_select ON core.organization_meta
+-- organizations_meta: viewable by org members, editable by org admins
+CREATE POLICY organizations_meta_select ON core.organizations_meta
   FOR SELECT USING (core.is_org_member(id));
 
-CREATE POLICY organization_meta_update ON core.organization_meta
+CREATE POLICY organizations_meta_update ON core.organizations_meta
   FOR UPDATE USING (core.has_org_role(id, 'admin'))
   WITH CHECK (core.has_org_role(id, 'admin'));
 

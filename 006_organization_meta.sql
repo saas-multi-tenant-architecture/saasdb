@@ -1,11 +1,11 @@
--- 006_organization_meta.sql
+-- 006_organizations_meta.sql
 -- Purpose: Metadata table for tenant organizations (1:1 with core.organizations)
 -- Assumes utils schema is present for timestamp updates
 
 -- ========================================
 -- TABLE CREATION
 -- ========================================
-CREATE TABLE core.organization_meta (
+CREATE TABLE core.organizations_meta (
   id UUID PRIMARY KEY REFERENCES core.organizations(id) ON DELETE CASCADE,
   logo_file_id UUID REFERENCES core.organization_files(id) ON DELETE SET NULL,
   address TEXT,
@@ -23,8 +23,8 @@ CREATE TABLE core.organization_meta (
 -- ========================================
 -- TRIGGERS
 -- ========================================
-CREATE TRIGGER trg_organization_meta_updated
-BEFORE UPDATE ON core.organization_meta
+CREATE TRIGGER trg_organizations_meta_updated
+BEFORE UPDATE ON core.organizations_meta
 FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 
 -- ========================================
