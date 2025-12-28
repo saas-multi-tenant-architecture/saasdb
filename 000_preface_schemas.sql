@@ -29,6 +29,15 @@ GRANT USAGE ON SCHEMA core TO authenticated;
 GRANT USAGE ON SCHEMA app TO authenticated;
 
 
+-- ========================================
+-- DEFAULT TABLE PRIVILEGES
+-- ========================================
+-- Automatically grant SELECT on all future tables created in these schemas
+ALTER DEFAULT PRIVILEGES IN SCHEMA app GRANT SELECT ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA utils GRANT SELECT ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA core GRANT SELECT ON TABLES TO authenticated;
+
+
 -- Lock down platform schema to prevent tenant access
 REVOKE ALL ON SCHEMA platform FROM authenticated, anon, public;
 REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon, public;
