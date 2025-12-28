@@ -8,7 +8,7 @@ Create a reusable, secure, and modular SaaS backend using Supabase as the backen
 
 - Fine-grained role-based access at both the organization and sub-entity ("unit") level
 
-- PostgreSQL RLS (Row-Level Security) for tenant isolation
+- PostgreSQL RLS (Row-Level Security) for tenant isolation and redundant tenant isolation
 
 - Soft deletion, auditing, and Stripe-based billing
 
@@ -20,13 +20,15 @@ Create a reusable, secure, and modular SaaS backend using Supabase as the backen
 
 - Single Postgres database (shared schema)
 
-- Users can belong to multiple organizations
+- Users can belong to multiple organizations with different roles
 
 - Role-based access at both organization and unit level
 
 - Roles defined in a lookup table (no Postgres enums)
 
 ### Schemas
+
+The following schemas complement those provided by Supabase. These are designed to segment functionality and enforce security boundaries:
 
 - `core`: identity, access, helper functions, audit logs
 
@@ -60,7 +62,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - No SQL functions or tables from `platform` are exposed in the `public` schema
 
-- All platform functionality is accessed exclusively via Edge Functions using the Supabase **service role**
+- Platform functionality is accessed via Edge Functions using the Supabase **service role**
 
 - (Optional) RLS policies can be applied to `platform.*` tables with `USING (false)` for defense in depth
 
@@ -106,19 +108,17 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - RLS support ensures tenant/user isolation for secret access
 
-- Future support planned for KMS integration (e.g., AWS KMS)
-
 ### API & Client Access
 
 - Tables only exist in `core`, `app`, `platform` schemas
 
-- Supabase client accesses only `public` RPC functions
+- Supabase client accesses only `public` via Remote Procedure Calls (RPC) functions
 
 - SQL functions in `public` execute in the context of the calling user (not SECURITY DEFINER)
 
 - Edge Functions used only when needed (Stripe hooks, admin)
 
-- Application-specific logic may reside in a single `app` schema
+- Application-specific logic resides in the `app` schema to make the SaaS database more extensible and portable
 
 ---
 
@@ -174,7 +174,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - All functions execute under the privileges of the calling user (not SECURITY DEFINER)
 
-- Functions explicitly validate context and rely on RLS for security
+- Functions explicitly validate context. RLS is implemented at the table level for added security
 
 ---
 
@@ -275,12 +275,13 @@ Functions should:
 - All public functions are `SECURITY INVOKER`
 - RLS on underlying tables must be enforced
 - No direct access to core or platform tables by clients
+- No direct access to any table unless via a 'public'-schema function
 
 ---
 
 ### 🧾 Audit Logging in RPC
 
-To support traceability, public functions that mutate data (create, update, delete) should log activity using:
+To support traceability, public functions that mutate data (create, update, delete) should log activity using the following:
 
 ```sql
 core.log_audit(
@@ -294,10 +295,12 @@ core.log_audit(
 
 ## 📡 Public RPC Functions
 
-This section defines the client-facing SQL functions exposed via the `public` schema. All functions:
+This section defines the client-facing SQL functions exposed via the `public` schema.
+
+The functions should have the following in common:
 
 - Are `SECURITY INVOKER`
-- Use `auth.uid()` internally to ensure identity context
+- Use `auth.uid()` internally to ensure identity context; This ties the user to their role and organization.
 - Respect RLS policies on underlying tables
 - Perform input validation and enforce business rules (where applicable)
 
@@ -395,10 +398,10 @@ All write operations should log an entry in `platform.platform_action_logs` for 
 ### 🔒 Security Model
 
 - Where scope is referenced it is either `organization` or `user`, and id refers to `organization_id` or `user_id`
-- Functions must validate if the user is a platform admin.
+- Functions must validate the user's role, along with the organization and unit membership.
 - A platform or tenant user can never access an unencrypted secret directly
   - The secret will be retrieved by the system as part of other functionality
-- For tenant_secrets, validate if the user is part of the organization, or if the user is the actual user.
+- For tenant_secrets, validate if the user is part of the organization.
 
   - This may require that the user_id (tenant) is retrieved by the frontend and included in the function parameters.
   - Example:
@@ -431,7 +434,7 @@ All write operations should log an entry in `platform.platform_action_logs` for 
 
 - All functions use `SECURITY DEFINER`
 - Access is only granted through explicit role validation inside each function
-- RLS on all platform tables prevents any raw table access, even for authenticated users
+- RLS on all tables prevents any raw table access, even for authenticated users
 
 #### 🔐 Final Access Flow for Platform Functions: Belt & Suspenders
 
@@ -449,6 +452,7 @@ Every time a function is invoked, add a row to `platform.platform_action_logs` w
 - `action = 'select' | 'create' | 'update' | 'delete' | 'log' | 'override'`
 - `target_table` and `target_id` where applicable
 - `summary` and `metadata` to describe the action
+- `created_at` timestamp with timezone
 
 This enforces accountability and traceability across platform operations.
 
