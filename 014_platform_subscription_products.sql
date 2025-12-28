@@ -6,8 +6,8 @@
 -- ========================================
 CREATE TABLE platform.subscription_products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  -- Stripe Price ID for this plan (maps to Stripe dashboard)
-  stripe_price_id TEXT NOT NULL UNIQUE,
+  -- Payment Processor Price ID for this plan (maps to Payment Processor dashboard)
+  paymentprocessor_price_id TEXT NOT NULL UNIQUE,
   -- Display information
   name TEXT NOT NULL,
   description TEXT,
@@ -40,7 +40,7 @@ CREATE POLICY deny_all_subscription_products ON platform.subscription_products
 CREATE OR REPLACE FUNCTION platform.list_all_subscription_products()
 RETURNS TABLE (
   id UUID,
-  stripe_price_id TEXT,
+  paymentprocessor_price_id TEXT,
   name TEXT,
   description TEXT,
   billing_interval TEXT,
@@ -62,7 +62,7 @@ BEGIN
   RETURN QUERY
   SELECT
     id,
-    stripe_price_id,
+    paymentprocessor_price_id,
     name,
     description,
     billing_interval,
@@ -85,7 +85,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- FUNCTION: platform.add_subscription_product()
 -- ========================================
 CREATE OR REPLACE FUNCTION platform.add_subscription_product(
-  p_stripe_price_id TEXT,
+  p_paymentprocessor_price_id TEXT,
   p_name TEXT,
   p_description TEXT,
   p_billing_interval TEXT,
@@ -95,7 +95,7 @@ CREATE OR REPLACE FUNCTION platform.add_subscription_product(
 )
 RETURNS TABLE (
   id UUID,
-  stripe_price_id TEXT,
+  paymentprocessor_price_id TEXT,
   name TEXT,
   description TEXT,
   billing_interval TEXT,
@@ -116,7 +116,7 @@ BEGIN
   PERFORM platform.ensure_platform_admin();
 
   INSERT INTO platform.subscription_products (
-    stripe_price_id,
+    paymentprocessor_price_id,
     name,
     description,
     billing_interval,
@@ -126,7 +126,7 @@ BEGIN
     created_by,
     updated_by
   ) VALUES (
-    p_stripe_price_id,
+    p_paymentprocessor_price_id,
     p_name,
     p_description,
     p_billing_interval,
@@ -142,7 +142,7 @@ BEGIN
 
   RETURN QUERY SELECT
     v_row.id,
-    v_row.stripe_price_id,
+    v_row.paymentprocessor_price_id,
     v_row.name,
     v_row.description,
     v_row.billing_interval,

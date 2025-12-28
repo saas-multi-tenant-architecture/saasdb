@@ -3,7 +3,7 @@ import { shared_auditSchema } from './_shared_audit';
 
 export const billing_customersSchema = z.object({
   organization_id: z.uuid(),
-  stripe_customer_id: z.string(),
+  paymentprocessor_customer_id: z.string(),
   billing_email: z.string().optional(),
   ...shared_auditSchema,
 });
