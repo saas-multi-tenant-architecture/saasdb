@@ -2,6 +2,22 @@
 -- Purpose: RLS helper functions for membership and role checks
 
 -- ========================================
+-- FUNCTION: core.is_super_admin()
+-- ========================================
+-- Check if current user is super_admin for an organization
+CREATE OR REPLACE FUNCTION core.is_super_admin(p_org_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM core.memberships
+    WHERE user_id = auth.uid()
+      AND organization_id = p_org_id
+      AND is_super_admin = true
+      AND is_deleted = false
+  );
+$$ LANGUAGE sql STABLE
+SET search_path = core;
+
+-- ========================================
 -- FUNCTION: core.is_org_member()
 -- ========================================
 CREATE OR REPLACE FUNCTION core.is_org_member(p_org_id UUID)
@@ -84,5 +100,35 @@ RETURNS BOOLEAN AS $$
       AND m1.is_deleted = false
       AND m2.is_deleted = false
   );
+$$ LANGUAGE sql STABLE
+SET search_path = core;
+
+-- ========================================
+-- FUNCTION: core.get_org_id_for_unit()
+-- ========================================
+-- Get the organization_id for a given unit
+CREATE OR REPLACE FUNCTION core.get_org_id_for_unit(p_unit_id UUID)
+RETURNS UUID AS $$
+  SELECT organization_id FROM core.units WHERE id = p_unit_id AND is_deleted = false;
+$$ LANGUAGE sql STABLE
+SET search_path = core;
+
+-- ========================================
+-- FUNCTION: core.is_org_super_admin_for_unit()
+-- ========================================
+-- Check if current user is super_admin of the organization that owns this unit
+CREATE OR REPLACE FUNCTION core.is_org_super_admin_for_unit(p_unit_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT core.is_super_admin(core.get_org_id_for_unit(p_unit_id));
+$$ LANGUAGE sql STABLE
+SET search_path = core;
+
+-- ========================================
+-- FUNCTION: core.is_org_member_for_unit()
+-- ========================================
+-- Check if current user is a member of the organization that owns this unit
+CREATE OR REPLACE FUNCTION core.is_org_member_for_unit(p_unit_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT core.is_org_member(core.get_org_id_for_unit(p_unit_id));
 $$ LANGUAGE sql STABLE
 SET search_path = core

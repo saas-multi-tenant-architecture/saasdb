@@ -32,6 +32,13 @@ CREATE TABLE platform.tenant_secrets (
 );
 
 -- ========================================
+-- INDEXES
+-- ========================================
+CREATE INDEX idx_tenant_secrets_organization_id ON platform.tenant_secrets (organization_id) WHERE scope = 'organization';
+CREATE INDEX idx_tenant_secrets_user_id ON platform.tenant_secrets (user_id) WHERE scope = 'user';
+CREATE INDEX idx_tenant_secrets_scope ON platform.tenant_secrets (scope);
+
+-- ========================================
 -- TRIGGERS
 -- ========================================
 CREATE TRIGGER trg_tenant_secrets_updated

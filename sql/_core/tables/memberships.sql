@@ -9,6 +9,7 @@ CREATE TABLE core.memberships (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
   role_id UUID NOT NULL REFERENCES core.roles(id),
+  is_super_admin BOOLEAN NOT NULL DEFAULT false,
   created_by uuid,
   updated_by uuid,
   is_deleted boolean DEFAULT false,
@@ -18,6 +19,18 @@ CREATE TABLE core.memberships (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, organization_id)
 );
+
+-- Ensure only one super_admin per organization
+CREATE UNIQUE INDEX idx_one_super_admin_per_org
+  ON core.memberships (organization_id)
+  WHERE is_super_admin = true AND is_deleted = false;
+
+-- ========================================
+-- INDEXES
+-- ========================================
+CREATE INDEX idx_memberships_user_id ON core.memberships (user_id);
+CREATE INDEX idx_memberships_organization_id ON core.memberships (organization_id);
+CREATE INDEX idx_memberships_role_id ON core.memberships (role_id);
 
 -- ========================================
 -- TRIGGERS
@@ -43,6 +56,13 @@ CREATE TABLE core.unit_memberships (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, unit_id)
 );
+
+-- ========================================
+-- INDEXES
+-- ========================================
+CREATE INDEX idx_unit_memberships_user_id ON core.unit_memberships (user_id);
+CREATE INDEX idx_unit_memberships_unit_id ON core.unit_memberships (unit_id);
+CREATE INDEX idx_unit_memberships_role_id ON core.unit_memberships (role_id);
 
 -- ========================================
 -- TRIGGERS

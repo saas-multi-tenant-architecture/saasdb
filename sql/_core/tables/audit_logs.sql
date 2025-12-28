@@ -19,6 +19,9 @@ CREATE TABLE core.audit_logs (
 -- ========================================
 -- INDEXES
 -- ========================================
+CREATE INDEX idx_audit_logs_actor_id ON core.audit_logs (actor_id);
+CREATE INDEX idx_audit_logs_organization_id ON core.audit_logs (organization_id);
+CREATE INDEX idx_audit_logs_target_table ON core.audit_logs (target_table);
 CREATE INDEX idx_audit_logs_metadata ON core.audit_logs USING GIN (metadata);
 
 -- ========================================

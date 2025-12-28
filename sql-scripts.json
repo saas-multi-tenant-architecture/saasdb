@@ -30,6 +30,7 @@
 
     "sql/_core/triggers/new_user.sql",
     "sql/_core/triggers/new_organization.sql",
+    "sql/_core/triggers/protect_super_admin.sql",
 
     "sql/_platform/tables/tenant_secrets.sql",
     "sql/_platform/tables/billing_customers.sql",
@@ -56,6 +57,7 @@
     "sql/_platform/functions/events.sql",
     "sql/_platform/functions/secrets.sql",
     "sql/_platform/functions/audit.sql",
+    "sql/_platform/functions/settings.sql",
     "sql/_platform/functions/billing.sql",
     "sql/_platform/functions/products.sql",
 

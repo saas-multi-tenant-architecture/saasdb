@@ -25,7 +25,7 @@ BEGIN
       JOIN core.roles r ON r.id = m.role_id
       WHERE m.user_id = p_user_id
         AND m.organization_id = p_id
-        AND r.name = 'admin'
+        AND r.name = 'super_admin'
         AND m.is_deleted = false
     ) THEN
       RAISE EXCEPTION 'You are not authorized to manage secrets for this organization.';

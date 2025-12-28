@@ -1,5 +1,6 @@
 -- units.sql
 -- Purpose: Public RPC functions for unit management
+-- Note: RLS validates org/unit membership; CASL handles fine-grained permissions
 
 -- ========================================
 -- FUNCTION: public.list_my_units()
@@ -39,10 +40,10 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT id, organization_id, name, description, created_at, updated_at
-  FROM core.units
-  WHERE id = p_id
-    AND is_deleted = false;
+  SELECT u.id, u.organization_id, u.name, u.description, u.created_at, u.updated_at
+  FROM core.units u
+  WHERE u.id = p_id
+    AND u.is_deleted = false;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
@@ -50,6 +51,7 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.create_unit()
 -- ========================================
 -- Create a new unit within an organization
+-- RLS validates org membership; CASL controls who can create
 CREATE OR REPLACE FUNCTION public.create_unit(
   p_org_id UUID,
   p_name TEXT,
@@ -68,11 +70,11 @@ DECLARE
 BEGIN
   INSERT INTO core.units (organization_id, name, description, created_by, updated_by)
   VALUES (p_org_id, p_name, p_description, auth.uid(), auth.uid())
-  RETURNING id INTO v_unit_id;
+  RETURNING core.units.id INTO v_unit_id;
 
   PERFORM core.log_audit('insert', 'core.units', v_unit_id, 'create_unit', jsonb_build_object('organization_id', p_org_id, 'name', p_name));
 
-  RETURN QUERY SELECT id, organization_id, name, created_by, updated_by FROM core.units WHERE id = v_unit_id;
+  RETURN QUERY SELECT u.id, u.organization_id, u.name, u.description, u.created_by, u.updated_by FROM core.units u WHERE u.id = v_unit_id;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
@@ -80,6 +82,7 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.assign_user_to_unit()
 -- ========================================
 -- Assign a user to a unit
+-- RLS validates org membership; CASL controls who can assign
 CREATE OR REPLACE FUNCTION public.assign_user_to_unit(p_user_id UUID, p_unit_id UUID, p_role_id UUID)
 RETURNS VOID AS $$
 BEGIN
@@ -94,6 +97,7 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.remove_user_from_unit()
 -- ========================================
 -- Remove a user from a unit (soft delete)
+-- RLS validates org membership; CASL controls who can remove
 CREATE OR REPLACE FUNCTION public.remove_user_from_unit(p_user_id UUID, p_unit_id UUID)
 RETURNS VOID AS $$
 BEGIN

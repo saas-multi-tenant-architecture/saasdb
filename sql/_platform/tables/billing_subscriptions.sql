@@ -22,6 +22,12 @@ CREATE TABLE platform.billing_subscriptions (
 );
 
 -- ========================================
+-- INDEXES
+-- ========================================
+CREATE INDEX idx_billing_subscriptions_organization_id ON platform.billing_subscriptions (organization_id);
+CREATE INDEX idx_billing_subscriptions_status ON platform.billing_subscriptions (status);
+
+-- ========================================
 -- RLS LOCKDOWN
 -- ========================================
 ALTER TABLE platform.billing_subscriptions ENABLE ROW LEVEL SECURITY;

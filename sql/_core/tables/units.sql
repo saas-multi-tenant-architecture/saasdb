@@ -19,6 +19,11 @@ CREATE TABLE core.units (
 );
 
 -- ========================================
+-- INDEXES
+-- ========================================
+CREATE INDEX idx_units_organization_id ON core.units (organization_id);
+
+-- ========================================
 -- TRIGGERS
 -- ========================================
 CREATE TRIGGER trg_units_updated

@@ -3,11 +3,12 @@
 
 ## General Overview
 
-Building a multi-tenant database can be a daunting task, particularly for a newly developing product. In many fledgling projects it is typically relagated to 'phase 2' in the interest of expedinecy, but this creates a substantial amount of technical debt. When an application gains success, establishing multi-tenancy involves limitations or awkward workarounds that are annoying to the customer end-user because the limitations of the initial database are just too costly to re-write. In some cases, multi-tenancy is achieved using a 'one-database-per-tenant  model', that is more costly to maintain and can lack cross-tenant integration (such as user log-ins across multiple tenants or macro-analytics). Still worse, sometimes a multi-tenant database is designed on top of the original database, reducing isolation, security, or performance, and sometimes all three.
+Building a multi-tenant database can be a daunting task, particularly for a newly developing product. In many fledgling projects it is typically relegated to 'phase 2' in the interest of expediency, but this creates a substantial amount of technical debt. When an application gains success, establishing multi-tenancy involves limitations or awkward workarounds that are annoying to the customer end-user because the limitations of the initial database are just too costly to re-write. In some cases, multi-tenancy is achieved using a 'one-database-per-tenant model', that can be more costly to maintain or lack cross-tenant integration (such as user log-ins across multiple tenants or macro-analytics) when done unintentionally. Sometimes a multi-tenant database is designed on top of the original database, reducing isolation, security, or performance, and sometimes all three.
 
-This *SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to address these challenges by providing a ready-made solution that can be used to quickly bootstrap your SaaS. The architecture is designed to be modular, scalable, and extensible to customize it to your needs. **SMTA**, combined with Supabase, removes all of the comlexity of multi-tenancy so that you can focus on building your MVP. 
+This *SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to address these challenges by providing a ready-made solution that can be used to quickly bootstrap your SaaS. The architecture is designed to be modular, scalable, and extensible to customize it to your needs. **SMTA**, combined with Supabase, helps to reduce the complexity of multi-tenancy so that you can focus on building your MVP. 
 
-To accomplish this goal, **SMTA** relies heavily on Supabase and PostgreSQL. Supabase provides excellent integration with its authentication layer and the database, including via Row Level Security (RLS) and user-specific functions (like ```auth.uid()```). This integration makes security and tenant isolation much easier to implement. This is also true of other database-adjacent features that Supabase brings, such as the Vault and an s3 compatible storage, both of which are an inherent part of almost every SaaS. The result is that many of the complicated tasks associated with a multi-tenant SaaS are abstracted behind clearly defined SQL functions, that are all subject to a standardized testing routing during development. At the same time, authentication (Supabase) and authorization (CASL-based roles) are divided into separate layers, allowing for a clear separation of concerns.
+To accomplish this goal, **SMTA** relies heavily on Supabase and PostgreSQL core features. Supabase provides excellent integration with its authentication layer and the database, including via Row Level Security (RLS) and user-specific functions (like ```auth.uid()```). This integration makes security and tenant isolation easier to implement. This is also true of other database-adjacent features that Supabase brings, such as the Vault and an s3-compatible storage, both of which are an inherent part of almost every SaaS. The result is that many of the complicated tasks associated with a multi-tenant SaaS are abstracted behind clearly defined SQL functions, that are subject to a published testing routine during development. At the same time, authentication (Supabase) and authorization (CASL-based roles) are divided into separate layers, allowing for a clear separation of concerns. Keeping the user authentication process outside of the access and authorization control keeps the system more flexible and portable to a different authentication provider.
+
 
 ## 🎯 Goal
 
@@ -17,7 +18,7 @@ Create a reusable, secure, and modular SaaS backend using Supabase as the backen
 
 - Fine-grained role-based access at both the organization and sub-entity ("unit") level
 
-- PostgreSQL RLS (Row-Level Security) for tenant isolation and redundant tenant isolation
+- PostgreSQL RLS (Row-Level Security) for tenant isolation
 
 - Soft deletion, auditing, and payment processor billing integration
 
@@ -53,9 +54,9 @@ The following schemas complement those provided by Supabase. These are designed 
 
 - PostgreSQL RLS enforced on all tenant-aware tables
 
-- Centralized helper functions (e.g., `is_org_member`) enforce membership and role checks
+- Centralized helper functions (e.g., `is_org_member`) enforce membership in organizations and units
 
-- `roles.name` enables scalable role comparison logic using CASL-style permissions
+- `roles.name` enables scalable role comparison logic using CASL-style permissions for fine-grained access control
 
 ### Platform Schema Security
 
@@ -424,7 +425,7 @@ All write operations should log an entry in `platform.platform_action_logs` for 
         FROM core.memberships
         WHERE user_id = userid
           AND organization_id = _organization_id
-          AND role_id = (SELECT id FROM core.roles WHERE name = 'admin')
+          AND role_id = (SELECT id FROM core.roles WHERE name = 'super_admin')
       ) THEN
         RAISE EXCEPTION 'You are not authorized to manage secrets for this organization.';
       END IF;
@@ -479,7 +480,7 @@ This enforces accountability and traceability across platform operations.
 
 ## 🔧 Technology
 
-- PostgreSQL and plpgsql for database and functions
+- PostgreSQL and plpgsql for database, functions, and Row Level Security
 
 - Zod v4 and Typescript for type-safe integration with any front/backend
 

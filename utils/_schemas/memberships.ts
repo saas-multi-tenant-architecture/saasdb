@@ -6,5 +6,6 @@ export const membershipsSchema = z.object({
   user_id: z.uuid(),
   organization_id: z.uuid(),
   role_id: z.uuid(),
+  is_super_admin: z.boolean().default(false),
   ...shared_auditSchema,
 });
