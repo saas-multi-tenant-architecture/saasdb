@@ -92,6 +92,8 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - All soft deletes are logged in audit log
 
+- Tenant Secrets are soft-deleted in the meta table, but hard deleted from the Supabase Vault to avoid the potential for future leaks.
+
 ### Audit Logging
 
 - Central `core.audit_logs` table records:
@@ -118,9 +120,11 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - Secrets are scoped per organization or per user using a `scope` column (`'organization'` or `'user'`)
 
-- Secret values are stored in Supabase Vault, and only the `vault_key_id` is saved in the database
+- Secret values are stored in Supabase Vault, and only the `vault_key_id` is saved in the SMTA database
 
 - RLS support ensures tenant/user isolation for secret access
+
+- Values stored in the Supabase Vault are hard deleted (when requested), but the `tenant_secrets` row is soft-deleted for audit purposes. 
 
 ### API & Client Access
 
