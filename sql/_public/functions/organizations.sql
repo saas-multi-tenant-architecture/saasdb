@@ -60,7 +60,8 @@ RETURNS TABLE (
   email TEXT,
   first_name TEXT,
   last_name TEXT,
-  role TEXT
+  role TEXT,
+  is_super_admin BOOLEAN
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -68,7 +69,8 @@ BEGIN
          u.email,
          um.first_name,
          um.last_name,
-         r.name AS role
+         r.name AS role,
+         m.is_super_admin
   FROM core.memberships m
   JOIN auth.users u ON u.id = m.user_id
   JOIN core.users_meta um ON um.id = m.user_id

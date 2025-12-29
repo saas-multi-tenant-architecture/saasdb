@@ -48,6 +48,34 @@ END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
+-- FUNCTION: public.list_unit_members()
+-- ========================================
+-- List members of a unit
+CREATE OR REPLACE FUNCTION public.list_unit_members(p_unit_id UUID)
+RETURNS TABLE (
+  user_id UUID,
+  email TEXT,
+  first_name TEXT,
+  last_name TEXT,
+  role TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT um.user_id,
+         u.email,
+         umeta.first_name,
+         umeta.last_name,
+         r.name AS role
+  FROM core.unit_memberships um
+  JOIN auth.users u ON u.id = um.user_id
+  JOIN core.users_meta umeta ON umeta.id = um.user_id
+  JOIN core.roles r ON r.id = um.role_id
+  WHERE um.unit_id = p_unit_id
+    AND um.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
 -- FUNCTION: public.create_unit()
 -- ========================================
 -- Create a new unit within an organization

@@ -30,6 +30,7 @@
 
     "sql/_core/triggers/new_user.sql",
     "sql/_core/triggers/new_organization.sql",
+    "sql/_core/triggers/new_unit.sql",
     "sql/_core/triggers/protect_super_admin.sql",
 
     "sql/_platform/tables/tenant_secrets.sql",
