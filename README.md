@@ -76,9 +76,9 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - No SQL functions or tables from `platform` are exposed in the `public` schema
 
-- Platform functionality is accessed via Edge Functions using the Supabase **service role**
+- Platform functionality is accessed via SQL or Edge Functions using the Supabase **service role**
 
-- (Optional) RLS policies can be applied to `platform.*` tables with `USING (false)` for defense in depth
+- RLS policies applied to `platform.*` tables with `USING (false)` for defense in depth
 
 ### Soft Deletion
 
@@ -106,7 +106,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 ### Billing
 
-- Common structure for integration with a billing provider such as Stripe or Lemon Squeezy
+- Common structure for integration with a billing providers like Stripe or Lemon Squeezy
 
 - `billing_customers`, `billing_subscriptions`, and `billing_plans` tables
 
@@ -118,7 +118,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - Secrets are scoped per organization or per user using a `scope` column (`'organization'` or `'user'`)
 
-- Actual secret values are stored in Supabase Vault, and only the `vault_key_id` is saved in the database
+- Secret values are stored in Supabase Vault, and only the `vault_key_id` is saved in the database
 
 - RLS support ensures tenant/user isolation for secret access
 
@@ -204,7 +204,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
 
 - Shared `updated_at` trigger function for all tables
 
-- Centralized helper functions for org/unit membership and role checks
+- Centralized helper functions for org/unit membership checks
 
 - Platform-facing automation functions for:
 
@@ -287,7 +287,7 @@ Functions should:
 ### 🛡️ Security Practices
 
 - All public functions are `SECURITY INVOKER`
-- RLS on underlying tables must be enforced
+- RLS on underlying tables enforces tenant isolation
 - No direct access to core or platform tables by clients
 - No direct access to any table unless via a 'public'-schema function
 
@@ -333,6 +333,8 @@ The functions should have the following in common:
 | `remove_user_from_organization(user_id UUID, org_id UUID)` | Removes a user from the org                                 |
 
 ### 🏢 Unit Functions
+
+Units are sub-organizations within an organization and can represent any number of entities in the real world. A unit could be a location, a department, or any other grouping. Units can have their own level of access control, and users can be assigned to one or more units within an organization. 
 
 | Function Name                                                   | Description                                         |
 | --------------------------------------------------------------- | --------------------------------------------------- |
@@ -494,9 +496,9 @@ This enforces accountability and traceability across platform operations.
 
 ## 🚫 What’s Explicitly Avoided
 
-- No PostgreSQL enums (lookup tables used instead)
+- No PostgreSQL enums (lookup tables used instead); Enums are used in Zod
 
-- No client access to raw tables
+- No Supabase client access to raw tables
 
 - No direct use of Supabase Edge Functions for CRUD unless necessary
 

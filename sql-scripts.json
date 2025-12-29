@@ -43,12 +43,14 @@
     "sql/_platform/rls/lockdown.sql",
 
     "sql/_core/functions/log_audit.sql",
+    "sql/_core/functions/secrets.sql",
 
     "sql/_public/functions/user_profile.sql",
     "sql/_public/functions/organizations.sql",
     "sql/_public/functions/units.sql",
     "sql/_public/functions/files.sql",
     "sql/_public/functions/audit.sql",
+    "sql/_public/functions/secrets.sql",
 
     "sql/_platform/functions/log_action.sql",
     "sql/_platform/functions/users.sql",
@@ -56,7 +58,6 @@
     "sql/_platform/functions/overrides.sql",
     "sql/_platform/functions/feature_flags.sql",
     "sql/_platform/functions/events.sql",
-    "sql/_platform/functions/secrets.sql",
     "sql/_platform/functions/audit.sql",
     "sql/_platform/functions/settings.sql",
     "sql/_platform/functions/billing.sql",
