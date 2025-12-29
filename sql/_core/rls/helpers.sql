@@ -89,16 +89,25 @@ SET search_path = core
 -- ========================================
 -- FUNCTION: core.shares_organization()
 -- ========================================
+-- Returns TRUE if current user and target user are members of at least one SAME organization
+-- Used for team directory features (viewing co-worker profiles, @mentions, etc.)
+--
+-- Privacy: Users can only see profiles of others who share AT LEAST ONE organization
+-- Example:
+--   Alice (Org A, Org B), Bob (Org A) → TRUE (share Org A)
+--   Alice (Org A, Org B), Carol (Org B) → TRUE (share Org B)
+--   Bob (Org A), Carol (Org B) → FALSE (no shared org)
 CREATE OR REPLACE FUNCTION core.shares_organization(p_user_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM core.memberships m1
-    JOIN core.memberships m2 ON m1.organization_id = m2.organization_id
-    WHERE m1.user_id = auth.uid()
-      AND m2.user_id = p_user_id
-      AND m1.is_deleted = false
-      AND m2.is_deleted = false
+    FROM core.memberships current_user_membership
+    JOIN core.memberships target_user_membership
+      ON current_user_membership.organization_id = target_user_membership.organization_id
+    WHERE current_user_membership.user_id = auth.uid()
+      AND target_user_membership.user_id = p_user_id
+      AND current_user_membership.is_deleted = false
+      AND target_user_membership.is_deleted = false
   );
 $$ LANGUAGE sql STABLE
 SET search_path = core;
