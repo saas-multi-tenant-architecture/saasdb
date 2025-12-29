@@ -4,3 +4,5 @@ node_modules
 # Editor
 .vscode
 
+# Completed Script Files are not saved
+/output/*.sql
