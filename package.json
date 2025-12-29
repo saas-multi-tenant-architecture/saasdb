@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "./run_tests.sh"
+    "test": "./run_tests.sh",
+    "build": "node ./combine_files.js"
   },
   "keywords": [],
   "author": "",

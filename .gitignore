@@ -7,5 +7,5 @@ node_modules
 # Environment variables
 .env
 
-# Completed Script Files are not saved
+# Completed Script Files are not tracked
 /output/*.sql
