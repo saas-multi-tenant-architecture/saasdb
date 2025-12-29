@@ -9,7 +9,7 @@ This *SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project d
 
 To accomplish this goal, **SMTA** relies heavily on Supabase and PostgreSQL core features. Supabase provides excellent integration with its authentication layer and the database, including via Row Level Security (RLS) and user-specific functions (like ```auth.uid()```). This integration makes security and tenant isolation easier to implement. This is also true of other database-adjacent features that Supabase brings, such as the secrets Vault and an s3-compatible storage, both of which are an inherent part of almost every SaaS. 
 
-The outcome is that many of the complicated tasks associated with a multi-tenant SaaS are abstracted behind clearly defined and tested SQL functions. At the same time, authentication (Supabase) and authorization (CASL-based roles) are divided into separate layers, allowing for a clear separation of concerns. Keeping the user authentication process outside of the access and authorization control keeps the system more flexible and portable too.
+The outcome is that many of the complicated tasks associated with a multi-tenant SaaS are abstracted behind clearly defined and tested SQL functions. At the same time, authentication (Supabase) and authorization (CASL-based roles) are divided into separate layers, allowing for a clear separation of concerns and a very customized approach. Keeping the user authentication process outside of the access and authorization control keeps the system more flexible and portable too.
 
 
 ## 🎯 Goal

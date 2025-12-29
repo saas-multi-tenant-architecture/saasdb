@@ -3,10 +3,6 @@
 
 BEGIN;
 
--- Load fixtures
-\i tests/fixtures/00_test_helpers.sql
-\i tests/fixtures/01_roles.sql
-
 SELECT plan(9);
 
 -- ========================================

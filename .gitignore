@@ -4,5 +4,8 @@ node_modules
 # Editor
 .vscode
 
+# Environment variables
+.env
+
 # Completed Script Files are not saved
 /output/*.sql
