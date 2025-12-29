@@ -20,3 +20,4 @@ export * from './tenant_secrets';
 export * from './billing_customers';
 export * from './billing_subscriptions';
 export * from './subscription_products';
+export * from './invitations';

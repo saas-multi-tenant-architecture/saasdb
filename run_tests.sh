@@ -98,12 +98,16 @@ pg_prove -v "$DB_URL" \
   tests/functions/02_unit_functions.sql \
   tests/functions/03_membership_functions.sql \
   tests/functions/04_user_functions.sql \
+  tests/invitations/01_create_invitation.sql \
+  tests/invitations/02_accept_invitation.sql \
+  tests/invitations/03_manage_invitations.sql \
   tests/rls/01_organizations_rls.sql \
   tests/rls/02_units_rls.sql \
   tests/rls/03_memberships_rls.sql \
   tests/rls/04_unit_memberships_rls.sql \
   tests/rls/05_users_meta_rls.sql \
   tests/rls/06_audit_logs_rls.sql \
+  tests/rls/07_invitations_rls.sql \
   tests/edge_cases/01_multi_org_user.sql \
   tests/edge_cases/02_cascading_deletes.sql \
   tests/edge_cases/03_concurrent_access.sql \

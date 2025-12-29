@@ -27,6 +27,7 @@
     "sql/_core/tables/organization_files.sql",
     "sql/_core/tables/organizations_meta.sql",
     "sql/_core/tables/audit_logs.sql",
+    "sql/_core/tables/invitations.sql",
 
     "sql/_core/triggers/new_user.sql",
     "sql/_core/triggers/new_organization.sql",
@@ -40,10 +41,12 @@
 
     "sql/_core/rls/helpers.sql",
     "sql/_core/rls/policies.sql",
+    "sql/_core/rls/invitations.sql",
     "sql/_platform/rls/lockdown.sql",
 
     "sql/_core/functions/log_audit.sql",
     "sql/_core/functions/secrets.sql",
+    "sql/_core/functions/invitations.sql",
 
     "sql/_public/functions/user_profile.sql",
     "sql/_public/functions/organizations.sql",
@@ -51,6 +54,7 @@
     "sql/_public/functions/files.sql",
     "sql/_public/functions/audit.sql",
     "sql/_public/functions/secrets.sql",
+    "sql/_public/functions/invitations.sql",
 
     "sql/_platform/functions/log_action.sql",
     "sql/_platform/functions/users.sql",
