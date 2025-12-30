@@ -18,9 +18,13 @@ DB_PORT="${DB_PORT:-54322}"
 DB_NAME="${DB_NAME:-postgres}"
 DB_USER="${DB_USER:-postgres}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
+DB_HOST="${DB_HOST:-aws-0-us-east-1.pooler.supabase.com}"
+DB_SSLMODE="${DB_SSLMODE:-require}"
+DB_PROJECT_REF="${DB_PROJECT_REF:-}"
 
 # Construct connection URL
-DB_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+# postgres://postgres.<PROJECT_REF>:<PASSWORD>@aws-0-<REGION>.pooler.supabase.com:5432/postgres?sslmode=require"
+DB_URL="postgresql://postgres.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
 
 echo -e "${YELLOW}=== SMTA Test Suite ===${NC}"
 echo "Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
