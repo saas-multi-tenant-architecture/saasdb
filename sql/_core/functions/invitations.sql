@@ -484,7 +484,7 @@ BEGIN
 
   RETURN v_count;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core;
 
 -- ========================================
 -- NOTES
