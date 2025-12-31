@@ -6,21 +6,36 @@ BEGIN;
 SELECT plan(10);
 
 -- ========================================
+-- SETUP: Get user IDs
+-- ========================================
+DO $$
+DECLARE
+  v_maria_id UUID;
+  v_carlos_id UUID;
+BEGIN
+  v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
+  v_carlos_id := test_helpers.get_test_user_id('carlos@test.bellaitalia.com');
+  PERFORM set_config('test.maria_id', v_maria_id::text, true);
+  PERFORM set_config('test.carlos_id', v_carlos_id::text, true);
+END $$;
+
+-- ========================================
 -- TEST: Unique constraint on role names
 -- ========================================
 SELECT throws_ok(
-  $$INSERT INTO core.roles (name, description, created_by, updated_by)
-    VALUES ('super_admin', 'Duplicate role',
-            '11111111-1111-1111-1111-111111111101',
-            '11111111-1111-1111-1111-111111111101')$$,
+  format($$INSERT INTO core.roles (name, description, created_by, updated_by)
+    VALUES ('super_admin', 'Duplicate role', %L, %L)$$,
+    current_setting('test.maria_id')::uuid,
+    current_setting('test.maria_id')::uuid),
   '23505', -- unique_violation
+  NULL,
   'Cannot create duplicate role name'
 );
 
 -- ========================================
 -- TEST: Unique constraint on org name (if exists) or just test insert
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 -- Create org, should work
 SELECT lives_ok(
@@ -34,16 +49,20 @@ SELECT lives_ok(
 -- ========================================
 -- Try to add Maria to Bella Italia again
 SELECT throws_ok(
-  $$INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by, updated_by)
+  format($$INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by, updated_by)
     VALUES (
-      '11111111-1111-1111-1111-111111111101',
+      %L,
       'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       '00000000-0000-0000-0000-000000000003',
       false,
-      '11111111-1111-1111-1111-111111111101',
-      '11111111-1111-1111-1111-111111111101'
+      %L,
+      %L
     )$$,
+    current_setting('test.maria_id')::uuid,
+    current_setting('test.maria_id')::uuid,
+    current_setting('test.maria_id')::uuid),
   '23505', -- unique_violation (if there's a unique constraint on user+org)
+  NULL,
   'Cannot create duplicate membership'
 );
 
@@ -51,11 +70,13 @@ SELECT throws_ok(
 -- TEST: Only one super_admin per org (unique partial index)
 -- ========================================
 SELECT throws_ok(
-  $$UPDATE core.memberships
+  format($$UPDATE core.memberships
     SET is_super_admin = true
-    WHERE user_id = '11111111-1111-1111-1111-111111111102' -- Carlos
+    WHERE user_id = %L
       AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+    current_setting('test.carlos_id')::uuid),
   '23505', -- unique_violation
+  NULL,
   'Cannot have two super_admins in same org'
 );
 
@@ -63,15 +84,19 @@ SELECT throws_ok(
 -- TEST: Unique unit_membership per user+unit (if constraint exists)
 -- ========================================
 SELECT throws_ok(
-  $$INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by, updated_by)
+  format($$INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by, updated_by)
     VALUES (
-      '11111111-1111-1111-1111-111111111102', -- Carlos
-      'aaaaaaaa-aaaa-aaaa-aaaa-000000000001', -- Downtown (already a member)
+      %L,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01', -- Downtown (already a member)
       '00000000-0000-0000-0000-000000000003',
-      '11111111-1111-1111-1111-111111111101',
-      '11111111-1111-1111-1111-111111111101'
+      %L,
+      %L
     )$$,
+    current_setting('test.carlos_id')::uuid,
+    current_setting('test.maria_id')::uuid,
+    current_setting('test.maria_id')::uuid),
   '23505', -- unique_violation
+  NULL,
   'Cannot create duplicate unit membership'
 );
 
@@ -79,16 +104,19 @@ SELECT throws_ok(
 -- TEST: User email uniqueness in users_meta
 -- ========================================
 SELECT throws_ok(
-  $$INSERT INTO core.users_meta (id, email, first_name, last_name, created_by, updated_by)
+  format($$INSERT INTO core.users_meta (id, email, first_name, last_name, created_by, updated_by)
     VALUES (
       gen_random_uuid(),
-      'maria@bellaitalia.com', -- Duplicate email
+      'maria@test.bellaitalia.com', -- Duplicate email
       'Fake',
       'Maria',
-      '11111111-1111-1111-1111-111111111101',
-      '11111111-1111-1111-1111-111111111101'
+      %L,
+      %L
     )$$,
+    current_setting('test.maria_id')::uuid,
+    current_setting('test.maria_id')::uuid),
   '23505', -- unique_violation
+  NULL,
   'Cannot create duplicate user email'
 );
 
@@ -96,14 +124,17 @@ SELECT throws_ok(
 -- TEST: Platform settings key uniqueness
 -- ========================================
 SELECT throws_ok(
-  $$INSERT INTO platform.platform_settings (key, value, created_by, updated_by)
+  format($$INSERT INTO platform.platform_settings (key, value, created_by, updated_by)
     VALUES (
       'maintenance_mode', -- Duplicate key
       '"new_value"',
-      '11111111-1111-1111-1111-111111111101',
-      '11111111-1111-1111-1111-111111111101'
+      %L,
+      %L
     )$$,
+    current_setting('test.maria_id')::uuid,
+    current_setting('test.maria_id')::uuid),
   '23505', -- unique_violation
+  NULL,
   'Cannot create duplicate platform setting key'
 );
 
@@ -123,24 +154,24 @@ SELECT throws_ok(
 -- First transfer to Carlos
 SELECT public.transfer_super_admin(
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '11111111-1111-1111-1111-111111111102'
+  current_setting('test.carlos_id')::uuid
 );
 
 -- Now Maria can be set as super_admin again via another transfer
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos is now super_admin
+SELECT test_helpers.set_auth_user(current_setting('test.carlos_id')::uuid); -- Carlos is now super_admin
 
 SELECT lives_ok(
-  $$SELECT public.transfer_super_admin(
+  format($$SELECT public.transfer_super_admin(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111101' -- Maria
-  )$$,
+    %L
+  )$$, current_setting('test.maria_id')::uuid),
   'Can transfer super_admin back to original user'
 );
 
 -- Verify Maria is super_admin again
 SELECT ok(
   (SELECT is_super_admin FROM core.memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111101'
+   WHERE user_id = current_setting('test.maria_id')::uuid
      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   'Maria should be super_admin again after transfer'
 );

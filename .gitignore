@@ -9,3 +9,7 @@ node_modules
 
 # Completed Script Files are not tracked
 /output/*.sql
+
+
+# Do not track test log files
+/tests/test_logs/*.log

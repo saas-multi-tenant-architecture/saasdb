@@ -8,7 +8,7 @@ SELECT plan(12);
 -- ========================================
 -- TEST: create_unit creates unit successfully
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT lives_ok(
   $$SELECT public.create_unit(
@@ -54,12 +54,12 @@ SELECT is(
 -- TEST: get_unit returns correct data
 -- ========================================
 SELECT ok(
-  (SELECT name FROM public.get_unit('aaaaaaaa-aaaa-aaaa-aaaa-000000000001')) = 'Downtown',
+  (SELECT name FROM public.get_unit('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')) = 'Downtown',
   'get_unit should return correct name'
 );
 
 SELECT ok(
-  (SELECT description FROM public.get_unit('aaaaaaaa-aaaa-aaaa-aaaa-000000000001')) = 'Downtown flagship location',
+  (SELECT description FROM public.get_unit('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')) = 'Downtown flagship location',
   'get_unit should return correct description'
 );
 
@@ -68,7 +68,7 @@ SELECT ok(
 -- ========================================
 SELECT lives_ok(
   $$SELECT public.update_unit(
-    'aaaaaaaa-aaaa-aaaa-aaaa-000000000001',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
     'Downtown Updated',
     'Updated description'
   )$$,
@@ -76,7 +76,7 @@ SELECT lives_ok(
 );
 
 SELECT ok(
-  (SELECT name FROM public.get_unit('aaaaaaaa-aaaa-aaaa-aaaa-000000000001')) = 'Downtown Updated',
+  (SELECT name FROM public.get_unit('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')) = 'Downtown Updated',
   'Unit name should be updated'
 );
 

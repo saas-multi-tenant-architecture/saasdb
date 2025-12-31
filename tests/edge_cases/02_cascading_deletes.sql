@@ -8,7 +8,7 @@ SELECT plan(10);
 -- ========================================
 -- TEST: Soft-deleting org doesn't cascade to units (intentional)
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 -- Count units before
 DO $$
@@ -21,7 +21,7 @@ END $$;
 
 -- Soft-delete org
 UPDATE core.organizations
-SET is_deleted = true, deleted_at = now(), deleted_by = '11111111-1111-1111-1111-111111111101'
+SET is_deleted = true, deleted_at = now(), deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
 WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 -- Units should still exist (not cascaded)
@@ -46,19 +46,19 @@ DO $$
 BEGIN
   PERFORM set_config('test.memberships_before',
     (SELECT COUNT(*)::text FROM core.unit_memberships
-     WHERE unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001'
+     WHERE unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'
        AND is_deleted = false), true);
 END $$;
 
 -- Soft-delete unit
 UPDATE core.units
 SET is_deleted = true, deleted_at = now()
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
 -- Unit memberships should still exist
 SELECT is(
   (SELECT COUNT(*)::int FROM core.unit_memberships
-   WHERE unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001'
+   WHERE unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'
      AND is_deleted = false),
   current_setting('test.memberships_before')::int,
   'Unit memberships should not be cascaded when unit is soft-deleted'
@@ -67,7 +67,7 @@ SELECT is(
 -- Restore unit
 UPDATE core.units
 SET is_deleted = false, deleted_at = NULL
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
 -- ========================================
 -- TEST: Memberships table integrity with soft-deleted org
@@ -92,24 +92,31 @@ WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 -- TEST: Can query historical data (soft-deleted)
 -- ========================================
 -- Create and soft-delete a unit
-INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
-VALUES (
-  'aaaaaaaa-aaaa-aaaa-aaaa-000000000099',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  'Temporary Unit',
-  '11111111-1111-1111-1111-111111111101',
-  '11111111-1111-1111-1111-111111111101'
-);
+DO $$
+DECLARE
+  v_maria_id UUID;
+BEGIN
+  v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
 
-UPDATE core.units
-SET is_deleted = true, deleted_at = now(), deleted_by = '11111111-1111-1111-1111-111111111101'
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000099';
+  INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
+  VALUES (
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'Temporary Unit',
+    v_maria_id,
+    v_maria_id
+  );
+
+  UPDATE core.units
+  SET is_deleted = true, deleted_at = now(), deleted_by = v_maria_id
+  WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99';
+END $$;
 
 -- Can query the deleted record directly (for audit purposes)
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.units
-    WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000099'
+    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99'
       AND is_deleted = true
   ),
   'Soft-deleted data should be queryable for auditing'
@@ -119,7 +126,7 @@ SELECT ok(
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM core.units
-    WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000099'
+    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99'
       AND is_deleted = false
   ),
   'Soft-deleted data should be hidden from active queries'
@@ -131,13 +138,13 @@ SELECT ok(
 -- Soft-delete Taylor's membership
 UPDATE core.memberships
 SET is_deleted = true, deleted_at = now()
-WHERE user_id = '11111111-1111-1111-1111-111111111107'
+WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    WHERE user_id = '11111111-1111-1111-1111-111111111107'
+    WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   ),
   'Deleted member should not appear in list'
 );
@@ -145,13 +152,13 @@ SELECT ok(
 -- Restore membership
 UPDATE core.memberships
 SET is_deleted = false, deleted_at = NULL
-WHERE user_id = '11111111-1111-1111-1111-111111111107'
+WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 SELECT ok(
   EXISTS (
     SELECT 1 FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    WHERE user_id = '11111111-1111-1111-1111-111111111107'
+    WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   ),
   'Restored member should appear in list'
 );
@@ -161,20 +168,20 @@ SELECT ok(
 -- ========================================
 -- Soft-delete Sam
 UPDATE core.memberships
-SET is_deleted = true, deleted_at = now(), deleted_by = '11111111-1111-1111-1111-111111111101'
-WHERE user_id = '11111111-1111-1111-1111-111111111106'
+SET is_deleted = true, deleted_at = now(), deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+WHERE user_id = test_helpers.get_test_user_id('sam@test.bellaitalia.com')
   AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 SELECT ok(
   (SELECT deleted_by FROM core.memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111106'
-     AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') = '11111111-1111-1111-1111-111111111101'::uuid,
+   WHERE user_id = test_helpers.get_test_user_id('sam@test.bellaitalia.com')
+     AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') = test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
   'deleted_by should be recorded'
 );
 
 SELECT ok(
   (SELECT deleted_at FROM core.memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111106'
+   WHERE user_id = test_helpers.get_test_user_id('sam@test.bellaitalia.com')
      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') IS NOT NULL,
   'deleted_at should be recorded'
 );

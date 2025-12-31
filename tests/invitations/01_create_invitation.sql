@@ -8,7 +8,7 @@ SELECT plan(15);
 -- ========================================
 -- TEST: Organization member can create invitation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria (super_admin of Bella Italia)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT lives_ok(
   $$SELECT * FROM public.create_invitation(
@@ -83,7 +83,7 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Non-member cannot create invitation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi (Pizza Palace, not Bella Italia)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT throws_ok(
   $$SELECT * FROM public.create_invitation(
@@ -98,7 +98,7 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Cannot invite as super_admin
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT throws_ok(
   $$SELECT * FROM public.create_invitation(
@@ -118,7 +118,7 @@ SELECT throws_ok(
     'unit@example.com',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
     '00000000-0000-0000-0000-000000000002'::uuid,
-    'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03'::uuid
   )$$,
   'You must be a member of this unit to invite users to it',
   'Cannot invite to unit without unit membership'
@@ -127,7 +127,7 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Regular member can also create invitations (CASL controls this)
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos (manager)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 SELECT lives_ok(
   $$SELECT * FROM public.create_invitation(
@@ -154,11 +154,11 @@ SELECT ok(
 -- ========================================
 -- TEST: Cannot invite existing member
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT throws_ok(
   $$SELECT * FROM public.create_invitation(
-    'carlos.hernandez@test.bellaitalia.com',
+    'carlos@test.bellaitalia.com',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
     '00000000-0000-0000-0000-000000000002'::uuid
   )$$,

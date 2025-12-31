@@ -17,7 +17,7 @@ SELECT is(
 -- ========================================
 -- TEST: get_setting returns correct value
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT is(
   platform.get_setting('maintenance_mode'),

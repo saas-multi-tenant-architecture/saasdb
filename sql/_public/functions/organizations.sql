@@ -183,6 +183,7 @@ RETURNS VOID AS $$
 DECLARE
   v_current_user_id UUID;
   v_target_membership_exists BOOLEAN;
+  v_target_membership_is_deleted BOOLEAN;
 BEGIN
   v_current_user_id := auth.uid();
 
@@ -208,20 +209,18 @@ BEGIN
     RAISE EXCEPTION 'Cannot transfer super_admin to yourself';
   END IF;
 
-  -- Perform atomic transfer: set new super_admin first, then remove from current
-  -- This order ensures the unique partial index is satisfied
+  -- Perform atomic transfer in a SINGLE statement
+  -- This ensures RLS is checked once (when caller is still super_admin)
+  -- and both updates happen atomically
   UPDATE core.memberships
-  SET is_super_admin = true,
-      updated_by = v_current_user_id
-  WHERE user_id = p_new_super_admin_user_id
-    AND organization_id = p_org_id
-    AND is_deleted = false;
-
-  UPDATE core.memberships
-  SET is_super_admin = false,
-      updated_by = v_current_user_id
-  WHERE user_id = v_current_user_id
-    AND organization_id = p_org_id
+  SET is_super_admin = CASE
+        WHEN user_id = p_new_super_admin_user_id THEN true
+        WHEN user_id = v_current_user_id THEN false
+      END,
+      updated_by = v_current_user_id,
+      updated_at = now()
+  WHERE organization_id = p_org_id
+    AND user_id IN (v_current_user_id, p_new_super_admin_user_id)
     AND is_deleted = false;
 
   PERFORM core.log_audit(

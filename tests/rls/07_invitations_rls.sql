@@ -8,7 +8,7 @@ SELECT plan(10);
 -- ========================================
 -- SETUP: Create test invitations
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria (Bella Italia)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
@@ -23,7 +23,7 @@ BEGIN
   PERFORM set_config('test.bella_invitation_id', v_result.id::text, false);
 END $$;
 
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi (Pizza Palace)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 DO $$
 DECLARE
@@ -32,7 +32,7 @@ BEGIN
   -- Pizza Palace invitation
   SELECT * INTO v_result FROM public.create_invitation(
     'pizzainvite@example.com',
-    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+    'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
     '00000000-0000-0000-0000-000000000002'::uuid
   );
   PERFORM set_config('test.pizza_invitation_id', v_result.id::text, false);
@@ -41,7 +41,7 @@ END $$;
 -- ========================================
 -- TEST: Org member can SELECT invitations for their org
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT ok(
   EXISTS (
@@ -65,7 +65,7 @@ SELECT ok(
 -- ========================================
 -- TEST: Luigi can SELECT Pizza Palace invitations
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT ok(
   EXISTS (
@@ -98,7 +98,7 @@ BEGIN
   PERFORM set_config('test.invitee_id', v_invitee_id::text, false);
 END $$;
 
-SELECT utils.set_auth_user(current_setting('test.invitee_id')::uuid);
+SELECT test_helpers.set_auth_user(current_setting('test.invitee_id')::uuid);
 
 SELECT ok(
   EXISTS (
@@ -112,7 +112,7 @@ SELECT ok(
 -- ========================================
 -- TEST: Count visible invitations per user
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.invitations
@@ -122,25 +122,25 @@ SELECT is(
   'RLS allows Maria to see all Bella Italia invitations'
 );
 
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.invitations
-   WHERE organization_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
      AND is_deleted = false),
-  (SELECT COUNT(*)::int FROM public.list_invitations('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid)),
+  (SELECT COUNT(*)::int FROM public.list_invitations('cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid)),
   'RLS allows Luigi to see all Pizza Palace invitations'
 );
 
 -- ========================================
 -- TEST: Soft-deleted invitations are not visible
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 UPDATE core.invitations
 SET is_deleted = true,
     deleted_at = now(),
-    deleted_by = '11111111-1111-1111-1111-111111111101'
+    deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
 WHERE id = current_setting('test.bella_invitation_id')::uuid;
 
 SELECT ok(

@@ -6,9 +6,32 @@ BEGIN;
 SELECT plan(12);
 
 -- ========================================
+-- SETUP: Get user IDs
+-- ========================================
+DO $$
+DECLARE
+  v_maria_id UUID;
+  v_carlos_id UUID;
+  v_alex_id UUID;
+  v_sam_id UUID;
+  v_taylor_id UUID;
+BEGIN
+  v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
+  v_carlos_id := test_helpers.get_test_user_id('carlos@test.bellaitalia.com');
+  v_alex_id := test_helpers.get_test_user_id('alex@test.bellaitalia.com');
+  v_sam_id := test_helpers.get_test_user_id('sam@test.bellaitalia.com');
+  v_taylor_id := test_helpers.get_test_user_id('taylor@test.bellaitalia.com');
+  PERFORM set_config('test.maria_id', v_maria_id::text, true);
+  PERFORM set_config('test.carlos_id', v_carlos_id::text, true);
+  PERFORM set_config('test.alex_id', v_alex_id::text, true);
+  PERFORM set_config('test.sam_id', v_sam_id::text, true);
+  PERFORM set_config('test.taylor_id', v_taylor_id::text, true);
+END $$;
+
+-- ========================================
 -- TEST: Super_admin can access all org data
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria (super_admin)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.units
@@ -28,7 +51,7 @@ SELECT is(
 -- ========================================
 -- TEST: Manager can access org data
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos (manager)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.units
@@ -40,7 +63,7 @@ SELECT is(
 -- ========================================
 -- TEST: Team member can access org data
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111106'); -- Sam (team)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sam@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.units
@@ -52,7 +75,7 @@ SELECT is(
 -- ========================================
 -- TEST: Org-only member (no unit assignments) can access org data
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111107'); -- Taylor (org member only)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('taylor@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.units
@@ -63,7 +86,7 @@ SELECT is(
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.unit_memberships um
-   WHERE um.user_id = '11111111-1111-1111-1111-111111111107'),
+   WHERE um.user_id = current_setting('test.taylor_id')::uuid),
   0,
   'Taylor has no unit memberships'
 );
@@ -71,19 +94,19 @@ SELECT is(
 -- ========================================
 -- TEST: User with multiple unit roles
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111104'); -- Alex
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('alex@test.bellaitalia.com'));
 
 -- Alex is team at Downtown, manager at Mall
 SELECT is(
-  (SELECT role FROM public.list_unit_members('aaaaaaaa-aaaa-aaaa-aaaa-000000000001')
-   WHERE user_id = '11111111-1111-1111-1111-111111111104'),
+  (SELECT role FROM public.list_unit_members('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')
+   WHERE user_id = current_setting('test.alex_id')::uuid),
   'team',
   'Alex is team at Downtown'
 );
 
 SELECT is(
-  (SELECT role FROM public.list_unit_members('aaaaaaaa-aaaa-aaaa-aaaa-000000000003')
-   WHERE user_id = '11111111-1111-1111-1111-111111111104'),
+  (SELECT role FROM public.list_unit_members('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03')
+   WHERE user_id = current_setting('test.alex_id')::uuid),
   'manager',
   'Alex is manager at Mall'
 );
@@ -91,15 +114,15 @@ SELECT is(
 -- ========================================
 -- TEST: User with same role at multiple units
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 -- Carlos is manager at both Downtown and Airport
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.unit_memberships um
     JOIN core.roles r ON r.id = um.role_id
-    WHERE um.user_id = '11111111-1111-1111-1111-111111111102'
-      AND um.unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001' -- Downtown
+    WHERE um.user_id = current_setting('test.carlos_id')::uuid
+      AND um.unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01' -- Downtown
       AND r.name = 'manager'
   ),
   'Carlos is manager at Downtown'
@@ -109,8 +132,8 @@ SELECT ok(
   EXISTS (
     SELECT 1 FROM core.unit_memberships um
     JOIN core.roles r ON r.id = um.role_id
-    WHERE um.user_id = '11111111-1111-1111-1111-111111111102'
-      AND um.unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000002' -- Airport
+    WHERE um.user_id = current_setting('test.carlos_id')::uuid
+      AND um.unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02' -- Airport
       AND r.name = 'manager'
   ),
   'Carlos is manager at Airport'
@@ -119,13 +142,13 @@ SELECT ok(
 -- ========================================
 -- TEST: Org role vs unit role independence
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111104'); -- Alex
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('alex@test.bellaitalia.com'));
 
 -- Alex is manager at org level, but team at Downtown unit
 SELECT is(
   (SELECT r.name FROM core.memberships m
    JOIN core.roles r ON r.id = m.role_id
-   WHERE m.user_id = '11111111-1111-1111-1111-111111111104'
+   WHERE m.user_id = current_setting('test.alex_id')::uuid
      AND m.organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   'manager',
   'Alex org role is manager'
@@ -134,8 +157,8 @@ SELECT is(
 SELECT is(
   (SELECT r.name FROM core.unit_memberships um
    JOIN core.roles r ON r.id = um.role_id
-   WHERE um.user_id = '11111111-1111-1111-1111-111111111104'
-     AND um.unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001'),
+   WHERE um.user_id = current_setting('test.alex_id')::uuid
+     AND um.unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'),
   'team',
   'Alex unit role at Downtown is team (independent of org role)'
 );

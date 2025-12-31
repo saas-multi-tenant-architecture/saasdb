@@ -9,20 +9,23 @@ SELECT plan(10);
 -- SETUP: Make Carlos a member of both orgs
 -- ========================================
 -- Carlos is already in Bella Italia, add him to Pizza Palace
-INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by, updated_by)
-VALUES (
-  '11111111-1111-1111-1111-111111111102', -- Carlos
-  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', -- Pizza Palace
-  '00000000-0000-0000-0000-000000000003', -- team
-  false,
-  '11111111-1111-1111-1111-111111111201', -- Created by Luigi
-  '11111111-1111-1111-1111-111111111201'
-);
+DO $$
+BEGIN
+  INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by, updated_by)
+  VALUES (
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+    'cccccccc-cccc-cccc-cccc-cccccccccccc', -- Pizza Palace
+    '00000000-0000-0000-0000-000000000003', -- team
+    false,
+    test_helpers.get_test_user_id('luigi@test.pizzapalace.com'),
+    test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
+  );
+END $$;
 
 -- ========================================
 -- TEST: User can see both organizations
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM public.get_user_organizations()),
@@ -35,14 +38,14 @@ SELECT is(
 -- ========================================
 SELECT is(
   (SELECT role FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-   WHERE user_id = '11111111-1111-1111-1111-111111111102'),
+   WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')),
   'manager',
   'Carlos is manager at Bella Italia'
 );
 
 SELECT is(
-  (SELECT role FROM public.list_organization_members('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
-   WHERE user_id = '11111111-1111-1111-1111-111111111102'),
+  (SELECT role FROM public.list_organization_members('cccccccc-cccc-cccc-cccc-cccccccccccc')
+   WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')),
   'team',
   'Carlos is team at Pizza Palace'
 );
@@ -61,7 +64,7 @@ SELECT ok(
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.organizations
-    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
   ),
   'Carlos can see Pizza Palace'
 );
@@ -79,7 +82,7 @@ SELECT lives_ok(
 SELECT lives_ok(
   $$UPDATE core.organizations
     SET description = 'Updated by Carlos'
-    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'$$,
+    WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'$$,
   'Carlos can update Pizza Palace'
 );
 
@@ -88,8 +91,8 @@ SELECT lives_ok(
 -- ========================================
 UPDATE core.memberships
 SET is_deleted = true, deleted_at = now()
-WHERE user_id = '11111111-1111-1111-1111-111111111102'
-  AND organization_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+  AND organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
 -- Carlos can still see Bella Italia
 SELECT ok(
@@ -104,7 +107,7 @@ SELECT ok(
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM core.organizations
-    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
   ),
   'Carlos cannot see Pizza Palace after being removed'
 );

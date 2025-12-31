@@ -28,6 +28,7 @@
     "sql/_core/tables/organizations_meta.sql",
     "sql/_core/tables/audit_logs.sql",
     "sql/_core/tables/invitations.sql",
+    "sql/_core/tables/grants.sql",
 
     "sql/_core/triggers/new_user.sql",
     "sql/_core/triggers/new_organization.sql",

@@ -8,7 +8,7 @@ SELECT plan(12);
 -- ========================================
 -- TEST: list_organization_members returns correct data
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 -- Count Bella Italia members (should be 7: Maria, Carlos, Sofia, Alex, Jordan, Sam, Taylor)
 SELECT is(
@@ -22,13 +22,13 @@ SELECT is(
 -- ========================================
 SELECT ok(
   (SELECT is_super_admin FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-   WHERE user_id = '11111111-1111-1111-1111-111111111101'),
+   WHERE user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')),
   'Maria should show as super_admin in member list'
 );
 
 SELECT ok(
   NOT (SELECT is_super_admin FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-       WHERE user_id = '11111111-1111-1111-1111-111111111102'),
+       WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')),
   'Carlos should NOT show as super_admin in member list'
 );
 
@@ -37,14 +37,14 @@ SELECT ok(
 -- ========================================
 SELECT is(
   (SELECT role FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-   WHERE user_id = '11111111-1111-1111-1111-111111111101'),
+   WHERE user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')),
   'super_admin',
   'Maria should have super_admin role'
 );
 
 SELECT is(
   (SELECT role FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-   WHERE user_id = '11111111-1111-1111-1111-111111111102'),
+   WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')),
   'manager',
   'Carlos should have manager role'
 );
@@ -52,10 +52,10 @@ SELECT is(
 -- ========================================
 -- TEST: Organization isolation - Pizza Palace members
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT is(
-  (SELECT COUNT(*)::int FROM public.list_organization_members('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')),
+  (SELECT COUNT(*)::int FROM public.list_organization_members('cccccccc-cccc-cccc-cccc-cccccccccccc')),
   2,
   'Pizza Palace should have 2 active members'
 );
@@ -73,12 +73,12 @@ SELECT is(
 -- ========================================
 -- TEST: Soft-deleted members not listed
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 -- Soft-delete Taylor's membership
 UPDATE core.memberships
-SET is_deleted = true, deleted_at = now(), deleted_by = '11111111-1111-1111-1111-111111111101'
-WHERE user_id = '11111111-1111-1111-1111-111111111107'
+SET is_deleted = true, deleted_at = now(), deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 SELECT is(
@@ -90,7 +90,7 @@ SELECT is(
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    WHERE user_id = '11111111-1111-1111-1111-111111111107'
+    WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   ),
   'Taylor should not appear in member list after soft-delete'
 );
@@ -103,7 +103,7 @@ SELECT ok(
   'Maria should be detected as org member'
 );
 
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT ok(
   NOT core.is_org_member('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),

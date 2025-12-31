@@ -8,7 +8,7 @@ SELECT plan(14);
 -- ========================================
 -- SETUP: Create test invitations
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
@@ -142,7 +142,7 @@ SELECT ok(
 -- ========================================
 -- TEST: Non-member cannot list invitations
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi (Pizza Palace)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT throws_ok(
   $$SELECT * FROM public.list_invitations('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)$$,
@@ -177,7 +177,7 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Regular member can cancel invitation they created
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos (manager)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 DO $$
 DECLARE
@@ -199,14 +199,14 @@ SELECT lives_ok(
 -- ========================================
 -- TEST: Org member can cancel invitation created by another member (CASL controls this)
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
   v_result RECORD;
 BEGIN
   -- Carlos creates invitation
-  PERFORM utils.set_auth_user('11111111-1111-1111-1111-111111111102');
+  PERFORM test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
   SELECT * INTO v_result FROM public.create_invitation(
     'cancelbyother@example.com',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
@@ -215,7 +215,7 @@ BEGIN
   PERFORM set_config('test.other_invitation_id', v_result.id::text, false);
 
   -- Switch back to Maria
-  PERFORM utils.set_auth_user('11111111-1111-1111-1111-111111111101');
+  PERFORM test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 END $$;
 
 SELECT lives_ok(

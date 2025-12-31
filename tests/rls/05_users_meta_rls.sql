@@ -8,12 +8,12 @@ SELECT plan(10);
 -- ========================================
 -- TEST: User can SELECT their own profile
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.users_meta
-    WHERE id = '11111111-1111-1111-1111-111111111101'
+    WHERE id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
   ),
   'Maria can SELECT her own profile'
 );
@@ -24,7 +24,7 @@ SELECT ok(
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.users_meta
-    WHERE id = '11111111-1111-1111-1111-111111111102' -- Carlos
+    WHERE id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com') -- Carlos
   ),
   'Maria can SELECT Carlos profile (same org)'
 );
@@ -35,7 +35,7 @@ SELECT ok(
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM core.users_meta
-    WHERE id = '11111111-1111-1111-1111-111111111201' -- Luigi
+    WHERE id = test_helpers.get_test_user_id('luigi@test.pizzapalace.com') -- Luigi
   ),
   'Maria cannot SELECT Luigi profile (different org)'
 );
@@ -46,7 +46,7 @@ SELECT ok(
 SELECT lives_ok(
   $$UPDATE core.users_meta
     SET first_name = 'Maria Updated'
-    WHERE id = '11111111-1111-1111-1111-111111111101'$$,
+    WHERE id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')$$,
   'Maria can UPDATE her own profile'
 );
 
@@ -56,7 +56,7 @@ SELECT lives_ok(
 SELECT lives_ok(
   $$UPDATE core.users_meta
     SET last_name = 'Hernandez Updated'
-    WHERE id = '11111111-1111-1111-1111-111111111102'$$,
+    WHERE id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')$$,
   'Maria (super_admin) can UPDATE Carlos profile'
 );
 
@@ -67,7 +67,7 @@ SELECT is(
   (SELECT COUNT(*)::int FROM (
     UPDATE core.users_meta
     SET first_name = 'Hacked'
-    WHERE id = '11111111-1111-1111-1111-111111111201' -- Luigi
+    WHERE id = test_helpers.get_test_user_id('luigi@test.pizzapalace.com') -- Luigi
     RETURNING id
   ) u),
   0,
@@ -77,7 +77,7 @@ SELECT is(
 -- ========================================
 -- TEST: Regular member can see colleagues
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111106'); -- Sam (team member)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sam@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.users_meta um
@@ -94,12 +94,12 @@ SELECT is(
 -- ========================================
 -- TEST: Pizza Palace isolation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi
+SELECT utils.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com')); -- Luigi
 
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.users_meta
-    WHERE id = '11111111-1111-1111-1111-111111111201'
+    WHERE id = test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
   ),
   'Luigi can SELECT his own profile'
 );
@@ -107,7 +107,7 @@ SELECT ok(
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.users_meta
-    WHERE id = '11111111-1111-1111-1111-111111111202' -- Giuseppe
+    WHERE id = test_helpers.get_test_user_id('giuseppe@test.pizzapalace.com') -- Giuseppe
   ),
   'Luigi can SELECT Giuseppe profile (same org)'
 );
@@ -115,7 +115,7 @@ SELECT ok(
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM core.users_meta
-    WHERE id = '11111111-1111-1111-1111-111111111101' -- Maria
+    WHERE id = test_helpers.get_test_user_id('maria@test.bellaitalia.com') -- Maria
   ),
   'Luigi cannot SELECT Maria profile (different org)'
 );

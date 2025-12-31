@@ -10,31 +10,23 @@
 -- FIXED UUIDs FOR ROLES
 -- ========================================
 -- Using fixed UUIDs allows tests to reference roles by ID consistently
+-- Using test_helpers.seed_role() to bypass RLS
 
 -- ========================================
 -- ROLE: super_admin
 -- ========================================
-INSERT INTO core.roles (id, name, description, casl_rules, created_at, updated_at)
-VALUES (
-  '00000000-0000-0000-0000-000000000001',
+SELECT test_helpers.seed_role(
+  '00000000-0000-0000-0000-000000000001'::uuid,
   'super_admin',
   'Organization owner with full administrative access',
-  '[
-    {"action": "manage", "subject": "all"}
-  ]'::jsonb,
-  now(),
-  now()
-) ON CONFLICT (name) DO UPDATE SET
-  description = EXCLUDED.description,
-  casl_rules = EXCLUDED.casl_rules,
-  updated_at = now();
+  '[{"action": "manage", "subject": "all"}]'::jsonb
+);
 
 -- ========================================
 -- ROLE: manager
 -- ========================================
-INSERT INTO core.roles (id, name, description, casl_rules, created_at, updated_at)
-VALUES (
-  '00000000-0000-0000-0000-000000000002',
+SELECT test_helpers.seed_role(
+  '00000000-0000-0000-0000-000000000002'::uuid,
   'manager',
   'Location manager with administrative access to assigned units',
   '[
@@ -44,20 +36,14 @@ VALUES (
     {"action": "read", "subject": "AuditLog"},
     {"action": "manage", "subject": "Schedule"},
     {"action": "manage", "subject": "Inventory"}
-  ]'::jsonb,
-  now(),
-  now()
-) ON CONFLICT (name) DO UPDATE SET
-  description = EXCLUDED.description,
-  casl_rules = EXCLUDED.casl_rules,
-  updated_at = now();
+  ]'::jsonb
+);
 
 -- ========================================
 -- ROLE: team
 -- ========================================
-INSERT INTO core.roles (id, name, description, casl_rules, created_at, updated_at)
-VALUES (
-  '00000000-0000-0000-0000-000000000003',
+SELECT test_helpers.seed_role(
+  '00000000-0000-0000-0000-000000000003'::uuid,
   'team',
   'Team member with read access and limited write access',
   '[
@@ -66,13 +52,8 @@ VALUES (
     {"action": "read", "subject": "Schedule"},
     {"action": "update", "subject": "Schedule", "conditions": {"assignee_id": "${user.id}"}},
     {"action": "read", "subject": "Inventory"}
-  ]'::jsonb,
-  now(),
-  now()
-) ON CONFLICT (name) DO UPDATE SET
-  description = EXCLUDED.description,
-  casl_rules = EXCLUDED.casl_rules,
-  updated_at = now();
+  ]'::jsonb
+);
 
 -- ========================================
 -- CONSTANTS FOR TEST REFERENCE

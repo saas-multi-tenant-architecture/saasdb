@@ -20,7 +20,7 @@ SELECT is(
 SELECT is(
   (SELECT pr.name FROM platform.platform_users pu
    JOIN platform.platform_roles pr ON pr.id = pu.role_id
-   WHERE pu.supabase_user_id = '11111111-1111-1111-1111-111111111101'),
+   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')),
   'platform_super_admin',
   'Maria should be platform_super_admin'
 );
@@ -31,7 +31,7 @@ SELECT is(
 SELECT is(
   (SELECT pr.name FROM platform.platform_users pu
    JOIN platform.platform_roles pr ON pr.id = pu.role_id
-   WHERE pu.supabase_user_id = '11111111-1111-1111-1111-111111111102'),
+   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')),
   'platform_viewer',
   'Carlos should be platform_viewer'
 );
@@ -39,14 +39,17 @@ SELECT is(
 -- ========================================
 -- TEST: create_platform_user function
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria (platform super admin)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT lives_ok(
-  $$SELECT platform.create_platform_user(
-    '11111111-1111-1111-1111-111111111103',
-    'sofia@bellaitalia.com',
-    '10000000-0000-0000-0000-000000000003' -- platform_viewer
-  )$$,
+  format(
+    $$SELECT platform.create_platform_user(
+      %L,
+      'sofia@bellaitalia.com',
+      '10000000-0000-0000-0000-000000000003'
+    )$$,
+    test_helpers.get_test_user_id('sofia@test.bellaitalia.com')
+  ),
   'Platform super admin can create platform user'
 );
 

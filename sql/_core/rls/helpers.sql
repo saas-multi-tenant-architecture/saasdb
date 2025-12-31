@@ -5,6 +5,8 @@
 -- FUNCTION: core.is_super_admin()
 -- ========================================
 -- Check if current user is super_admin for an organization
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
+-- (prevents infinite recursion when RLS checks membership status)
 CREATE OR REPLACE FUNCTION core.is_super_admin(p_org_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -15,11 +17,13 @@ RETURNS BOOLEAN AS $$
       AND is_deleted = false
   );
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.is_org_member()
 -- ========================================
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.is_org_member(p_org_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -29,11 +33,13 @@ RETURNS BOOLEAN AS $$
       AND is_deleted = false
   );
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.is_unit_member()
 -- ========================================
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.is_unit_member(p_unit_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -43,11 +49,13 @@ RETURNS BOOLEAN AS $$
       AND is_deleted = false
   );
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.get_org_role()
 -- ========================================
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.get_org_role(p_org_id UUID)
 RETURNS TEXT AS $$
   SELECT r.name
@@ -58,20 +66,24 @@ RETURNS TEXT AS $$
     AND m.is_deleted = false
   LIMIT 1;
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.has_org_role()
 -- ========================================
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.has_org_role(p_org_id UUID, p_role TEXT)
 RETURNS BOOLEAN AS $$
   SELECT core.get_org_role(p_org_id) = p_role;
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.has_unit_role()
 -- ========================================
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.has_unit_role(p_unit_id UUID, p_role TEXT)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -84,7 +96,8 @@ RETURNS BOOLEAN AS $$
       AND r.name = p_role
   );
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.shares_organization()
@@ -97,6 +110,7 @@ SET search_path = core;
 --   Alice (Org A, Org B), Bob (Org A) → TRUE (share Org A)
 --   Alice (Org A, Org B), Carol (Org B) → TRUE (share Org B)
 --   Bob (Org A), Carol (Org B) → FALSE (no shared org)
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.shares_organization(p_user_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -110,34 +124,41 @@ RETURNS BOOLEAN AS $$
       AND target_user_membership.is_deleted = false
   );
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.get_org_id_for_unit()
 -- ========================================
 -- Get the organization_id for a given unit
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.get_org_id_for_unit(p_unit_id UUID)
 RETURNS UUID AS $$
   SELECT organization_id FROM core.units WHERE id = p_unit_id AND is_deleted = false;
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.is_org_super_admin_for_unit()
 -- ========================================
 -- Check if current user is super_admin of the organization that owns this unit
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.is_org_super_admin_for_unit(p_unit_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT core.is_super_admin(core.get_org_id_for_unit(p_unit_id));
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;
 
 -- ========================================
 -- FUNCTION: core.is_org_member_for_unit()
 -- ========================================
 -- Check if current user is a member of the organization that owns this unit
+-- SECURITY DEFINER: Required to bypass RLS when called from RLS policies
 CREATE OR REPLACE FUNCTION core.is_org_member_for_unit(p_unit_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT core.is_org_member(core.get_org_id_for_unit(p_unit_id));
 $$ LANGUAGE sql STABLE
-SET search_path = core;
+SECURITY DEFINER
+SET search_path = core, public;

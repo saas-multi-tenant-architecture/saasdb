@@ -1,89 +1,139 @@
 -- 05_platform.sql
 -- Purpose: Create platform test data (platform roles, users, settings)
+-- Uses SECURITY DEFINER helper functions to bypass RLS
 
 -- ========================================
 -- PLATFORM ROLES (seeded for testing)
 -- ========================================
--- Note: In production these would be seeded separately
-INSERT INTO platform.platform_roles (id, name, description, casl_rules, created_by, updated_by) VALUES
-  -- Platform Super Admin - full access
-  ('10000000-0000-0000-0000-000000000001', 'platform_super_admin', 'Full platform administration access',
-   '[{"action": "manage", "subject": "all"}]',
-   NULL, NULL),
+-- Platform Super Admin - full access
+SELECT test_helpers.seed_platform_role(
+  '10000000-0000-0000-0000-000000000001'::uuid,
+  'platform_super_admin',
+  'Full platform administration access',
+  '[{"action": "manage", "subject": "all"}]'::jsonb
+);
 
-  -- Platform Admin - administrative access
-  ('10000000-0000-0000-0000-000000000002', 'platform_admin', 'Platform administration',
-   '[{"action": ["read", "create", "update"], "subject": "Organization"}, {"action": ["read", "create", "update"], "subject": "User"}, {"action": "read", "subject": "AuditLog"}]',
-   NULL, NULL),
+-- Platform Admin - administrative access
+SELECT test_helpers.seed_platform_role(
+  '10000000-0000-0000-0000-000000000002'::uuid,
+  'platform_admin',
+  'Platform administration',
+  '[{"action": ["read", "create", "update"], "subject": "Organization"}, {"action": ["read", "create", "update"], "subject": "User"}, {"action": "read", "subject": "AuditLog"}]'::jsonb
+);
 
-  -- Platform Viewer - read-only access
-  ('10000000-0000-0000-0000-000000000003', 'platform_viewer', 'Read-only platform access',
-   '[{"action": "read", "subject": "Organization"}, {"action": "read", "subject": "User"}]',
-   NULL, NULL)
-ON CONFLICT (id) DO NOTHING;
+-- Platform Viewer - read-only access
+SELECT test_helpers.seed_platform_role(
+  '10000000-0000-0000-0000-000000000003'::uuid,
+  'platform_viewer',
+  'Read-only platform access',
+  '[{"action": "read", "subject": "Organization"}, {"action": "read", "subject": "User"}]'::jsonb
+);
 
 -- ========================================
 -- PLATFORM USERS (admin users)
 -- ========================================
--- Platform Super Admin
-INSERT INTO platform.platform_users (id, supabase_user_id, email, role_id, created_by, updated_by) VALUES
-  ('20000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111101', 'maria@bellaitalia.com',
-   '10000000-0000-0000-0000-000000000001', -- platform_super_admin
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101')
-ON CONFLICT (id) DO NOTHING;
+-- Note: These users must exist in auth.users first (created in 02_test_users.sql)
+-- Platform Super Admin (Maria)
+SELECT test_helpers.seed_platform_user(
+  '20000000-0000-0000-0000-000000000001'::uuid,
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com'),  -- supabase_user_id
+  'maria@test.bellaitalia.com',
+  '10000000-0000-0000-0000-000000000001'::uuid   -- platform_super_admin role
+);
 
--- Platform Viewer
-INSERT INTO platform.platform_users (id, supabase_user_id, email, role_id, created_by, updated_by) VALUES
-  ('20000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111102', 'carlos@bellaitalia.com',
-   '10000000-0000-0000-0000-000000000003', -- platform_viewer
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101')
-ON CONFLICT (id) DO NOTHING;
+-- Platform Viewer (Carlos)
+SELECT test_helpers.seed_platform_user(
+  '20000000-0000-0000-0000-000000000002'::uuid,
+  test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),  -- supabase_user_id
+  'carlos@test.bellaitalia.com',
+  '10000000-0000-0000-0000-000000000003'::uuid   -- platform_viewer role
+);
 
 -- ========================================
 -- PLATFORM SETTINGS (sample settings)
 -- ========================================
-INSERT INTO platform.platform_settings (key, value, created_by, updated_by) VALUES
-  ('maintenance_mode', 'false', '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101'),
-  ('max_organizations', '100', '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101'),
-  ('signup_enabled', 'true', '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101')
-ON CONFLICT (key) DO NOTHING;
+-- Note: value is JSONB type
+SELECT test_helpers.seed_platform_setting('maintenance_mode', 'false'::jsonb, 'Enable/disable maintenance mode');
+SELECT test_helpers.seed_platform_setting('max_organizations', '100'::jsonb, 'Maximum number of organizations allowed');
+SELECT test_helpers.seed_platform_setting('signup_enabled', 'true'::jsonb, 'Enable/disable new signups');
+
+-- ========================================
+-- PLATFORM ORGANIZATIONS (required for feature flags FK)
+-- ========================================
+-- Create platform organization entry for Bella Italia
+SELECT test_helpers.seed_platform_organization(
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'Bella Italia',
+  'Test restaurant organization'
+);
 
 -- ========================================
 -- PLATFORM FEATURE FLAGS (sample flags)
 -- ========================================
-INSERT INTO platform.platform_feature_flags (id, key, value, is_active, organization_id, created_by, updated_by) VALUES
-  -- Global feature flag (no org)
-  ('30000000-0000-0000-0000-000000000001', 'dark_mode', '{"enabled": true}', true, NULL,
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101'),
-  -- Bella Italia specific flag
-  ('30000000-0000-0000-0000-000000000002', 'beta_features', '{"dashboard_v2": true}', true,
-   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101'),
-  -- Inactive flag
-  ('30000000-0000-0000-0000-000000000003', 'experimental', '{}', false, NULL,
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101')
-ON CONFLICT (id) DO NOTHING;
+-- Global feature flag (no org)
+SELECT test_helpers.seed_feature_flag(
+  '30000000-0000-0000-0000-000000000001'::uuid,
+  'dark_mode',
+  '{"enabled": true}'::jsonb,
+  true,
+  NULL,
+  'Enable dark mode UI theme'
+);
+
+-- Bella Italia specific flag
+SELECT test_helpers.seed_feature_flag(
+  '30000000-0000-0000-0000-000000000002'::uuid,
+  'beta_features',
+  '{"dashboard_v2": true}'::jsonb,
+  true,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'Beta features for specific organization'
+);
+
+-- Inactive flag
+SELECT test_helpers.seed_feature_flag(
+  '30000000-0000-0000-0000-000000000003'::uuid,
+  'experimental',
+  '{}'::jsonb,
+  false,
+  NULL,
+  'Experimental features (inactive)'
+);
 
 -- ========================================
 -- BILLING DATA (sample data)
 -- ========================================
 -- Billing customer for Bella Italia
-INSERT INTO platform.billing_customers (id, organization_id, created_by, updated_by) VALUES
-  ('40000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101')
-ON CONFLICT (id) DO NOTHING;
+SELECT test_helpers.seed_billing_customer(
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'cus_test_bellaitalia_001',
+  'billing@bellaitalia.com'
+);
 
--- Subscription product
-INSERT INTO platform.subscription_products (id, name, description, billing_interval, amount, created_by, updated_by) VALUES
-  ('50000000-0000-0000-0000-000000000001', 'Professional', 'Professional tier with all features', 'monthly', 9900,
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101'),
-  ('50000000-0000-0000-0000-000000000002', 'Enterprise', 'Enterprise tier with priority support', 'yearly', 99900,
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101')
-ON CONFLICT (id) DO NOTHING;
+-- Subscription products
+SELECT test_helpers.seed_subscription_product(
+  '50000000-0000-0000-0000-000000000001'::uuid,
+  'price_professional_monthly',
+  'Professional',
+  'Professional tier with all features',
+  'monthly',
+  9900
+);
 
--- Billing subscription
-INSERT INTO platform.billing_subscriptions (id, organization_id, product_id, status, created_by, updated_by) VALUES
-  ('60000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-   '50000000-0000-0000-0000-000000000001', 'active',
-   '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101')
-ON CONFLICT (id) DO NOTHING;
+SELECT test_helpers.seed_subscription_product(
+  '50000000-0000-0000-0000-000000000002'::uuid,
+  'price_enterprise_yearly',
+  'Enterprise',
+  'Enterprise tier with priority support',
+  'yearly',
+  99900
+);
+
+-- Billing subscription for Bella Italia
+SELECT test_helpers.seed_billing_subscription(
+  '60000000-0000-0000-0000-000000000001'::uuid,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'sub_test_bellaitalia_001',
+  'professional',
+  'active'
+);

@@ -8,7 +8,7 @@ SELECT plan(14);
 -- ========================================
 -- TEST: Org member can SELECT all units in their org
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria (Bella Italia)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.units
@@ -22,7 +22,7 @@ SELECT is(
 -- ========================================
 SELECT is(
   (SELECT COUNT(*)::int FROM core.units
-   WHERE organization_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
   0,
   'Maria cannot see Pizza Palace units'
 );
@@ -30,12 +30,12 @@ SELECT is(
 -- ========================================
 -- TEST: Unit member can SELECT their unit
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos (Downtown + Airport)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.units
-    WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001' -- Downtown
+    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01' -- Downtown
   ),
   'Carlos can SELECT Downtown unit'
 );
@@ -43,7 +43,7 @@ SELECT ok(
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.units
-    WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000002' -- Airport
+    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02' -- Airport
   ),
   'Carlos can SELECT Airport unit'
 );
@@ -55,7 +55,7 @@ SELECT ok(
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.units
-    WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000003' -- Mall
+    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03' -- Mall
   ),
   'Carlos can see Mall unit (org member access)'
 );
@@ -63,34 +63,42 @@ SELECT ok(
 -- ========================================
 -- TEST: Super_admin can INSERT new unit
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT lives_ok(
-  $$INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
-    VALUES (
-      'aaaaaaaa-aaaa-aaaa-aaaa-000000000004',
-      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      'New Location',
-      '11111111-1111-1111-1111-111111111101',
-      '11111111-1111-1111-1111-111111111101'
-    )$$,
+  format(
+    $$INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
+      VALUES (
+        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb04',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        'New Location',
+        %L,
+        %L
+      )$$,
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+  ),
   'Maria (super_admin) can INSERT new unit'
 );
 
 -- ========================================
 -- TEST: Regular member can INSERT unit (permissive RLS)
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 SELECT lives_ok(
-  $$INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
-    VALUES (
-      'aaaaaaaa-aaaa-aaaa-aaaa-000000000005',
-      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      'Carlos Location',
-      '11111111-1111-1111-1111-111111111102',
-      '11111111-1111-1111-1111-111111111102'
-    )$$,
+  format(
+    $$INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
+      VALUES (
+        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb05',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        'Carlos Location',
+        %L,
+        %L
+      )$$,
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+  ),
   'Carlos (manager) can INSERT new unit (permissive RLS)'
 );
 
@@ -98,15 +106,20 @@ SELECT lives_ok(
 -- TEST: Cannot INSERT unit into other organization
 -- ========================================
 SELECT throws_ok(
-  $$INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
-    VALUES (
-      'bbbbbbbb-bbbb-bbbb-bbbb-000000000099',
-      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-      'Should Fail',
-      '11111111-1111-1111-1111-111111111102',
-      '11111111-1111-1111-1111-111111111102'
-    )$$,
+  format(
+    $$INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
+      VALUES (
+        'dddddddd-dddd-dddd-dddd-dddddddddd99',
+        'cccccccc-cccc-cccc-cccc-cccccccccccc',
+        'Should Fail',
+        %L,
+        %L
+      )$$,
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+  ),
   '42501', -- insufficient_privilege
+  NULL,
   'Carlos cannot INSERT unit into Pizza Palace'
 );
 
@@ -116,7 +129,7 @@ SELECT throws_ok(
 SELECT lives_ok(
   $$UPDATE core.units
     SET description = 'Updated by Carlos'
-    WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001'$$,
+    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'$$,
   'Carlos can UPDATE Downtown unit'
 );
 
@@ -127,7 +140,7 @@ SELECT is(
   (SELECT COUNT(*)::int FROM (
     UPDATE core.units
     SET description = 'Should not work'
-    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-000000000001'
+    WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddd01'
     RETURNING id
   ) u),
   0,
@@ -137,11 +150,11 @@ SELECT is(
 -- ========================================
 -- TEST: Pizza Palace isolation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.units
-   WHERE organization_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
   1,
   'Luigi can see 1 Pizza Palace unit'
 );
@@ -156,16 +169,16 @@ SELECT is(
 -- ========================================
 -- TEST: Soft-deleted units not visible
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 UPDATE core.units
 SET is_deleted = true, deleted_at = now()
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000004'; -- New Location we created
+WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb04'; -- New Location we created
 
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM core.units
-    WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000004'
+    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb04'
   ),
   'Soft-deleted unit should not be visible'
 );

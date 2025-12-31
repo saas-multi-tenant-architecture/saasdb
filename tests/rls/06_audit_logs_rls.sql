@@ -8,21 +8,24 @@ SELECT plan(8);
 -- ========================================
 -- SETUP: Create some audit log entries
 -- ========================================
-INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-VALUES
-  -- Bella Italia logs
-  ('11111111-1111-1111-1111-111111111101', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'insert', 'core.units',
-   'aaaaaaaa-aaaa-aaaa-aaaa-000000000001', NULL, '{"name": "Downtown"}'),
-  ('11111111-1111-1111-1111-111111111102', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'update', 'core.units',
-   'aaaaaaaa-aaaa-aaaa-aaaa-000000000001', '{"name": "Old Name"}', '{"name": "Downtown"}'),
-  -- Pizza Palace logs
-  ('11111111-1111-1111-1111-111111111201', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'insert', 'core.units',
-   'bbbbbbbb-bbbb-bbbb-bbbb-000000000001', NULL, '{"name": "Main Street"}');
+DO $$
+BEGIN
+  INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
+  VALUES
+    -- Bella Italia logs
+    (test_helpers.get_test_user_id('maria@test.bellaitalia.com'), 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'insert', 'core.units',
+     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01', NULL, '{"name": "Downtown"}'),
+    (test_helpers.get_test_user_id('carlos@test.bellaitalia.com'), 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'update', 'core.units',
+     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01', '{"name": "Old Name"}', '{"name": "Downtown"}'),
+    -- Pizza Palace logs
+    (test_helpers.get_test_user_id('luigi@test.pizzapalace.com'), 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'insert', 'core.units',
+     'dddddddd-dddd-dddd-dddd-dddddddddd01', NULL, '{"name": "Main Street"}');
+END $$;
 
 -- ========================================
 -- TEST: Org member can SELECT audit logs for their org
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.audit_logs
@@ -36,7 +39,7 @@ SELECT is(
 -- ========================================
 SELECT is(
   (SELECT COUNT(*)::int FROM core.audit_logs
-   WHERE organization_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
   0,
   'Maria cannot see Pizza Palace audit logs'
 );
@@ -45,35 +48,41 @@ SELECT is(
 -- TEST: Super_admin can INSERT audit logs
 -- ========================================
 SELECT lives_ok(
-  $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-    VALUES (
-      '11111111-1111-1111-1111-111111111101',
-      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      'update',
-      'core.organizations',
-      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      '{"name": "Old"}',
-      '{"name": "New"}'
-    )$$,
+  format(
+    $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
+      VALUES (
+        %L,
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        'update',
+        'core.organizations',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        '{"name": "Old"}',
+        '{"name": "New"}'
+      )$$,
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+  ),
   'Maria can INSERT audit log entry'
 );
 
 -- ========================================
 -- TEST: Regular member can INSERT audit logs (permissive)
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 SELECT lives_ok(
-  $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-    VALUES (
-      '11111111-1111-1111-1111-111111111102',
-      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      'update',
-      'core.units',
-      'aaaaaaaa-aaaa-aaaa-aaaa-000000000001',
-      '{"name": "Downtown"}',
-      '{"name": "Downtown Updated"}'
-    )$$,
+  format(
+    $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
+      VALUES (
+        %L,
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        'update',
+        'core.units',
+        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+        '{"name": "Downtown"}',
+        '{"name": "Downtown Updated"}'
+      )$$,
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+  ),
   'Carlos can INSERT audit log entry'
 );
 
@@ -81,24 +90,28 @@ SELECT lives_ok(
 -- TEST: Cannot INSERT audit log for other org
 -- ========================================
 SELECT throws_ok(
-  $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-    VALUES (
-      '11111111-1111-1111-1111-111111111102',
-      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-      'update',
-      'core.units',
-      'bbbbbbbb-bbbb-bbbb-bbbb-000000000001',
-      '{}',
-      '{}'
-    )$$,
+  format(
+    $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
+      VALUES (
+        %L,
+        'cccccccc-cccc-cccc-cccc-cccccccccccc',
+        'update',
+        'core.units',
+        'dddddddd-dddd-dddd-dddd-dddddddddd01',
+        '{}',
+        '{}'
+      )$$,
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+  ),
   '42501', -- insufficient_privilege
+  NULL,
   'Carlos cannot INSERT audit log for Pizza Palace'
 );
 
 -- ========================================
 -- TEST: Regular member can view audit logs
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111106'); -- Sam
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sam@test.bellaitalia.com'));
 
 SELECT ok(
   (SELECT COUNT(*)::int FROM core.audit_logs
@@ -109,11 +122,11 @@ SELECT ok(
 -- ========================================
 -- TEST: Pizza Palace isolation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111201'); -- Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.audit_logs
-   WHERE organization_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
   1,
   'Luigi can see 1 Pizza Palace audit log'
 );

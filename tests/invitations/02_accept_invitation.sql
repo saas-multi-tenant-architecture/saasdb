@@ -8,7 +8,7 @@ SELECT plan(12);
 -- ========================================
 -- SETUP: Create a test invitation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
@@ -28,7 +28,7 @@ END $$;
 -- ========================================
 -- TEST: Can retrieve invitation details by token (unauthenticated)
 -- ========================================
-SELECT utils.clear_auth_user();
+SELECT test_helpers.clear_auth_user();
 
 SELECT ok(
   EXISTS (
@@ -50,7 +50,7 @@ BEGIN
   PERFORM set_config('test.new_user_id', v_new_user_id::text, false);
 END $$;
 
-SELECT utils.set_auth_user(current_setting('test.new_user_id')::uuid);
+SELECT test_helpers.set_auth_user(current_setting('test.new_user_id')::uuid);
 
 SELECT lives_ok(
   format($$SELECT * FROM public.accept_invitation('%s')$$, current_setting('test.invitation_token')),
@@ -92,7 +92,7 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Cannot accept with wrong email
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
@@ -106,7 +106,7 @@ BEGIN
   PERFORM set_config('test.wrong_email_token', v_wrong_token, false);
 END $$;
 
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos (different email)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 SELECT throws_ok(
   format($$SELECT * FROM public.accept_invitation('%s')$$, current_setting('test.wrong_email_token')),
@@ -117,7 +117,7 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Cannot accept expired invitation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
@@ -148,7 +148,7 @@ BEGIN
   PERFORM set_config('test.expired_user_id', v_expired_user_id::text, false);
 END $$;
 
-SELECT utils.set_auth_user(current_setting('test.expired_user_id')::uuid);
+SELECT test_helpers.set_auth_user(current_setting('test.expired_user_id')::uuid);
 
 SELECT throws_ok(
   format($$SELECT * FROM public.accept_invitation('%s')$$, current_setting('test.expired_token')),
@@ -168,14 +168,14 @@ SELECT is(
 -- ========================================
 -- TEST: Cannot accept invitation if already a member
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
   v_duplicate_token TEXT;
 BEGIN
   SELECT token INTO v_duplicate_token FROM public.create_invitation(
-    'maria.rossi@test.bellaitalia.com',
+    'maria@test.bellaitalia.com',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
     '00000000-0000-0000-0000-000000000002'::uuid
   );
@@ -191,7 +191,7 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Invalid token returns error
 -- ========================================
-SELECT utils.set_auth_user(current_setting('test.new_user_id')::uuid);
+SELECT test_helpers.set_auth_user(current_setting('test.new_user_id')::uuid);
 
 SELECT throws_ok(
   $$SELECT * FROM public.accept_invitation('invalid-token-12345')$$,
@@ -202,16 +202,22 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Unit membership created for unit-specific invitation
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
--- Maria needs to be a unit member first
-INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-VALUES (
-  '11111111-1111-1111-1111-111111111101',
-  'dddddddd-dddd-dddd-dddd-dddddddddddd',
-  '00000000-0000-0000-0000-000000000001',
-  '11111111-1111-1111-1111-111111111101'
-);
+-- Maria needs to be a unit member of Mall first (she's not in Mall by default)
+DO $$
+DECLARE
+  v_maria_id UUID;
+BEGIN
+  v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
+  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
+  VALUES (
+    v_maria_id,
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03', -- Mall unit
+    '00000000-0000-0000-0000-000000000001',
+    v_maria_id
+  );
+END $$;
 
 DO $$
 DECLARE
@@ -222,7 +228,7 @@ BEGIN
     'unitinvite@example.com',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
     '00000000-0000-0000-0000-000000000002'::uuid,
-    'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03'::uuid -- Mall unit
   );
 
   v_unit_user_id := test_helpers.create_test_user('unitinvite@example.com', 'Unit', 'User');
@@ -231,7 +237,7 @@ BEGIN
   PERFORM set_config('test.unit_user_id', v_unit_user_id::text, false);
 END $$;
 
-SELECT utils.set_auth_user(current_setting('test.unit_user_id')::uuid);
+SELECT test_helpers.set_auth_user(current_setting('test.unit_user_id')::uuid);
 
 SELECT lives_ok(
   format($$SELECT * FROM public.accept_invitation('%s')$$, current_setting('test.unit_token')),
@@ -242,7 +248,7 @@ SELECT ok(
   EXISTS (
     SELECT 1 FROM core.unit_memberships
     WHERE user_id = current_setting('test.unit_user_id')::uuid
-      AND unit_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+      AND unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03'
       AND is_deleted = false
   ),
   'Unit membership created for unit invitation'

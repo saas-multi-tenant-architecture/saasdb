@@ -1,5 +1,6 @@
 -- 04_pizza_palace.sql
 -- Purpose: Create Pizza Palace organization for cross-org isolation testing
+-- Uses SECURITY DEFINER helper functions to bypass RLS
 --
 -- Organization: Pizza Palace
 -- Units (Locations):
@@ -10,88 +11,79 @@
 --   Giuseppe (team) -> Main Street Team
 
 -- ========================================
--- CREATE PIZZA PALACE ORGANIZATION
+-- FIXED IDs (deterministic for testing)
 -- ========================================
-DO $$
-DECLARE
-  -- Users
-  v_luigi UUID := current_setting('test.user_luigi')::UUID;
-  v_giuseppe UUID := current_setting('test.user_giuseppe')::UUID;
+-- Organization ID: cccccccc-cccc-cccc-cccc-cccccccccccc
+-- Unit IDs:
+--   Main Street: dddddddd-dddd-dddd-dddd-dddddddddd01
+-- Role IDs:
+--   super_admin: 00000000-0000-0000-0000-000000000001
+--   team:        00000000-0000-0000-0000-000000000003
 
-  -- Roles
-  v_role_super_admin UUID := current_setting('test.role_super_admin')::UUID;
-  v_role_team UUID := current_setting('test.role_team')::UUID;
+-- ========================================
+-- CREATE ORGANIZATION
+-- ========================================
+SELECT test_helpers.seed_organization(
+  'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+  'Pizza Palace',
+  'Quick and delicious pizza delivery',
+  test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
+);
 
-  -- Organization and Units
-  v_org_id UUID;
-  v_mainstreet_id UUID;
-BEGIN
-  -- ========================================
-  -- CREATE ORGANIZATION AS LUIGI
-  -- ========================================
-  PERFORM test_helpers.set_auth_user(v_luigi);
+-- ========================================
+-- CREATE UNITS (LOCATIONS)
+-- ========================================
+SELECT test_helpers.seed_unit(
+  'dddddddd-dddd-dddd-dddd-dddddddddd01'::uuid,
+  'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+  'Main Street Location',
+  'Original Pizza Palace location',
+  test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
+);
 
-  -- Create the organization
-  INSERT INTO core.organizations (id, name, description, created_by)
-  VALUES (
-    'cccccccc-cccc-cccc-cccc-cccccccccccc',
-    'Pizza Palace',
-    'Quick and delicious pizza delivery',
-    v_luigi
-  )
-  RETURNING id INTO v_org_id;
+-- ========================================
+-- ADD ORGANIZATION MEMBERSHIPS
+-- ========================================
+-- Luigi - super_admin (owner)
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('luigi@test.pizzapalace.com'),
+  'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+  '00000000-0000-0000-0000-000000000001'::uuid,  -- super_admin role
+  true,  -- is_super_admin
+  test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
+);
 
-  -- Create Luigi's super_admin membership
-  INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by)
-  VALUES (v_luigi, v_org_id, v_role_super_admin, true, v_luigi);
+-- Giuseppe - team member
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('giuseppe@test.pizzapalace.com'),
+  'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  false,
+  test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
+);
 
-  -- Store org ID for tests
-  PERFORM set_config('test.org_pizza_palace', v_org_id::text, false);
+-- ========================================
+-- ADD UNIT MEMBERSHIPS
+-- ========================================
+-- Giuseppe: Team at Main Street
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('giuseppe@test.pizzapalace.com'),
+  'dddddddd-dddd-dddd-dddd-dddddddddd01'::uuid,  -- Main Street
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
+);
 
-  -- ========================================
-  -- CREATE UNITS (LOCATIONS)
-  -- ========================================
-
-  -- Main Street Location
-  INSERT INTO core.units (id, organization_id, name, description, created_by, updated_by)
-  VALUES (
-    'dddddddd-dddd-dddd-dddd-dddddddddd01',
-    v_org_id,
-    'Main Street Location',
-    'Original Pizza Palace location',
-    v_luigi,
-    v_luigi
-  )
-  RETURNING id INTO v_mainstreet_id;
-
-  -- Store unit ID for tests
-  PERFORM set_config('test.unit_mainstreet', v_mainstreet_id::text, false);
-
-  -- ========================================
-  -- ADD ORGANIZATION MEMBERS
-  -- ========================================
-
-  -- Giuseppe - team member
-  INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_giuseppe, v_org_id, v_role_team, v_luigi);
-
-  -- ========================================
-  -- ADD UNIT MEMBERSHIPS
-  -- ========================================
-
-  -- Giuseppe: Team at Main Street
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_giuseppe, v_mainstreet_id, v_role_team, v_luigi);
-
-  -- ========================================
-  -- LOG AUDIT ENTRIES
-  -- ========================================
-  INSERT INTO core.audit_logs (actor_id, organization_id, target_table, target_id, action, summary)
-  VALUES (v_luigi, v_org_id, 'core.organizations', v_org_id, 'insert', 'Created Pizza Palace');
-
-  -- Clear auth user
-  PERFORM test_helpers.clear_auth_user();
-END $$;
+-- ========================================
+-- LOG AUDIT ENTRY
+-- ========================================
+SELECT test_helpers.seed_audit_log(
+  test_helpers.get_test_user_id('luigi@test.pizzapalace.com'),
+  'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+  'core.organizations',
+  'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+  'insert',
+  'Created Pizza Palace'
+);
 
 -- ========================================
 -- SUMMARY

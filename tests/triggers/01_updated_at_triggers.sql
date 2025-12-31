@@ -1,5 +1,8 @@
 -- 01_updated_at_triggers.sql
 -- Purpose: Test that updated_at triggers work correctly
+--
+-- Unit IDs from fixtures:
+--   Downtown: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01
 
 BEGIN;
 
@@ -8,7 +11,7 @@ SELECT plan(8);
 -- ========================================
 -- TEST: organizations updated_at trigger
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 -- Get initial updated_at
 DO $$
@@ -42,7 +45,7 @@ DECLARE
 BEGIN
   SELECT updated_at INTO v_initial_updated_at
   FROM core.units
-  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+  WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
   PERFORM set_config('test.initial_ts', v_initial_updated_at::text, true);
   PERFORM pg_sleep(0.1);
@@ -50,10 +53,10 @@ END $$;
 
 UPDATE core.units
 SET description = 'Updated to test trigger'
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
 SELECT ok(
-  (SELECT updated_at FROM core.units WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001')
+  (SELECT updated_at FROM core.units WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')
   > current_setting('test.initial_ts')::timestamptz,
   'units.updated_at should be updated on change'
 );
@@ -64,24 +67,28 @@ SELECT ok(
 DO $$
 DECLARE
   v_initial_updated_at TIMESTAMPTZ;
+  v_carlos_id UUID;
 BEGIN
+  v_carlos_id := test_helpers.get_test_user_id('carlos@test.bellaitalia.com');
+
   SELECT updated_at INTO v_initial_updated_at
   FROM core.memberships
-  WHERE user_id = '11111111-1111-1111-1111-111111111102'
+  WHERE user_id = v_carlos_id
     AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
   PERFORM set_config('test.initial_ts', v_initial_updated_at::text, true);
+  PERFORM set_config('test.carlos_id', v_carlos_id::text, true);
   PERFORM pg_sleep(0.1);
 END $$;
 
 UPDATE core.memberships
 SET role_id = '00000000-0000-0000-0000-000000000001' -- change to super_admin role (but not is_super_admin flag)
-WHERE user_id = '11111111-1111-1111-1111-111111111102'
+WHERE user_id = current_setting('test.carlos_id')::uuid
   AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 SELECT ok(
   (SELECT updated_at FROM core.memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111102'
+   WHERE user_id = current_setting('test.carlos_id')::uuid
      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
   > current_setting('test.initial_ts')::timestamptz,
   'memberships.updated_at should be updated on change'
@@ -90,7 +97,7 @@ SELECT ok(
 -- Restore role
 UPDATE core.memberships
 SET role_id = '00000000-0000-0000-0000-000000000002' -- manager
-WHERE user_id = '11111111-1111-1111-1111-111111111102'
+WHERE user_id = current_setting('test.carlos_id')::uuid
   AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 -- ========================================
@@ -99,11 +106,14 @@ WHERE user_id = '11111111-1111-1111-1111-111111111102'
 DO $$
 DECLARE
   v_initial_updated_at TIMESTAMPTZ;
+  v_carlos_id UUID;
 BEGIN
+  v_carlos_id := test_helpers.get_test_user_id('carlos@test.bellaitalia.com');
+
   SELECT updated_at INTO v_initial_updated_at
   FROM core.unit_memberships
-  WHERE user_id = '11111111-1111-1111-1111-111111111102'
-    AND unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+  WHERE user_id = v_carlos_id
+    AND unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
   PERFORM set_config('test.initial_ts', v_initial_updated_at::text, true);
   PERFORM pg_sleep(0.1);
@@ -111,13 +121,13 @@ END $$;
 
 UPDATE core.unit_memberships
 SET role_id = '00000000-0000-0000-0000-000000000003' -- change to team
-WHERE user_id = '11111111-1111-1111-1111-111111111102'
-  AND unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+WHERE user_id = current_setting('test.carlos_id')::uuid
+  AND unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
 SELECT ok(
   (SELECT updated_at FROM core.unit_memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111102'
-     AND unit_id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001')
+   WHERE user_id = current_setting('test.carlos_id')::uuid
+     AND unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')
   > current_setting('test.initial_ts')::timestamptz,
   'unit_memberships.updated_at should be updated on change'
 );
@@ -128,21 +138,25 @@ SELECT ok(
 DO $$
 DECLARE
   v_initial_updated_at TIMESTAMPTZ;
+  v_maria_id UUID;
 BEGIN
+  v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
+
   SELECT updated_at INTO v_initial_updated_at
   FROM core.users_meta
-  WHERE id = '11111111-1111-1111-1111-111111111101';
+  WHERE id = v_maria_id;
 
   PERFORM set_config('test.initial_ts', v_initial_updated_at::text, true);
+  PERFORM set_config('test.maria_id', v_maria_id::text, true);
   PERFORM pg_sleep(0.1);
 END $$;
 
 UPDATE core.users_meta
 SET first_name = 'Maria Updated'
-WHERE id = '11111111-1111-1111-1111-111111111101';
+WHERE id = current_setting('test.maria_id')::uuid;
 
 SELECT ok(
-  (SELECT updated_at FROM core.users_meta WHERE id = '11111111-1111-1111-1111-111111111101')
+  (SELECT updated_at FROM core.users_meta WHERE id = current_setting('test.maria_id')::uuid)
   > current_setting('test.initial_ts')::timestamptz,
   'users_meta.updated_at should be updated on change'
 );
@@ -156,7 +170,7 @@ DECLARE
 BEGIN
   SELECT updated_at INTO v_initial_updated_at
   FROM core.unit_meta
-  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+  WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
   PERFORM set_config('test.initial_ts', v_initial_updated_at::text, true);
   PERFORM pg_sleep(0.1);
@@ -164,10 +178,10 @@ END $$;
 
 UPDATE core.unit_meta
 SET notes = 'Updated notes'
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
 SELECT ok(
-  (SELECT updated_at FROM core.unit_meta WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001')
+  (SELECT updated_at FROM core.unit_meta WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')
   > current_setting('test.initial_ts')::timestamptz,
   'unit_meta.updated_at should be updated on change'
 );
@@ -175,35 +189,25 @@ SELECT ok(
 -- ========================================
 -- TEST: platform_users updated_at trigger
 -- ========================================
--- Create a platform user first
-INSERT INTO platform.platform_users (id, supabase_user_id, email, role_id, created_by, updated_by)
-VALUES (
-  '22222222-2222-2222-2222-222222222201',
-  '11111111-1111-1111-1111-111111111101',
-  'platform-test@test.com',
-  (SELECT id FROM platform.platform_roles WHERE name = 'platform_viewer'),
-  '11111111-1111-1111-1111-111111111101',
-  '11111111-1111-1111-1111-111111111101'
-);
-
+-- Use existing platform user from fixtures (Maria)
 DO $$
 DECLARE
   v_initial_updated_at TIMESTAMPTZ;
 BEGIN
   SELECT updated_at INTO v_initial_updated_at
   FROM platform.platform_users
-  WHERE id = '22222222-2222-2222-2222-222222222201';
+  WHERE id = '20000000-0000-0000-0000-000000000001';
 
   PERFORM set_config('test.initial_ts', v_initial_updated_at::text, true);
   PERFORM pg_sleep(0.1);
 END $$;
 
 UPDATE platform.platform_users
-SET email = 'platform-updated@test.com'
-WHERE id = '22222222-2222-2222-2222-222222222201';
+SET first_name = 'Maria Updated'
+WHERE id = '20000000-0000-0000-0000-000000000001';
 
 SELECT ok(
-  (SELECT updated_at FROM platform.platform_users WHERE id = '22222222-2222-2222-2222-222222222201')
+  (SELECT updated_at FROM platform.platform_users WHERE id = '20000000-0000-0000-0000-000000000001')
   > current_setting('test.initial_ts')::timestamptz,
   'platform_users.updated_at should be updated on change'
 );
@@ -211,27 +215,25 @@ SELECT ok(
 -- ========================================
 -- TEST: platform_settings updated_at trigger
 -- ========================================
-INSERT INTO platform.platform_settings (key, value, created_by, updated_by)
-VALUES ('test_key', '"test_value"', '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101');
-
+-- Use existing setting from fixtures
 DO $$
 DECLARE
   v_initial_updated_at TIMESTAMPTZ;
 BEGIN
   SELECT updated_at INTO v_initial_updated_at
   FROM platform.platform_settings
-  WHERE key = 'test_key';
+  WHERE key = 'maintenance_mode';
 
   PERFORM set_config('test.initial_ts', v_initial_updated_at::text, true);
   PERFORM pg_sleep(0.1);
 END $$;
 
 UPDATE platform.platform_settings
-SET value = '"updated_value"'
-WHERE key = 'test_key';
+SET value = '"true"'::jsonb
+WHERE key = 'maintenance_mode';
 
 SELECT ok(
-  (SELECT updated_at FROM platform.platform_settings WHERE key = 'test_key')
+  (SELECT updated_at FROM platform.platform_settings WHERE key = 'maintenance_mode')
   > current_setting('test.initial_ts')::timestamptz,
   'platform_settings.updated_at should be updated on change'
 );

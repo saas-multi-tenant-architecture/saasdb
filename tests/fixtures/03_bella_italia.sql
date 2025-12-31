@@ -1,5 +1,6 @@
 -- 03_bella_italia.sql
 -- Purpose: Create Bella Italia Restaurant Group organization with units and memberships
+-- Uses SECURITY DEFINER helper functions to bypass RLS
 --
 -- Organization: Bella Italia Restaurant Group
 -- Units (Locations):
@@ -17,168 +18,195 @@
 --   Taylor (team) -> Org member only, no unit assignments
 
 -- ========================================
--- HELPER: Get user and role IDs
+-- FIXED IDs (deterministic for testing)
 -- ========================================
-DO $$
-DECLARE
-  -- Users
-  v_maria UUID := current_setting('test.user_maria')::UUID;
-  v_carlos UUID := current_setting('test.user_carlos')::UUID;
-  v_sofia UUID := current_setting('test.user_sofia')::UUID;
-  v_alex UUID := current_setting('test.user_alex')::UUID;
-  v_jordan UUID := current_setting('test.user_jordan')::UUID;
-  v_sam UUID := current_setting('test.user_sam')::UUID;
-  v_taylor UUID := current_setting('test.user_taylor')::UUID;
+-- Organization ID: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+-- Unit IDs:
+--   Downtown: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01
+--   Airport:  bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02
+--   Mall:     bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03
+-- Role IDs:
+--   super_admin: 00000000-0000-0000-0000-000000000001
+--   manager:     00000000-0000-0000-0000-000000000002
+--   team:        00000000-0000-0000-0000-000000000003
 
-  -- Roles
-  v_role_super_admin UUID := current_setting('test.role_super_admin')::UUID;
-  v_role_manager UUID := current_setting('test.role_manager')::UUID;
-  v_role_team UUID := current_setting('test.role_team')::UUID;
+-- ========================================
+-- CREATE ORGANIZATION
+-- ========================================
+SELECT test_helpers.seed_organization(
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'Bella Italia Restaurant Group',
+  'Fine Italian dining across multiple locations',
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Organization and Units
-  v_org_id UUID;
-  v_downtown_id UUID;
-  v_airport_id UUID;
-  v_mall_id UUID;
-BEGIN
-  -- ========================================
-  -- CREATE ORGANIZATION AS MARIA
-  -- ========================================
-  -- Simulate Maria creating the organization
-  PERFORM test_helpers.set_auth_user(v_maria);
+-- ========================================
+-- CREATE UNITS (LOCATIONS)
+-- ========================================
+SELECT test_helpers.seed_unit(
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'Downtown Location',
+  'Flagship location in the city center',
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Create the organization (Maria becomes super_admin automatically)
-  INSERT INTO core.organizations (id, name, description, created_by)
-  VALUES (
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'Bella Italia Restaurant Group',
-    'Fine Italian dining across multiple locations',
-    v_maria
-  )
-  RETURNING id INTO v_org_id;
+SELECT test_helpers.seed_unit(
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02'::uuid,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'Airport Location',
+  'Quick-service location at the airport terminal',
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Trigger creates organizations_meta and platform.platform_organizations
-  -- Now manually create Maria's super_admin membership
-  INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by)
-  VALUES (v_maria, v_org_id, v_role_super_admin, true, v_maria);
+SELECT test_helpers.seed_unit(
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03'::uuid,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'Mall Location',
+  'Family-friendly location in the shopping mall',
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Store org ID for tests
-  PERFORM set_config('test.org_bella_italia', v_org_id::text, false);
+-- ========================================
+-- ADD ORGANIZATION MEMBERSHIPS
+-- ========================================
+-- Maria - super_admin (owner)
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  '00000000-0000-0000-0000-000000000001'::uuid,  -- super_admin role
+  true,  -- is_super_admin
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- ========================================
-  -- CREATE UNITS (LOCATIONS)
-  -- ========================================
+-- Carlos - manager role at org level
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  '00000000-0000-0000-0000-000000000002'::uuid,  -- manager role
+  false,
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Downtown Location
-  INSERT INTO core.units (id, organization_id, name, description, created_by, updated_by)
-  VALUES (
-    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
-    v_org_id,
-    'Downtown Location',
-    'Flagship location in the city center',
-    v_maria,
-    v_maria
-  )
-  RETURNING id INTO v_downtown_id;
+-- Sofia - manager role at org level
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('sofia@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  '00000000-0000-0000-0000-000000000002'::uuid,  -- manager role
+  false,
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Airport Location
-  INSERT INTO core.units (id, organization_id, name, description, created_by, updated_by)
-  VALUES (
-    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02',
-    v_org_id,
-    'Airport Location',
-    'Quick-service location at the airport terminal',
-    v_maria,
-    v_maria
-  )
-  RETURNING id INTO v_airport_id;
+-- Alex - team role at org level
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('alex@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  false,
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Mall Location
-  INSERT INTO core.units (id, organization_id, name, description, created_by, updated_by)
-  VALUES (
-    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03',
-    v_org_id,
-    'Mall Location',
-    'Family-friendly location in the shopping mall',
-    v_maria,
-    v_maria
-  )
-  RETURNING id INTO v_mall_id;
+-- Jordan - team role at org level
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('jordan@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  false,
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Store unit IDs for tests
-  PERFORM set_config('test.unit_downtown', v_downtown_id::text, false);
-  PERFORM set_config('test.unit_airport', v_airport_id::text, false);
-  PERFORM set_config('test.unit_mall', v_mall_id::text, false);
+-- Sam - team role at org level
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('sam@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  false,
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- ========================================
-  -- ADD ORGANIZATION MEMBERS
-  -- ========================================
+-- Taylor - team role at org level (no unit assignments)
+SELECT test_helpers.seed_membership(
+  test_helpers.get_test_user_id('taylor@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  false,
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Carlos - manager role at org level
-  INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_carlos, v_org_id, v_role_manager, v_maria);
+-- ========================================
+-- ADD UNIT MEMBERSHIPS
+-- ========================================
+-- Carlos: Manager at Downtown and Airport
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,  -- Downtown
+  '00000000-0000-0000-0000-000000000002'::uuid,  -- manager role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02'::uuid,  -- Airport
+  '00000000-0000-0000-0000-000000000002'::uuid,  -- manager role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Sofia - manager role at org level
-  INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_sofia, v_org_id, v_role_manager, v_maria);
+-- Sofia: Manager at Downtown only
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('sofia@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,  -- Downtown
+  '00000000-0000-0000-0000-000000000002'::uuid,  -- manager role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Alex - team role at org level (has different roles at unit level)
-  INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_alex, v_org_id, v_role_team, v_maria);
+-- Alex: Team at Downtown, Manager at Mall
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('alex@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,  -- Downtown
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('alex@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03'::uuid,  -- Mall
+  '00000000-0000-0000-0000-000000000002'::uuid,  -- manager role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Jordan - team role at org level
-  INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_jordan, v_org_id, v_role_team, v_maria);
+-- Jordan: Team at Airport and Mall
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('jordan@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb02'::uuid,  -- Airport
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('jordan@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb03'::uuid,  -- Mall
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Sam - team role at org level
-  INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_sam, v_org_id, v_role_team, v_maria);
+-- Sam: Team at Downtown only
+SELECT test_helpers.seed_unit_membership(
+  test_helpers.get_test_user_id('sam@test.bellaitalia.com'),
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,  -- Downtown
+  '00000000-0000-0000-0000-000000000003'::uuid,  -- team role
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+);
 
-  -- Taylor - team role at org level (no unit assignments)
-  INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_taylor, v_org_id, v_role_team, v_maria);
+-- Taylor: No unit memberships (org member only)
 
-  -- ========================================
-  -- ADD UNIT MEMBERSHIPS
-  -- ========================================
-
-  -- Carlos: Manager at Downtown and Airport
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_carlos, v_downtown_id, v_role_manager, v_maria);
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_carlos, v_airport_id, v_role_manager, v_maria);
-
-  -- Sofia: Manager at Downtown only
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_sofia, v_downtown_id, v_role_manager, v_maria);
-
-  -- Alex: Team at Downtown, Manager at Mall
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_alex, v_downtown_id, v_role_team, v_maria);
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_alex, v_mall_id, v_role_manager, v_maria);
-
-  -- Jordan: Team at Airport and Mall
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_jordan, v_airport_id, v_role_team, v_maria);
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_jordan, v_mall_id, v_role_team, v_maria);
-
-  -- Sam: Team at Downtown only
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (v_sam, v_downtown_id, v_role_team, v_maria);
-
-  -- Taylor: No unit memberships (org member only)
-
-  -- ========================================
-  -- LOG AUDIT ENTRIES
-  -- ========================================
-  INSERT INTO core.audit_logs (actor_id, organization_id, target_table, target_id, action, summary)
-  VALUES (v_maria, v_org_id, 'core.organizations', v_org_id, 'insert', 'Created Bella Italia Restaurant Group');
-
-  -- Clear auth user
-  PERFORM test_helpers.clear_auth_user();
-END $$;
+-- ========================================
+-- LOG AUDIT ENTRY
+-- ========================================
+SELECT test_helpers.seed_audit_log(
+  test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'core.organizations',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  'insert',
+  'Created Bella Italia Restaurant Group'
+);
 
 -- ========================================
 -- SUMMARY

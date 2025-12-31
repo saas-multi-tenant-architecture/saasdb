@@ -7,6 +7,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Log file configuration
+LOG_FILE="./tests/test_logs/test_results_$(date +%Y%m%d_%H%M%S).log"
+QUIET_MODE="${QUIET_MODE:-false}"
+
 # Load environment variables from .env if it exists
 if [ -f .env ]; then
   export $(grep -v '^#' .env | xargs)
@@ -18,13 +22,20 @@ DB_PORT="${DB_PORT:-54322}"
 DB_NAME="${DB_NAME:-postgres}"
 DB_USER="${DB_USER:-postgres}"
 DB_PASSWORD="${DB_PASSWORD:-postgres}"
-DB_HOST="${DB_HOST:-aws-0-us-east-1.pooler.supabase.com}"
-DB_SSLMODE="${DB_SSLMODE:-require}"
+DB_SSLMODE="${DB_SSLMODE:-disable}"
 DB_PROJECT_REF="${DB_PROJECT_REF:-}"
 
 # Construct connection URL
-# postgres://postgres.<PROJECT_REF>:<PASSWORD>@aws-0-<REGION>.pooler.supabase.com:5432/postgres?sslmode=require"
-DB_URL="postgresql://postgres.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
+# For Supabase pooler (port 6543): use postgres.PROJECT_REF format
+# For direct connection (port 5432): use just the username
+# DB_URL="postgresql://${DB_USER}.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
+DB_URL="postgresql://${DB_USER}.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
+
+# if [[ "$DB_HOST" == *"pooler.supabase.com"* ]] && [[ -n "$DB_PROJECT_REF" ]]; then
+#   DB_URL="postgresql://${DB_USER}.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
+# else
+#   DB_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
+# fi
 
 echo -e "${YELLOW}=== SMTA Test Suite ===${NC}"
 echo "Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
@@ -52,23 +63,25 @@ echo ""
 # SETUP: Load test fixtures
 # ========================================
 echo -e "${YELLOW}=== Setting up test fixtures ===${NC}"
+echo "=== Setting up test fixtures ===" > "$LOG_FILE"
 
-psql "$DB_URL" -f tests/fixtures/00_test_helpers.sql
+# Use -q to suppress notices during fixture loading
+psql "$DB_URL" -q -f tests/fixtures/00_test_helpers.sql 2>> "$LOG_FILE"
 echo "✓ Loaded test helpers"
 
-psql "$DB_URL" -f tests/fixtures/01_roles.sql
+psql "$DB_URL" -q -f tests/fixtures/01_roles.sql 2>> "$LOG_FILE"
 echo "✓ Loaded roles"
 
-psql "$DB_URL" -f tests/fixtures/02_test_users.sql
+psql "$DB_URL" -q -f tests/fixtures/02_test_users.sql 2>> "$LOG_FILE"
 echo "✓ Loaded test users"
 
-psql "$DB_URL" -f tests/fixtures/03_bella_italia.sql
+psql "$DB_URL" -q -f tests/fixtures/03_bella_italia.sql 2>> "$LOG_FILE"
 echo "✓ Loaded Bella Italia test data"
 
-psql "$DB_URL" -f tests/fixtures/04_pizza_palace.sql
+psql "$DB_URL" -q -f tests/fixtures/04_pizza_palace.sql 2>> "$LOG_FILE"
 echo "✓ Loaded Pizza Palace test data"
 
-psql "$DB_URL" -f tests/fixtures/05_platform.sql
+psql "$DB_URL" -q -f tests/fixtures/05_platform.sql 2>> "$LOG_FILE"
 echo "✓ Loaded platform test data"
 
 echo ""
@@ -78,10 +91,23 @@ echo ""
 # ========================================
 echo -e "${YELLOW}=== Running tests ===${NC}"
 echo ""
+echo "=== Running tests ===" >> "$LOG_FILE"
+echo "Output saved to: $LOG_FILE"
+echo ""
+
+# Export connection parameters for pg_prove/psql
+export PGHOST="$DB_HOST"
+export PGPORT="$DB_PORT"
+export PGDATABASE="$DB_NAME"
+export PGUSER="${DB_USER}.${DB_PROJECT_REF}"
+export PGPASSWORD="$DB_PASSWORD"
+export PGSSLMODE="$DB_SSLMODE"
+# Suppress NOTICE/INFO messages from PostgreSQL (reduces noise like "SQL function X statement Y")
+export PGOPTIONS="-c client_min_messages=WARNING"
 
 # Run tests in logical order
-# Using -v for verbose output
-pg_prove -v "$DB_URL" \
+# Using -v for verbose output, pipe to tee to save and display
+pg_prove -v \
   tests/schema/01_schemas_exist.sql \
   tests/schema/02_core_tables.sql \
   tests/schema/03_platform_tables.sql \
@@ -115,9 +141,10 @@ pg_prove -v "$DB_URL" \
   tests/edge_cases/01_multi_org_user.sql \
   tests/edge_cases/02_cascading_deletes.sql \
   tests/edge_cases/03_concurrent_access.sql \
-  tests/edge_cases/04_role_scenarios.sql
+  tests/edge_cases/04_role_scenarios.sql \
+  2>&1 | tee -a "$LOG_FILE"
 
-TEST_EXIT_CODE=$?
+TEST_EXIT_CODE=${PIPESTATUS[0]}
 
 echo ""
 
@@ -134,10 +161,16 @@ echo ""
 # ========================================
 # SUMMARY
 # ========================================
+echo ""
+echo "Full output saved to: $LOG_FILE"
+echo ""
+
 if [ $TEST_EXIT_CODE -eq 0 ]; then
   echo -e "${GREEN}=== All tests passed! ===${NC}"
+  echo "=== All tests passed! ===" >> "$LOG_FILE"
   exit 0
 else
   echo -e "${RED}=== Some tests failed ===${NC}"
+  echo "=== Some tests failed ===" >> "$LOG_FILE"
   exit $TEST_EXIT_CODE
 fi

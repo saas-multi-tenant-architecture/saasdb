@@ -8,7 +8,7 @@ SELECT plan(10);
 -- ========================================
 -- TEST: get_user_profile returns current user data
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT ok(
   (SELECT first_name FROM public.get_user_profile()) = 'Maria',
@@ -21,7 +21,7 @@ SELECT ok(
 );
 
 SELECT ok(
-  (SELECT email FROM public.get_user_profile()) = 'maria@bellaitalia.com',
+  (SELECT email FROM public.get_user_profile()) = 'maria@test.bellaitalia.com',
   'get_user_profile should return correct email'
 );
 
@@ -63,7 +63,7 @@ SELECT ok(
 -- ========================================
 -- TEST: get_user_units returns units for current user in org
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 -- Carlos is in Downtown and Airport
 SELECT is(
@@ -75,7 +75,7 @@ SELECT is(
 -- ========================================
 -- TEST: User with no unit memberships
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111107'); -- Taylor
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('taylor@test.bellaitalia.com'));
 
 SELECT is(
   (SELECT COUNT(*)::int FROM public.get_user_units('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')),

@@ -8,20 +8,36 @@ SELECT plan(16);
 -- ========================================
 -- TEST: add_member_to_organization works
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+-- Store Maria's ID for use in inserts
+DO $$
+DECLARE
+  v_maria_id UUID;
+  v_new_user_id UUID;
+BEGIN
+  v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
+  -- Generate deterministic UUID for test user
+  v_new_user_id := extensions.uuid_generate_v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8'::uuid, 'newmember@test.com');
+  PERFORM set_config('test.maria_id', v_maria_id::text, true);
+  PERFORM set_config('test.new_user_id', v_new_user_id::text, true);
+END $$;
 
 -- Create a new test user
-INSERT INTO auth.users (id, email) VALUES ('11111111-1111-1111-1111-111111111199', 'newmember@test.com');
+INSERT INTO auth.users (id, email) VALUES (current_setting('test.new_user_id')::uuid, 'newmember@test.com');
 INSERT INTO core.users_meta (id, email, first_name, last_name, created_by, updated_by)
-VALUES ('11111111-1111-1111-1111-111111111199', 'newmember@test.com', 'New', 'Member',
-        '11111111-1111-1111-1111-111111111101', '11111111-1111-1111-1111-111111111101');
+VALUES (current_setting('test.new_user_id')::uuid, 'newmember@test.com', 'New', 'Member',
+        current_setting('test.maria_id')::uuid, current_setting('test.maria_id')::uuid);
 
 SELECT lives_ok(
-  $$SELECT public.add_member_to_organization(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111199',
-    '00000000-0000-0000-0000-000000000003' -- team role
-  )$$,
+  format(
+    $$SELECT public.add_member_to_organization(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      %L,
+      '00000000-0000-0000-0000-000000000003'
+    )$$,
+    current_setting('test.new_user_id')::uuid
+  ),
   'add_member_to_organization should succeed'
 );
 
@@ -30,7 +46,7 @@ SELECT ok(
   EXISTS (
     SELECT 1 FROM core.memberships
     WHERE organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-      AND user_id = '11111111-1111-1111-1111-111111111199'
+      AND user_id = current_setting('test.new_user_id')::uuid
       AND is_super_admin = false
   ),
   'New member should have membership record'
@@ -42,7 +58,7 @@ SELECT ok(
 SELECT ok(
   EXISTS (
     SELECT 1 FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    WHERE user_id = '11111111-1111-1111-1111-111111111199'
+    WHERE user_id = current_setting('test.new_user_id')::uuid
   ),
   'New member should appear in member list'
 );
@@ -51,17 +67,20 @@ SELECT ok(
 -- TEST: update_member_role works
 -- ========================================
 SELECT lives_ok(
-  $$SELECT public.update_member_role(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111199',
-    '00000000-0000-0000-0000-000000000002' -- manager role
-  )$$,
+  format(
+    $$SELECT public.update_member_role(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      %L,
+      '00000000-0000-0000-0000-000000000002'
+    )$$,
+    current_setting('test.new_user_id')::uuid
+  ),
   'update_member_role should succeed'
 );
 
 SELECT is(
   (SELECT role FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-   WHERE user_id = '11111111-1111-1111-1111-111111111199'),
+   WHERE user_id = current_setting('test.new_user_id')::uuid),
   'manager',
   'Member role should be updated to manager'
 );
@@ -70,17 +89,20 @@ SELECT is(
 -- TEST: remove_member_from_organization soft-deletes
 -- ========================================
 SELECT lives_ok(
-  $$SELECT public.remove_member_from_organization(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111199'
-  )$$,
+  format(
+    $$SELECT public.remove_member_from_organization(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      %L
+    )$$,
+    current_setting('test.new_user_id')::uuid
+  ),
   'remove_member_from_organization should succeed'
 );
 
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    WHERE user_id = '11111111-1111-1111-1111-111111111199'
+    WHERE user_id = current_setting('test.new_user_id')::uuid
   ),
   'Removed member should not appear in member list'
 );
@@ -90,7 +112,7 @@ SELECT ok(
   EXISTS (
     SELECT 1 FROM core.memberships
     WHERE organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-      AND user_id = '11111111-1111-1111-1111-111111111199'
+      AND user_id = current_setting('test.new_user_id')::uuid
       AND is_deleted = true
   ),
   'Membership should be soft-deleted'
@@ -100,18 +122,21 @@ SELECT ok(
 -- TEST: add_member_to_unit works
 -- ========================================
 SELECT lives_ok(
-  $$SELECT public.add_member_to_unit(
-    'aaaaaaaa-aaaa-aaaa-aaaa-000000000001', -- Downtown
-    '11111111-1111-1111-1111-111111111107', -- Taylor (org member, no units)
-    '00000000-0000-0000-0000-000000000003'  -- team role
-  )$$,
+  format(
+    $$SELECT public.add_member_to_unit(
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+      %L,
+      '00000000-0000-0000-0000-000000000003'
+    )$$,
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+  ),
   'add_member_to_unit should succeed'
 );
 
 SELECT ok(
   EXISTS (
-    SELECT 1 FROM public.list_unit_members('aaaaaaaa-aaaa-aaaa-aaaa-000000000001')
-    WHERE user_id = '11111111-1111-1111-1111-111111111107'
+    SELECT 1 FROM public.list_unit_members('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')
+    WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   ),
   'Taylor should appear in Downtown unit members'
 );
@@ -120,17 +145,20 @@ SELECT ok(
 -- TEST: update_unit_member_role works
 -- ========================================
 SELECT lives_ok(
-  $$SELECT public.update_unit_member_role(
-    'aaaaaaaa-aaaa-aaaa-aaaa-000000000001', -- Downtown
-    '11111111-1111-1111-1111-111111111107', -- Taylor
-    '00000000-0000-0000-0000-000000000002'  -- manager role
-  )$$,
+  format(
+    $$SELECT public.update_unit_member_role(
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+      %L,
+      '00000000-0000-0000-0000-000000000002'
+    )$$,
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+  ),
   'update_unit_member_role should succeed'
 );
 
 SELECT is(
-  (SELECT role FROM public.list_unit_members('aaaaaaaa-aaaa-aaaa-aaaa-000000000001')
-   WHERE user_id = '11111111-1111-1111-1111-111111111107'),
+  (SELECT role FROM public.list_unit_members('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')
+   WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')),
   'manager',
   'Taylor unit role should be updated to manager'
 );
@@ -139,17 +167,20 @@ SELECT is(
 -- TEST: remove_member_from_unit soft-deletes
 -- ========================================
 SELECT lives_ok(
-  $$SELECT public.remove_member_from_unit(
-    'aaaaaaaa-aaaa-aaaa-aaaa-000000000001', -- Downtown
-    '11111111-1111-1111-1111-111111111107'  -- Taylor
-  )$$,
+  format(
+    $$SELECT public.remove_member_from_unit(
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+      %L
+    )$$,
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+  ),
   'remove_member_from_unit should succeed'
 );
 
 SELECT ok(
   NOT EXISTS (
-    SELECT 1 FROM public.list_unit_members('aaaaaaaa-aaaa-aaaa-aaaa-000000000001')
-    WHERE user_id = '11111111-1111-1111-1111-111111111107'
+    SELECT 1 FROM public.list_unit_members('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01')
+    WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   ),
   'Taylor should not appear in Downtown unit members'
 );
@@ -158,10 +189,13 @@ SELECT ok(
 -- TEST: Cannot remove super_admin from org
 -- ========================================
 SELECT throws_ok(
-  $$SELECT public.remove_member_from_organization(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111101' -- Maria (super_admin)
-  )$$,
+  format(
+    $$SELECT public.remove_member_from_organization(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      %L
+    )$$,
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+  ),
   'Cannot soft-delete super_admin membership. Transfer super_admin status first.',
   'Cannot remove super_admin from organization'
 );

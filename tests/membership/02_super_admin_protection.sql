@@ -9,9 +9,11 @@ SELECT plan(6);
 -- TEST: Cannot hard-delete super_admin membership
 -- ========================================
 SELECT throws_ok(
-  $$DELETE FROM core.memberships
-    WHERE user_id = '11111111-1111-1111-1111-111111111101'
-      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+  format(
+    'DELETE FROM core.memberships WHERE user_id = %L AND organization_id = %L',
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+  ),
   'Cannot delete super_admin membership. Transfer super_admin status first.',
   'Hard delete of super_admin membership should be blocked'
 );
@@ -20,10 +22,11 @@ SELECT throws_ok(
 -- TEST: Cannot soft-delete super_admin membership
 -- ========================================
 SELECT throws_ok(
-  $$UPDATE core.memberships
-    SET is_deleted = true, deleted_at = now()
-    WHERE user_id = '11111111-1111-1111-1111-111111111101'
-      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+  format(
+    'UPDATE core.memberships SET is_deleted = true, deleted_at = now() WHERE user_id = %L AND organization_id = %L',
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+  ),
   'Cannot soft-delete super_admin membership. Transfer super_admin status first.',
   'Soft delete of super_admin membership should be blocked'
 );
@@ -32,12 +35,15 @@ SELECT throws_ok(
 -- TEST: Only one super_admin per organization (unique index)
 -- ========================================
 -- Try to set Carlos as super_admin (should fail due to unique index)
+-- Using 4-arg form: throws_ok(sql, errcode, errmsg_pattern, description)
 SELECT throws_ok(
-  $$UPDATE core.memberships
-    SET is_super_admin = true
-    WHERE user_id = '11111111-1111-1111-1111-111111111102'
-      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+  format(
+    'UPDATE core.memberships SET is_super_admin = true WHERE user_id = %L AND organization_id = %L',
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+  ),
   '23505', -- unique_violation error code
+  NULL,    -- don't check specific error message
   'Setting second super_admin should violate unique constraint'
 );
 
@@ -46,7 +52,7 @@ SELECT throws_ok(
 -- ========================================
 SELECT ok(
   (SELECT is_super_admin FROM core.memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111101'
+   WHERE user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
      AND is_deleted = false),
   'Maria should be super_admin of Bella Italia'
@@ -57,7 +63,7 @@ SELECT ok(
 -- ========================================
 SELECT ok(
   NOT (SELECT is_super_admin FROM core.memberships
-       WHERE user_id = '11111111-1111-1111-1111-111111111102'
+       WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
          AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
          AND is_deleted = false),
   'Carlos should NOT be super_admin of Bella Italia'
@@ -66,22 +72,13 @@ SELECT ok(
 -- ========================================
 -- TEST: Can delete non-super_admin membership
 -- ========================================
--- Create a temporary membership to delete
-INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by, updated_by)
-VALUES (
-  '11111111-1111-1111-1111-111111111107', -- Taylor
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '00000000-0000-0000-0000-000000000003', -- team role
-  false,
-  '11111111-1111-1111-1111-111111111101',
-  '11111111-1111-1111-1111-111111111101'
-);
-
+-- Use Taylor who already exists in the fixtures as an org member with no unit assignments
 SELECT lives_ok(
-  $$UPDATE core.memberships
-    SET is_deleted = true, deleted_at = now()
-    WHERE user_id = '11111111-1111-1111-1111-111111111107'
-      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+  format(
+    'UPDATE core.memberships SET is_deleted = true, deleted_at = now() WHERE user_id = %L AND organization_id = %L',
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com'),
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+  ),
   'Soft delete of non-super_admin membership should succeed'
 );
 

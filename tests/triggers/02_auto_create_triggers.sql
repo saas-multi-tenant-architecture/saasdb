@@ -1,5 +1,8 @@
 -- 02_auto_create_triggers.sql
 -- Purpose: Test that auto-creation triggers work correctly
+--
+-- Note: Uses eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee for test org to avoid
+-- conflicts with Pizza Palace (cccccccc-cccc-cccc-cccc-cccccccccccc)
 
 BEGIN;
 
@@ -8,29 +11,35 @@ SELECT plan(8);
 -- ========================================
 -- TEST: Creating organization auto-creates organizations_meta
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+-- Store Maria's ID for later use
+DO $$
+BEGIN
+  PERFORM set_config('test.maria_id', test_helpers.get_test_user_id('maria@test.bellaitalia.com')::text, true);
+END $$;
 
 -- Create org directly (not via function, to test trigger)
 INSERT INTO core.organizations (id, name, description, created_by, updated_by)
 VALUES (
-  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   'Trigger Test Org',
   'Testing auto-create trigger',
-  '11111111-1111-1111-1111-111111111101',
-  '11111111-1111-1111-1111-111111111101'
+  current_setting('test.maria_id')::uuid,
+  current_setting('test.maria_id')::uuid
 );
 
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.organizations_meta
-    WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+    WHERE id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
   ),
   'organizations_meta should be auto-created'
 );
 
 SELECT is(
-  (SELECT created_by FROM core.organizations_meta WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
-  '11111111-1111-1111-1111-111111111101'::uuid,
+  (SELECT created_by FROM core.organizations_meta WHERE id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+  current_setting('test.maria_id')::uuid,
   'organizations_meta.created_by should match organization creator'
 );
 
@@ -39,25 +48,25 @@ SELECT is(
 -- ========================================
 INSERT INTO core.units (id, organization_id, name, description, created_by, updated_by)
 VALUES (
-  'cccccccc-cccc-cccc-cccc-000000000001',
-  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'eeeeeeee-eeee-eeee-eeee-000000000001',
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   'Trigger Test Unit',
   'Testing auto-create trigger',
-  '11111111-1111-1111-1111-111111111101',
-  '11111111-1111-1111-1111-111111111101'
+  current_setting('test.maria_id')::uuid,
+  current_setting('test.maria_id')::uuid
 );
 
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.unit_meta
-    WHERE id = 'cccccccc-cccc-cccc-cccc-000000000001'
+    WHERE id = 'eeeeeeee-eeee-eeee-eeee-000000000001'
   ),
   'unit_meta should be auto-created'
 );
 
 SELECT is(
-  (SELECT created_by FROM core.unit_meta WHERE id = 'cccccccc-cccc-cccc-cccc-000000000001'),
-  '11111111-1111-1111-1111-111111111101'::uuid,
+  (SELECT created_by FROM core.unit_meta WHERE id = 'eeeeeeee-eeee-eeee-eeee-000000000001'),
+  current_setting('test.maria_id')::uuid,
   'unit_meta.created_by should match unit creator'
 );
 
@@ -65,12 +74,12 @@ SELECT is(
 -- TEST: Meta records have correct timestamps
 -- ========================================
 SELECT ok(
-  (SELECT created_at FROM core.organizations_meta WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc') IS NOT NULL,
+  (SELECT created_at FROM core.organizations_meta WHERE id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee') IS NOT NULL,
   'organizations_meta.created_at should be set'
 );
 
 SELECT ok(
-  (SELECT created_at FROM core.unit_meta WHERE id = 'cccccccc-cccc-cccc-cccc-000000000001') IS NOT NULL,
+  (SELECT created_at FROM core.unit_meta WHERE id = 'eeeeeeee-eeee-eeee-eeee-000000000001') IS NOT NULL,
   'unit_meta.created_at should be set'
 );
 
@@ -79,17 +88,17 @@ SELECT ok(
 -- ========================================
 INSERT INTO core.units (id, organization_id, name, description, created_by, updated_by)
 VALUES (
-  'cccccccc-cccc-cccc-cccc-000000000002',
-  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'eeeeeeee-eeee-eeee-eeee-000000000002',
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   'Second Trigger Test Unit',
   'Testing second unit',
-  '11111111-1111-1111-1111-111111111101',
-  '11111111-1111-1111-1111-111111111101'
+  current_setting('test.maria_id')::uuid,
+  current_setting('test.maria_id')::uuid
 );
 
 SELECT is(
   (SELECT COUNT(*)::int FROM core.unit_meta
-   WHERE id IN ('cccccccc-cccc-cccc-cccc-000000000001', 'cccccccc-cccc-cccc-cccc-000000000002')),
+   WHERE id IN ('eeeeeeee-eeee-eeee-eeee-000000000001', 'eeeeeeee-eeee-eeee-eeee-000000000002')),
   2,
   'Each unit should have its own unit_meta record'
 );

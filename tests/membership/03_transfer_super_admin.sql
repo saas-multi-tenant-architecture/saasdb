@@ -3,14 +3,14 @@
 
 BEGIN;
 
-SELECT plan(10);
+SELECT plan(9);
 
 -- ========================================
 -- TEST: Initial state - Maria is super_admin
 -- ========================================
 SELECT ok(
   (SELECT is_super_admin FROM core.memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111101'
+   WHERE user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
      AND is_deleted = false),
   'Before transfer: Maria should be super_admin'
@@ -18,7 +18,7 @@ SELECT ok(
 
 SELECT ok(
   NOT (SELECT is_super_admin FROM core.memberships
-       WHERE user_id = '11111111-1111-1111-1111-111111111102'
+       WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
          AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
          AND is_deleted = false),
   'Before transfer: Carlos should NOT be super_admin'
@@ -27,13 +27,14 @@ SELECT ok(
 -- ========================================
 -- TEST: Only super_admin can transfer (set auth as Maria)
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101');
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT lives_ok(
-  $$SELECT public.transfer_super_admin(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111102'
-  )$$,
+  format(
+    'SELECT public.transfer_super_admin(%L, %L)',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+  ),
   'Super_admin should be able to transfer ownership'
 );
 
@@ -42,7 +43,7 @@ SELECT lives_ok(
 -- ========================================
 SELECT ok(
   (SELECT is_super_admin FROM core.memberships
-   WHERE user_id = '11111111-1111-1111-1111-111111111102'
+   WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
      AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
      AND is_deleted = false),
   'After transfer: Carlos should be super_admin'
@@ -50,7 +51,7 @@ SELECT ok(
 
 SELECT ok(
   NOT (SELECT is_super_admin FROM core.memberships
-       WHERE user_id = '11111111-1111-1111-1111-111111111101'
+       WHERE user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
          AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
          AND is_deleted = false),
   'After transfer: Maria should NOT be super_admin'
@@ -61,10 +62,11 @@ SELECT ok(
 -- ========================================
 -- Try to transfer as Maria (no longer super_admin)
 SELECT throws_ok(
-  $$SELECT public.transfer_super_admin(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111103'
-  )$$,
+  format(
+    'SELECT public.transfer_super_admin(%L, %L)',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+    test_helpers.get_test_user_id('sofia@test.bellaitalia.com')
+  ),
   'Only the current super_admin can transfer ownership',
   'Non-super_admin should not be able to transfer ownership'
 );
@@ -72,15 +74,16 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Cannot transfer to non-member
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111102'); -- Carlos is now super_admin
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com')); -- Carlos is now super_admin
 
 -- Luigi is member of Pizza Palace, not Bella Italia
 SELECT throws_ok(
-  $$SELECT public.transfer_super_admin(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111201'
-  )$$,
-  'Target user must be an active member of the organization',
+  format(
+    'SELECT public.transfer_super_admin(%L, %L)',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+    test_helpers.get_test_user_id('luigi@test.pizzapalace.com')
+  ),
+  'Target user is not a member of this organization',
   'Cannot transfer to user not in organization'
 );
 
@@ -88,42 +91,31 @@ SELECT throws_ok(
 -- TEST: Cannot transfer to yourself
 -- ========================================
 SELECT throws_ok(
-  $$SELECT public.transfer_super_admin(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111102'
-  )$$,
-  'Cannot transfer super_admin status to yourself',
+  format(
+    'SELECT public.transfer_super_admin(%L, %L)',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+  ),
+  'Cannot transfer super_admin to yourself',
   'Cannot transfer to yourself'
 );
 
 -- ========================================
 -- TEST: Cannot transfer to deleted member
 -- ========================================
--- First soft-delete Taylor's membership (if exists)
+-- First soft-delete Taylor's membership
 UPDATE core.memberships
 SET is_deleted = true, deleted_at = now()
-WHERE user_id = '11111111-1111-1111-1111-111111111107'
+WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
--- Create and soft-delete a test membership
-INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, is_deleted, deleted_at, created_by, updated_by)
-VALUES (
-  '11111111-1111-1111-1111-111111111107',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '00000000-0000-0000-0000-000000000003',
-  false,
-  true,
-  now(),
-  '11111111-1111-1111-1111-111111111102',
-  '11111111-1111-1111-1111-111111111102'
-);
-
 SELECT throws_ok(
-  $$SELECT public.transfer_super_admin(
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11111111-1111-1111-1111-111111111107'
-  )$$,
-  'Target user must be an active member of the organization',
+  format(
+    'SELECT public.transfer_super_admin(%L, %L)',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+  ),
+  'Target user is not a member of this organization',
   'Cannot transfer to deleted member'
 );
 

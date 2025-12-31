@@ -8,7 +8,7 @@ SELECT plan(12);
 -- ========================================
 -- TEST: create_organization creates org with super_admin
 -- ========================================
-SELECT utils.set_auth_user('11111111-1111-1111-1111-111111111101'); -- Maria
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT lives_ok(
   $$SELECT public.create_organization('Test Restaurant', 'A test organization')$$,
@@ -20,7 +20,7 @@ SELECT ok(
   EXISTS (
     SELECT 1 FROM core.organizations
     WHERE name = 'Test Restaurant'
-      AND created_by = '11111111-1111-1111-1111-111111111101'
+      AND created_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
   ),
   'Organization should be created with correct name and creator'
 );
@@ -33,7 +33,7 @@ SELECT ok(
     SELECT 1 FROM core.memberships m
     JOIN core.organizations o ON o.id = m.organization_id
     WHERE o.name = 'Test Restaurant'
-      AND m.user_id = '11111111-1111-1111-1111-111111111101'
+      AND m.user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
       AND m.is_super_admin = true
   ),
   'Creator should be super_admin of new organization'
@@ -47,7 +47,7 @@ SELECT is(
    JOIN core.organizations o ON o.id = m.organization_id
    JOIN core.roles r ON r.id = m.role_id
    WHERE o.name = 'Test Restaurant'
-     AND m.user_id = '11111111-1111-1111-1111-111111111101'),
+     AND m.user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')),
   'super_admin',
   'Creator should have super_admin role'
 );
