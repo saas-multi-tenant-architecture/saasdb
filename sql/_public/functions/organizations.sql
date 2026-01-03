@@ -66,17 +66,17 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   SELECT m.user_id,
-         u.email,
+         um.email,
          um.first_name,
          um.last_name,
          r.name AS role,
          m.is_super_admin
   FROM core.memberships m
-  JOIN auth.users u ON u.id = m.user_id
   JOIN core.users_meta um ON um.id = m.user_id
   JOIN core.roles r ON r.id = m.role_id
   WHERE m.organization_id = p_id
-    AND m.is_deleted = false;
+    AND m.is_deleted = false
+    AND um.is_deleted = false
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 

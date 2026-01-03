@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(56);
+SELECT plan(58);
 
 -- ========================================
 -- TABLE: core.organizations

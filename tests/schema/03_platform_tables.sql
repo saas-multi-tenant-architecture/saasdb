@@ -62,8 +62,9 @@ SELECT has_column('platform', 'platform_action_logs', 'action_type', 'platform_a
 -- TABLE: platform.billing_customers
 -- ========================================
 SELECT has_table('platform', 'billing_customers', 'Table platform.billing_customers should exist');
-SELECT has_column('platform', 'billing_customers', 'id', 'billing_customers.id should exist');
 SELECT has_column('platform', 'billing_customers', 'organization_id', 'billing_customers.organization_id should exist');
+SELECT has_column('platform', 'billing_customers', 'paymentprocessor_customer_id', 'billing_customers.paymentprocessor_customer_id should exist');
+SELECT has_column('platform', 'billing_customers', 'billing_email', 'billing_customers.billing_email should exist');
 
 -- ========================================
 -- TABLE: platform.billing_subscriptions
