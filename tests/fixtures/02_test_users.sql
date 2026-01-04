@@ -1,7 +1,7 @@
 -- 02_test_users.sql
--- Purpose: Create test users for Bella Italia and Pizza Palace scenarios
+-- Purpose: Create test users for Bella Italia, Pizza Palace, and Platform scenarios
 --
--- Bella Italia Users:
+-- Bella Italia Users (Tenant):
 -- - Maria (Owner/super_admin)
 -- - Carlos (Regional Manager - Downtown & Airport)
 -- - Sofia (Downtown Manager)
@@ -10,9 +10,13 @@
 -- - Sam (Downtown Team only)
 -- - Taylor (Org member, no unit assignment)
 --
--- Pizza Palace Users:
+-- Pizza Palace Users (Tenant):
 -- - Luigi (Owner/super_admin)
 -- - Giuseppe (Team member)
+--
+-- PizzaTech SaaS Users (Platform Operator):
+-- - Sarah (Platform Super Admin - CTO)
+-- - Mike (Platform Viewer - Support Staff)
 
 -- ========================================
 -- BELLA ITALIA USERS
@@ -83,6 +87,26 @@ SELECT test_helpers.create_test_user(
   'giuseppe@test.pizzapalace.com',
   'Giuseppe',
   'Romano'
+);
+
+-- ========================================
+-- PLATFORM USERS (SaaS Operator Staff)
+-- ========================================
+-- These are employees of "PizzaTech SaaS" - the company that runs the
+-- pizza restaurant management platform. They are NOT tenant users.
+
+-- Sarah - Platform Super Admin (CTO)
+SELECT test_helpers.create_test_user(
+  'sarah@pizzatech-saas.com',
+  'Sarah',
+  'Chen'
+);
+
+-- Mike - Platform Viewer (Support Staff)
+SELECT test_helpers.create_test_user(
+  'mike@pizzatech-saas.com',
+  'Mike',
+  'Thompson'
 );
 
 -- ========================================

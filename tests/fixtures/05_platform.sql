@@ -30,22 +30,25 @@ SELECT test_helpers.seed_platform_role(
 );
 
 -- ========================================
--- PLATFORM USERS (admin users)
+-- PLATFORM USERS (SaaS operator staff)
 -- ========================================
 -- Note: These users must exist in auth.users first (created in 02_test_users.sql)
--- Platform Super Admin (Maria)
+-- Platform users are employees of "PizzaTech SaaS" - the company that operates
+-- the pizza restaurant management platform. They are NOT tenant users.
+
+-- Platform Super Admin (Sarah - CTO)
 SELECT test_helpers.seed_platform_user(
   '20000000-0000-0000-0000-000000000001'::uuid,
-  test_helpers.get_test_user_id('maria@test.bellaitalia.com'),  -- supabase_user_id
-  'maria@test.bellaitalia.com',
+  test_helpers.get_test_user_id('sarah@pizzatech-saas.com'),  -- supabase_user_id
+  'sarah@pizzatech-saas.com',
   '10000000-0000-0000-0000-000000000001'::uuid   -- platform_super_admin role
 );
 
--- Platform Viewer (Carlos)
+-- Platform Viewer (Mike - Support Staff)
 SELECT test_helpers.seed_platform_user(
   '20000000-0000-0000-0000-000000000002'::uuid,
-  test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),  -- supabase_user_id
-  'carlos@test.bellaitalia.com',
+  test_helpers.get_test_user_id('mike@pizzatech-saas.com'),  -- supabase_user_id
+  'mike@pizzatech-saas.com',
   '10000000-0000-0000-0000-000000000003'::uuid   -- platform_viewer role
 );
 

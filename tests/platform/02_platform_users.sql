@@ -15,31 +15,31 @@ SELECT is(
 );
 
 -- ========================================
--- TEST: Maria is platform super admin
+-- TEST: Sarah is platform super admin
 -- ========================================
 SELECT is(
   (SELECT pr.name FROM platform.platform_users pu
    JOIN platform.platform_roles pr ON pr.id = pu.role_id
-   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('maria@test.bellaitalia.com')),
+   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('sarah@pizzatech-saas.com')),
   'platform_super_admin',
-  'Maria should be platform_super_admin'
+  'Sarah should be platform_super_admin'
 );
 
 -- ========================================
--- TEST: Carlos is platform viewer
+-- TEST: Mike is platform viewer
 -- ========================================
 SELECT is(
   (SELECT pr.name FROM platform.platform_users pu
    JOIN platform.platform_roles pr ON pr.id = pu.role_id
-   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')),
+   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('mike@pizzatech-saas.com')),
   'platform_viewer',
-  'Carlos should be platform_viewer'
+  'Mike should be platform_viewer'
 );
 
 -- ========================================
 -- TEST: create_platform_user function
 -- ========================================
-SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
 
 SELECT lives_ok(
   format(

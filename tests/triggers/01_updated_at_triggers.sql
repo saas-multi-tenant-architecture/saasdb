@@ -189,7 +189,9 @@ SELECT ok(
 -- ========================================
 -- TEST: platform_users updated_at trigger
 -- ========================================
--- Use existing platform user from fixtures (Maria)
+-- Switch to service role for platform schema tests (platform schema is locked down)
+SELECT test_helpers.set_service_role();
+
 DO $$
 DECLARE
   v_initial_updated_at TIMESTAMPTZ;
@@ -203,7 +205,7 @@ BEGIN
 END $$;
 
 UPDATE platform.platform_users
-SET first_name = 'Maria Updated'
+SET first_name = 'Sarah Updated'
 WHERE id = '20000000-0000-0000-0000-000000000001';
 
 SELECT ok(
