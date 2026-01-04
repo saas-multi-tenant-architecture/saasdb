@@ -22,6 +22,7 @@ $$;
 -- ========================================
 -- TRIGGER
 -- ========================================
+DROP TRIGGER IF EXISTS trg_on_unit_created ON core.units;
 CREATE TRIGGER trg_on_unit_created
 AFTER INSERT ON core.units
 FOR EACH ROW EXECUTE FUNCTION core.handle_new_unit();

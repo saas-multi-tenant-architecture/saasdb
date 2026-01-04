@@ -26,6 +26,7 @@ $$;
 -- ========================================
 -- TRIGGER
 -- ========================================
+DROP TRIGGER IF EXISTS trg_on_organization_created ON core.organizations;
 CREATE TRIGGER trg_on_organization_created
 AFTER INSERT ON core.organizations
 FOR EACH ROW EXECUTE FUNCTION core.handle_new_organization();

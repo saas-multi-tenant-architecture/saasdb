@@ -76,7 +76,7 @@ BEGIN
   JOIN core.roles r ON r.id = m.role_id
   WHERE m.organization_id = p_id
     AND m.is_deleted = false
-    AND um.is_deleted = false
+    AND um.is_deleted = false;
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 

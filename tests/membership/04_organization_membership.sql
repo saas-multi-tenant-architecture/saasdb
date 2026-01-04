@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(11);
 
 -- ========================================
 -- TEST: list_organization_members returns correct data

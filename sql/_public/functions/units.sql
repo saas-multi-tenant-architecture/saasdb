@@ -62,12 +62,11 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   SELECT um.user_id,
-         u.email,
+         umeta.email,
          umeta.first_name,
          umeta.last_name,
          r.name AS role
   FROM core.unit_memberships um
-  JOIN auth.users u ON u.id = um.user_id
   JOIN core.users_meta umeta ON umeta.id = um.user_id
   JOIN core.roles r ON r.id = um.role_id
   WHERE um.unit_id = p_unit_id

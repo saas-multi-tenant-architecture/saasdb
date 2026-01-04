@@ -48,6 +48,7 @@ $$;
 -- ========================================
 -- TRIGGER
 -- ========================================
+DROP TRIGGER IF EXISTS trg_protect_super_admin ON core.memberships;
 CREATE TRIGGER trg_protect_super_admin
 BEFORE UPDATE OR DELETE ON core.memberships
 FOR EACH ROW EXECUTE FUNCTION core.protect_super_admin();
