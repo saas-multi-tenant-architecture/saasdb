@@ -14,7 +14,8 @@ BEGIN
     FROM platform.platform_users pu
     JOIN platform.platform_roles pr ON pu.role_id = pr.id
     WHERE pu.id = auth.uid()
-      AND pr.name = 'admin'
+      AND (pr.name = 'platform_super_admin' OR pr.name = 'platform_admin')
+      AND pu.deleted_at IS NULL
   ) INTO is_admin;
 
   IF NOT is_admin THEN

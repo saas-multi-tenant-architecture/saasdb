@@ -23,6 +23,12 @@ GRANT ALL ON ALL TABLES IN SCHEMA platform TO postgres;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA platform TO postgres;
 GRANT USAGE ON SCHEMA platform TO postgres;
 
+-- Include Service Role
+GRANT USAGE ON SCHEMA platform TO service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA platform TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA platform TO service_role;
+
+
 -- ========================================
 -- GRANTS FOR AUTH SCHEMA (for test user creation)
 -- ========================================
@@ -49,3 +55,5 @@ ALTER ROLE postgres BYPASSRLS;
 ALTER DEFAULT PRIVILEGES IN SCHEMA core GRANT ALL ON TABLES TO postgres;
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT ALL ON TABLES TO postgres;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON TABLES TO postgres;
+
+
