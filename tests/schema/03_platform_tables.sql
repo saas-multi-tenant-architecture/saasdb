@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(42);
+SELECT plan(44);
 
 -- ========================================
 -- TABLE: platform.platform_roles

@@ -29,6 +29,14 @@ VALUES (
   current_setting('test.maria_id')::uuid
 );
 
+-- Create membership for Maria so she can insert units
+  SELECT test_helpers.seed_membership(
+    current_setting('test.maria_id')::uuid,
+    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+    '00000000-0000-0000-0000-000000000001'::uuid,  -- super_admin role
+    true  -- is_super_admin
+  );
+
 SELECT ok(
   EXISTS (
     SELECT 1 FROM core.organizations_meta
@@ -106,7 +114,13 @@ SELECT is(
 -- ========================================
 -- TEST: Organization created via function also creates meta
 -- ========================================
-SELECT public.create_organization('Function Test Org', 'Created via function');
+
+-- Set user as Maria for this test
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+SELECT diag('auth.uid() returns: ' || COALESCE(auth.uid()::text, 'NULL'));
+
+SELECT public.create_organization('Function Test Org');
 
 SELECT ok(
   EXISTS (
