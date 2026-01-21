@@ -119,8 +119,6 @@ SELECT is(
 -- Set user as Maria for this test
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
-SELECT diag('auth.uid() returns: ' || COALESCE(auth.uid()::text, 'NULL'));
-
 SELECT public.create_organization('Function Test Org');
 
 SELECT ok(
@@ -135,3 +133,5 @@ SELECT ok(
 SELECT * FROM finish();
 
 ROLLBACK;
+
+
