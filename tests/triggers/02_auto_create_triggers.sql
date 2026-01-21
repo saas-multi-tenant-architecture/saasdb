@@ -111,6 +111,7 @@ SELECT is(
   'Each unit should have its own unit_meta record'
 );
 
+
 -- ========================================
 -- TEST: Organization created via function also creates meta
 -- ========================================
