@@ -95,7 +95,10 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.create_organization()
 -- ========================================
 -- Create a new organization and assign creator as super_admin
-CREATE OR REPLACE FUNCTION public.create_organization(p_name TEXT, p_role_id UUID DEFAULT NULL)
+-- NOTE: This function previously accepted (p_name TEXT, p_role_id UUID).
+-- We drop that signature to avoid overload ambiguity.
+DROP FUNCTION IF EXISTS public.create_organization(TEXT, UUID);
+CREATE OR REPLACE FUNCTION public.create_organization(p_name TEXT, p_description TEXT DEFAULT NULL)
 RETURNS TABLE (
   id UUID,
   name TEXT,
@@ -103,24 +106,23 @@ RETURNS TABLE (
 ) AS $$
 DECLARE
   v_org_id UUID;
-  v_role_id UUID;
 BEGIN
-  INSERT INTO core.organizations (name, created_by)
-  VALUES (p_name, auth.uid())
-  RETURNING core.organizations.id INTO v_org_id;
-
-  -- Use provided role_id or fall back to 'super_admin' role
-  IF p_role_id IS NOT NULL THEN
-    v_role_id := p_role_id;
-  ELSE
-    SELECT core.roles.id INTO v_role_id FROM core.roles WHERE name = 'super_admin' LIMIT 1;
+  IF p_name IS NULL OR btrim(p_name) = '' THEN
+    RAISE EXCEPTION 'Organization name is required';
   END IF;
 
-  -- Creator becomes super_admin (tenant owner)
-  INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by)
-  VALUES (auth.uid(), v_org_id, v_role_id, true, auth.uid());
+  INSERT INTO core.organizations (name, description, created_by, updated_by)
+  VALUES (p_name, p_description, auth.uid(), auth.uid())
+  RETURNING core.organizations.id INTO v_org_id;
 
-  PERFORM core.log_audit('insert', 'core.organizations', v_org_id, 'create_organization', jsonb_build_object('name', p_name));
+  -- Membership + platform registry rows are created by core.handle_new_organization() trigger.
+  PERFORM core.log_audit(
+    'insert',
+    'core.organizations',
+    v_org_id,
+    'create_organization',
+    jsonb_build_object('name', p_name, 'description', p_description)
+  );
 
   RETURN QUERY SELECT core.organizations.id, core.organizations.name, core.organizations.created_at FROM core.organizations WHERE core.organizations.id = v_org_id;
 END;

@@ -8,7 +8,7 @@ CREATE TABLE core.organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
-  created_by uuid,
+  created_by uuid NOT NULL,
   updated_by uuid,
   is_deleted boolean DEFAULT false,
   deleted_at TIMESTAMPTZ,
