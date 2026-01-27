@@ -7,6 +7,7 @@
 CREATE TABLE platform.platform_action_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   platform_user_id UUID REFERENCES platform.platform_users(id) ON DELETE SET NULL,
+  supabase_user_id UUID REFERENCES platform.platform_users(supabase_user_id),
   action_type TEXT NOT NULL, -- enum: select, create, update, delete, log, override
   target_table TEXT,
   target_id UUID,

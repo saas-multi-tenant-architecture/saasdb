@@ -14,12 +14,14 @@ CREATE OR REPLACE FUNCTION platform.log_platform_action(
 BEGIN
   INSERT INTO platform.platform_action_logs (
     platform_user_id,
+    supabase_user_id,
     action_type,
     target_table,
     target_id,
     summary,
     metadata
   ) VALUES (
+    (SELECT id FROM platform.platform_users WHERE supabase_user_id = auth.uid()),
     auth.uid(),
     p_action,
     p_target_table,
