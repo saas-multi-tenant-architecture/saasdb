@@ -8,7 +8,7 @@
 -- Platform Super Admin - full access
 SELECT test_helpers.seed_platform_role(
   '10000000-0000-0000-0000-000000000001'::uuid,
-  'platform_super_admin',
+  'super_admin',
   'Full platform administration access',
   '[{"action": "manage", "subject": "all"}]'::jsonb
 );
@@ -41,7 +41,7 @@ SELECT test_helpers.seed_platform_user(
   '20000000-0000-0000-0000-000000000001'::uuid,
   test_helpers.get_test_user_id('sarah@pizzatech-saas.com'),  -- supabase_user_id
   'sarah@pizzatech-saas.com',
-  '10000000-0000-0000-0000-000000000001'::uuid   -- platform_super_admin role
+  '10000000-0000-0000-0000-000000000001'::uuid   -- super_admin role
 );
 
 -- Platform Viewer (Mike - Support Staff)

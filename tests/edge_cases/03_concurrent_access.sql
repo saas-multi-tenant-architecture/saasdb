@@ -123,6 +123,8 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Platform settings key uniqueness
 -- ========================================
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+
 SELECT throws_ok(
   format($$INSERT INTO platform.platform_settings (key, value, created_by, updated_by)
     VALUES (
@@ -131,8 +133,8 @@ SELECT throws_ok(
       %L,
       %L
     )$$,
-    current_setting('test.maria_id')::uuid,
-    current_setting('test.maria_id')::uuid),
+    test_helpers.get_test_user_id('sarah@pizzatech-saas.com'),
+    test_helpers.get_test_user_id('sarah@pizzatech-saas.com')),
   '23505', -- unique_violation
   NULL,
   'Cannot create duplicate platform setting key'
@@ -143,7 +145,7 @@ SELECT throws_ok(
 -- ========================================
 SELECT throws_ok(
   $$INSERT INTO platform.platform_roles (name, description)
-    VALUES ('platform_super_admin', 'Duplicate role')$$,
+    VALUES ('super_admin', 'Duplicate role')$$,
   '23505', -- unique_violation
   'Cannot create duplicate platform role name'
 );

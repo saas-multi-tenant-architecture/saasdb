@@ -5,6 +5,9 @@ BEGIN;
 
 SELECT plan(10);
 
+-- Run platform reads/writes as a platform super_admin
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+
 -- ========================================
 -- TEST: Settings exist
 -- ========================================
@@ -17,8 +20,6 @@ SELECT is(
 -- ========================================
 -- TEST: get_setting returns correct value
 -- ========================================
-SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
-
 SELECT is(
   platform.get_setting('maintenance_mode'),
   'false',

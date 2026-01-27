@@ -111,9 +111,13 @@ BEGIN
     RAISE EXCEPTION 'Organization name is required';
   END IF;
 
-  INSERT INTO core.organizations (name, description, created_by, updated_by)
-  VALUES (p_name, p_description, auth.uid(), auth.uid())
-  RETURNING core.organizations.id INTO v_org_id;
+  -- Avoid INSERT .. RETURNING here.
+  -- The org membership is seeded in an AFTER INSERT trigger, and the RETURNING clause
+  -- would require SELECT access to the new org row before that membership exists.
+  v_org_id := gen_random_uuid();
+
+  INSERT INTO core.organizations (id, name, description, created_by, updated_by)
+  VALUES (v_org_id, p_name, p_description, auth.uid(), auth.uid());
 
   -- Membership + platform registry rows are created by core.handle_new_organization() trigger.
   PERFORM core.log_audit(

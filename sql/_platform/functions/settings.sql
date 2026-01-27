@@ -7,19 +7,17 @@
 -- Get a specific platform setting by key
 CREATE OR REPLACE FUNCTION platform.get_setting(
   p_key TEXT
-) RETURNS TABLE (
-  key TEXT,
-  value JSONB,
-  description TEXT
-) AS $$
+) RETURNS TEXT AS $$
 BEGIN
-  PERFORM platform.ensure_platform_admin();
+  PERFORM platform.ensure_platform_user();
 
-  RETURN QUERY
-  SELECT s.key, s.value, s.description
-  FROM platform.platform_settings s
-  WHERE s.key = p_key
-    AND s.is_deleted = false;
+  RETURN (
+    SELECT s.value::text
+    FROM platform.platform_settings s
+    WHERE s.key = p_key
+      AND s.is_deleted = false
+    LIMIT 1
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 
@@ -36,7 +34,7 @@ RETURNS TABLE (
   updated_at TIMESTAMPTZ
 ) AS $$
 BEGIN
-  PERFORM platform.ensure_platform_admin();
+  PERFORM platform.ensure_platform_user();
 
   RETURN QUERY
   SELECT s.key, s.value, s.description, s.created_at, s.updated_at

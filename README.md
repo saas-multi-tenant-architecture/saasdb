@@ -40,7 +40,7 @@ Create a reusable, secure, and modular SaaS backend using Supabase as the backen
 
 ### Schemas
 
-The following schemas complement those provided by Supabase. These are designed to segment functionality and enforce security boundaries. Removing tables from the `public` schema is an additional security measure to help prevent accidental exposure of sensitive data.
+The following schemas complement those provided by Supabase. These are designed to segment functionality and enforce security boundaries. Removing access to tables from the `public` schema is an additional security measure to help prevent accidental exposure of sensitive data.
 
 - `core`: identity, access, helper functions, audit logs
 
@@ -64,21 +64,21 @@ The following schemas complement those provided by Supabase. These are designed 
 
 - Platform functionality (`platform.*`) is strictly backend-only (SaaS operator only)
 
-- Supabase roles (`authenticated`, `anon`) are **explicitly revoked** from accessing the `platform` schema:
+- The `platform` schema is not exposed to tenant users. Base privileges are granted to `authenticated`, but row access is enforced with RLS so only platform users can read and only platform `super_admin` can write.
 
 ```sql
 
-REVOKE ALL ON SCHEMA platform FROM authenticated, anon;
-
-REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon;
+GRANT USAGE ON SCHEMA platform TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA platform TO authenticated;
+-- RLS policies enforce platform user/super_admin access.
 
 ```
 
 - No SQL functions or tables from `platform` are exposed in the `public` schema
 
-- Platform functionality is accessed via SQL or Edge Functions using the Supabase **service role**
+-- Platform functionality can be accessed via SQL or Edge Functions using the Supabase **service role**
 
-- RLS policies applied to `platform.*` tables with `USING (false)` for defense in depth
+- RLS policies applied to `platform.*` tables with `USING (false)` for defense in depth, except for bona fide platform users.
 
 ### Soft Deletion
 

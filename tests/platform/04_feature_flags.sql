@@ -5,6 +5,9 @@ BEGIN;
 
 SELECT plan(12);
 
+-- Run platform reads/writes as a platform super_admin
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+
 -- ========================================
 -- TEST: Feature flags exist
 -- ========================================
@@ -17,8 +20,6 @@ SELECT is(
 -- ========================================
 -- TEST: get_feature_flag returns correct value for global flag
 -- ========================================
-SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
-
 SELECT is(
   (platform.get_feature_flag('dark_mode'))::text,
   '{"enabled": true}',

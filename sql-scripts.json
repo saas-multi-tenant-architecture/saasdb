@@ -39,6 +39,7 @@
     "sql/_platform/tables/billing_customers.sql",
     "sql/_platform/tables/billing_subscriptions.sql",
     "sql/_platform/tables/subscription_products.sql",
+    "sql/_platform/tables/grants.sql",
 
     "sql/_core/rls/helpers.sql",
     "sql/_core/rls/policies.sql",

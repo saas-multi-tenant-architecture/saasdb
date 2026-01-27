@@ -5,6 +5,9 @@ BEGIN;
 
 SELECT plan(10);
 
+-- Run platform reads as a platform user
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+
 -- ========================================
 -- TEST: Platform users exist
 -- ========================================
@@ -21,8 +24,8 @@ SELECT is(
   (SELECT pr.name FROM platform.platform_users pu
    JOIN platform.platform_roles pr ON pr.id = pu.role_id
    WHERE pu.supabase_user_id = test_helpers.get_test_user_id('sarah@pizzatech-saas.com')),
-  'platform_super_admin',
-  'Sarah should be platform_super_admin'
+  'super_admin',
+  'Sarah should be super_admin'
 );
 
 -- ========================================

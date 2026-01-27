@@ -10,12 +10,13 @@ RETURNS TEXT AS $$
 DECLARE
   v_role TEXT;
 BEGIN
-  PERFORM platform.ensure_platform_admin();
+  PERFORM platform.ensure_platform_user();
 
   SELECT pr.name INTO v_role
   FROM platform.platform_users pu
   JOIN platform.platform_roles pr ON pu.role_id = pr.id
-  WHERE pu.id = auth.uid();
+  WHERE pu.supabase_user_id = auth.uid()
+    AND pu.is_deleted = false;
 
   RETURN v_role;
 END;
@@ -38,7 +39,7 @@ CREATE OR REPLACE FUNCTION platform.get_platform_action_log(
   created_at TIMESTAMPTZ
 ) AS $$
 BEGIN
-  PERFORM platform.ensure_platform_admin();
+  PERFORM platform.ensure_platform_user();
 
   PERFORM platform.log_platform_action('select', 'platform.platform_action_logs', NULL,
     'get_platform_action_log', jsonb_build_object('limit', p_limit));

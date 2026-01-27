@@ -45,7 +45,7 @@ CREATE OR REPLACE FUNCTION platform.get_feature_flag(
   is_active BOOLEAN
 ) AS $$
 BEGIN
-  PERFORM platform.ensure_platform_admin();
+  PERFORM platform.ensure_platform_user();
 
   RETURN QUERY
   SELECT ff.id, ff.key, ff.value, ff.organization_id, ff.description, ff.is_active
@@ -73,7 +73,7 @@ CREATE OR REPLACE FUNCTION platform.list_feature_flags(
   created_at TIMESTAMPTZ
 ) AS $$
 BEGIN
-  PERFORM platform.ensure_platform_admin();
+  PERFORM platform.ensure_platform_user();
 
   RETURN QUERY
   SELECT ff.id, ff.key, ff.value, ff.organization_id, ff.description, ff.is_active, ff.created_at

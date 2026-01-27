@@ -189,8 +189,8 @@ SELECT ok(
 -- ========================================
 -- TEST: platform_users updated_at trigger
 -- ========================================
--- Switch to service role for platform schema tests (platform schema is locked down)
-SELECT test_helpers.set_service_role();
+-- Run platform updates as a platform super_admin
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
 
 DO $$
 DECLARE
