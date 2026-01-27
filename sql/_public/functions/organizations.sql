@@ -276,11 +276,11 @@ BEGIN
     RAISE EXCEPTION 'Only a super_admin can update the organization';
   END IF;
 
-  UPDATE core.organizations
+  UPDATE core.organizations as o
   SET name = p_name,
       description = p_description,
       updated_by = auth.uid()
-  WHERE id = p_id
+  WHERE o.id = p_id
     AND is_deleted = false;
 
   IF NOT FOUND THEN
