@@ -114,13 +114,11 @@ SELECT lives_ok(
 );
 
 SELECT ok(
-  EXISTS (
-    SELECT 1 FROM core.organizations
+  NOT EXISTS (
+    SELECT 1 FROM public.list_my_organizations()
     WHERE id = current_setting('test.org_id')::uuid
-      AND is_deleted = true
-      AND deleted_at IS NOT NULL
   ),
-  'Organization should be soft-deleted'
+  'Deleted organization should not appear in list_my_organizations'
 );
 
 -- ========================================

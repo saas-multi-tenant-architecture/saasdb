@@ -242,3 +242,304 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
+-- FUNCTION: public.update_organization()
+-- ========================================
+-- Update an organization (super_admin only)
+CREATE OR REPLACE FUNCTION public.update_organization(
+  p_id UUID,
+  p_name TEXT,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id UUID,
+  name TEXT,
+  description TEXT,
+  updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  IF p_id IS NULL THEN
+    RAISE EXCEPTION 'Organization id is required';
+  END IF;
+
+  IF p_name IS NULL OR btrim(p_name) = '' THEN
+    RAISE EXCEPTION 'Organization name is required';
+  END IF;
+
+  -- Prevent leaking whether an org exists to non-members
+  IF NOT core.is_org_member(p_id) THEN
+    RAISE EXCEPTION 'Organization not found';
+  END IF;
+
+  IF NOT core.is_super_admin(p_id) THEN
+    RAISE EXCEPTION 'Only a super_admin can update the organization';
+  END IF;
+
+  UPDATE core.organizations
+  SET name = p_name,
+      description = p_description,
+      updated_by = auth.uid()
+  WHERE id = p_id
+    AND is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Organization not found';
+  END IF;
+
+  PERFORM core.log_audit(
+    'update',
+    'core.organizations',
+    p_id,
+    'update_organization',
+    jsonb_build_object('name', p_name, 'description', p_description)
+  );
+
+  RETURN QUERY
+  SELECT o.id, o.name, o.description, o.updated_at
+  FROM core.organizations o
+  WHERE o.id = p_id
+    AND o.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
+-- FUNCTION: public.update_organization_meta()
+-- ========================================
+-- Update organization metadata (super_admin only)
+CREATE OR REPLACE FUNCTION public.update_organization_meta(
+  p_id UUID,
+  p_logo_file_id UUID DEFAULT NULL,
+  p_address TEXT DEFAULT NULL,
+  p_timezone TEXT DEFAULT NULL,
+  p_locale TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id UUID,
+  logo_file_id UUID,
+  address TEXT,
+  timezone TEXT,
+  locale TEXT,
+  updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  IF p_id IS NULL THEN
+    RAISE EXCEPTION 'Organization id is required';
+  END IF;
+
+  -- Prevent leaking whether an org exists to non-members
+  IF NOT core.is_org_member(p_id) THEN
+    RAISE EXCEPTION 'Organization not found';
+  END IF;
+
+  IF NOT core.is_super_admin(p_id) THEN
+    RAISE EXCEPTION 'Only a super_admin can update the organization';
+  END IF;
+
+  IF p_logo_file_id IS NOT NULL THEN
+    PERFORM 1
+    FROM core.organization_files of
+    WHERE of.id = p_logo_file_id
+      AND of.organization_id = p_id
+      AND of.is_deleted = false;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Invalid logo_file_id for this organization';
+    END IF;
+  END IF;
+
+  UPDATE core.organizations_meta om
+  SET logo_file_id = p_logo_file_id,
+      address = p_address,
+      timezone = p_timezone,
+      locale = p_locale,
+      updated_by = auth.uid()
+  WHERE om.id = p_id
+    AND om.is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Organization not found';
+  END IF;
+
+  PERFORM core.log_audit(
+    'update',
+    'core.organizations_meta',
+    p_id,
+    'update_organization_meta',
+    jsonb_build_object(
+      'logo_file_id', p_logo_file_id,
+      'address', p_address,
+      'timezone', p_timezone,
+      'locale', p_locale
+    )
+  );
+
+  RETURN QUERY
+  SELECT om.id, om.logo_file_id, om.address, om.timezone, om.locale, om.updated_at
+  FROM core.organizations_meta om
+  WHERE om.id = p_id
+    AND om.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
+-- FUNCTION: public.delete_organization()
+-- ========================================
+-- Soft-delete an organization and related tenant data (super_admin only)
+-- Intended to be the "shut off subscription" operation.
+CREATE OR REPLACE FUNCTION public.delete_organization(p_id UUID)
+RETURNS VOID AS $$
+DECLARE
+  v_unit_ids UUID[];
+  v_org_meta_rows INT := 0;
+  v_unit_meta_rows INT := 0;
+  v_unit_membership_rows INT := 0;
+  v_unit_rows INT := 0;
+  v_org_file_rows INT := 0;
+  v_cleared_super_admin_rows INT := 0;
+  v_membership_rows INT := 0;
+  v_membership_rows_self INT := 0;
+  v_org_rows INT := 0;
+BEGIN
+  IF p_id IS NULL THEN
+    RAISE EXCEPTION 'Organization id is required';
+  END IF;
+
+  -- Prevent leaking whether an org exists to non-members
+  IF NOT core.is_org_member(p_id) THEN
+    RAISE EXCEPTION 'Organization not found';
+  END IF;
+
+  IF NOT core.is_super_admin(p_id) THEN
+    RAISE EXCEPTION 'Only a super_admin can delete the organization';
+  END IF;
+
+  -- Ensure org exists and is active
+  PERFORM 1
+  FROM core.organizations o
+  WHERE o.id = p_id
+    AND o.is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Organization not found';
+  END IF;
+
+  SELECT COALESCE(array_agg(u.id), ARRAY[]::uuid[])
+  INTO v_unit_ids
+  FROM core.units u
+  WHERE u.organization_id = p_id
+    AND u.is_deleted = false;
+
+  -- Soft-delete organizations_meta first (1:1)
+  UPDATE core.organizations_meta
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = auth.uid(),
+      updated_by = auth.uid()
+  WHERE id = p_id
+    AND is_deleted = false;
+  GET DIAGNOSTICS v_org_meta_rows = ROW_COUNT;
+
+  -- Soft-delete units and their dependent rows while units are still active
+  IF array_length(v_unit_ids, 1) IS NOT NULL AND array_length(v_unit_ids, 1) > 0 THEN
+    UPDATE core.unit_meta
+    SET is_deleted = true,
+        deleted_at = now(),
+        deleted_by = auth.uid(),
+        updated_by = auth.uid()
+    WHERE id = ANY (v_unit_ids)
+      AND is_deleted = false;
+    GET DIAGNOSTICS v_unit_meta_rows = ROW_COUNT;
+
+    UPDATE core.unit_memberships
+    SET is_deleted = true,
+        deleted_at = now(),
+        deleted_by = auth.uid(),
+        updated_by = auth.uid()
+    WHERE unit_id = ANY (v_unit_ids)
+      AND is_deleted = false;
+    GET DIAGNOSTICS v_unit_membership_rows = ROW_COUNT;
+
+    UPDATE core.units
+    SET is_deleted = true,
+        deleted_at = now(),
+        deleted_by = auth.uid(),
+        updated_by = auth.uid()
+    WHERE id = ANY (v_unit_ids)
+      AND is_deleted = false;
+    GET DIAGNOSTICS v_unit_rows = ROW_COUNT;
+  END IF;
+
+  -- Soft-delete org files
+  UPDATE core.organization_files
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = auth.uid(),
+      updated_by = auth.uid()
+  WHERE organization_id = p_id
+    AND is_deleted = false;
+  GET DIAGNOSTICS v_org_file_rows = ROW_COUNT;
+
+  -- protect_super_admin trigger blocks soft-delete of a super_admin membership.
+  -- Clear the flag for the caller first.
+  UPDATE core.memberships
+  SET is_super_admin = false,
+      updated_by = auth.uid()
+  WHERE organization_id = p_id
+    AND user_id = auth.uid()
+    AND is_super_admin = true
+    AND is_deleted = false;
+  GET DIAGNOSTICS v_cleared_super_admin_rows = ROW_COUNT;
+
+  -- Soft-delete all org memberships (including the former super_admin)
+  -- Keep the caller membership active until the end of the process.
+  UPDATE core.memberships
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = auth.uid(),
+      updated_by = auth.uid()
+  WHERE organization_id = p_id
+    AND user_id <> auth.uid()
+    AND is_deleted = false;
+  GET DIAGNOSTICS v_membership_rows = ROW_COUNT;
+
+  UPDATE core.memberships
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = auth.uid(),
+      updated_by = auth.uid()
+  WHERE organization_id = p_id
+    AND user_id = auth.uid()
+    AND is_deleted = false;
+  GET DIAGNOSTICS v_membership_rows_self = ROW_COUNT;
+
+  v_membership_rows := v_membership_rows + v_membership_rows_self;
+
+  -- Finally, soft-delete the organization
+  UPDATE core.organizations
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = auth.uid(),
+      updated_by = auth.uid()
+  WHERE id = p_id
+    AND is_deleted = false;
+  GET DIAGNOSTICS v_org_rows = ROW_COUNT;
+
+  PERFORM core.log_audit(
+    'delete',
+    'core.organizations',
+    p_id,
+    'delete_organization',
+    jsonb_build_object(
+      'organizations_meta_rows', v_org_meta_rows,
+      'unit_meta_rows', v_unit_meta_rows,
+      'unit_membership_rows', v_unit_membership_rows,
+      'unit_rows', v_unit_rows,
+      'organization_file_rows', v_org_file_rows,
+      'cleared_super_admin_rows', v_cleared_super_admin_rows,
+      'membership_rows', v_membership_rows,
+      'organization_rows', v_org_rows
+    )
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;

@@ -132,6 +132,7 @@ pg_prove -v \
   tests/invitations/02_accept_invitation.sql \
   tests/invitations/03_manage_invitations.sql \
   tests/rls/01_organizations_rls.sql \
+  tests/rls/08_organizations_meta_rls.sql \
   tests/rls/02_units_rls.sql \
   tests/rls/03_memberships_rls.sql \
   tests/rls/04_unit_memberships_rls.sql \

@@ -47,15 +47,15 @@ CREATE POLICY users_meta_update ON core.users_meta
 -- Org members can view and update (CASL controls fine-grained access)
 CREATE POLICY organizations_meta_select ON core.organizations_meta
   FOR SELECT USING (
-    core.is_org_member(id) OR core.is_super_admin(id)
+    is_deleted = false AND (core.is_org_member(id) OR core.is_super_admin(id))
   );
 
 CREATE POLICY organizations_meta_update ON core.organizations_meta
   FOR UPDATE USING (
-    core.is_org_member(id) OR core.is_super_admin(id)
+    is_deleted = false AND core.is_super_admin(id)
   )
   WITH CHECK (
-    core.is_org_member(id) OR core.is_super_admin(id)
+    core.is_super_admin(id)
   );
 
 -- ========================================
@@ -64,7 +64,7 @@ CREATE POLICY organizations_meta_update ON core.organizations_meta
 -- Members can read and update, creator can insert
 CREATE POLICY organizations_select ON core.organizations
   FOR SELECT USING (
-    core.is_org_member(id) OR core.is_super_admin(id)
+    is_deleted = false AND (core.is_org_member(id) OR core.is_super_admin(id))
   );
 
 CREATE POLICY organizations_insert ON core.organizations
@@ -72,10 +72,10 @@ CREATE POLICY organizations_insert ON core.organizations
 
 CREATE POLICY organizations_update ON core.organizations
   FOR UPDATE USING (
-    core.is_org_member(id) OR core.is_super_admin(id)
+    is_deleted = false AND core.is_super_admin(id)
   )
   WITH CHECK (
-    core.is_org_member(id) OR core.is_super_admin(id)
+    core.is_super_admin(id)
   );
 
 -- ========================================
@@ -84,7 +84,7 @@ CREATE POLICY organizations_update ON core.organizations
 -- Org members can read/insert/update (CASL controls fine-grained access)
 CREATE POLICY units_select ON core.units
   FOR SELECT USING (
-    core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
+    is_deleted = false AND (core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
   );
 
 CREATE POLICY units_insert ON core.units
@@ -94,7 +94,7 @@ CREATE POLICY units_insert ON core.units
 
 CREATE POLICY units_update ON core.units
   FOR UPDATE USING (
-    core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
+    is_deleted = false AND (core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
   )
   WITH CHECK (
     core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
@@ -106,12 +106,12 @@ CREATE POLICY units_update ON core.units
 -- Unit members or org members can read/update (CASL controls fine-grained access)
 CREATE POLICY unit_meta_select ON core.unit_meta
   FOR SELECT USING (
-    core.is_unit_member(id) OR core.is_org_member_for_unit(id) OR core.is_org_super_admin_for_unit(id)
+    is_deleted = false AND (core.is_unit_member(id) OR core.is_org_member_for_unit(id) OR core.is_org_super_admin_for_unit(id))
   );
 
 CREATE POLICY unit_meta_update ON core.unit_meta
   FOR UPDATE USING (
-    core.is_unit_member(id) OR core.is_org_member_for_unit(id) OR core.is_org_super_admin_for_unit(id)
+    is_deleted = false AND (core.is_unit_member(id) OR core.is_org_member_for_unit(id) OR core.is_org_super_admin_for_unit(id))
   )
   WITH CHECK (
     core.is_unit_member(id) OR core.is_org_member_for_unit(id) OR core.is_org_super_admin_for_unit(id)
@@ -124,7 +124,7 @@ CREATE POLICY unit_meta_update ON core.unit_meta
 -- Note: protect_super_admin trigger prevents deletion of super_admin membership
 CREATE POLICY memberships_select ON core.memberships
   FOR SELECT USING (
-    (SELECT auth.uid()) = user_id OR core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
+    is_deleted = false AND ((SELECT auth.uid()) = user_id OR core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
   );
 
 CREATE POLICY memberships_insert ON core.memberships
@@ -134,7 +134,7 @@ CREATE POLICY memberships_insert ON core.memberships
 
 CREATE POLICY memberships_update ON core.memberships
   FOR UPDATE USING (
-    core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
+    is_deleted = false AND (core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
   )
   WITH CHECK (
     core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
@@ -146,7 +146,7 @@ CREATE POLICY memberships_update ON core.memberships
 -- Users see their own rows, org members can manage (CASL controls fine-grained access)
 CREATE POLICY unit_memberships_select ON core.unit_memberships
   FOR SELECT USING (
-    (SELECT auth.uid()) = user_id OR core.is_org_member_for_unit(unit_id) OR core.is_org_super_admin_for_unit(unit_id)
+    is_deleted = false AND ((SELECT auth.uid()) = user_id OR core.is_org_member_for_unit(unit_id) OR core.is_org_super_admin_for_unit(unit_id))
   );
 
 CREATE POLICY unit_memberships_insert ON core.unit_memberships
@@ -156,7 +156,7 @@ CREATE POLICY unit_memberships_insert ON core.unit_memberships
 
 CREATE POLICY unit_memberships_update ON core.unit_memberships
   FOR UPDATE USING (
-    core.is_org_member_for_unit(unit_id) OR core.is_org_super_admin_for_unit(unit_id)
+    is_deleted = false AND (core.is_org_member_for_unit(unit_id) OR core.is_org_super_admin_for_unit(unit_id))
   )
   WITH CHECK (
     core.is_org_member_for_unit(unit_id) OR core.is_org_super_admin_for_unit(unit_id)
@@ -177,7 +177,7 @@ CREATE POLICY audit_logs_select ON core.audit_logs
 -- Org members can read/insert/update (CASL controls fine-grained access)
 CREATE POLICY organization_files_select ON core.organization_files
   FOR SELECT USING (
-    core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
+    is_deleted = false AND (core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
   );
 
 CREATE POLICY organization_files_insert ON core.organization_files
@@ -187,7 +187,7 @@ CREATE POLICY organization_files_insert ON core.organization_files
 
 CREATE POLICY organization_files_update ON core.organization_files
   FOR UPDATE USING (
-    core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
+    is_deleted = false AND (core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
   )
   WITH CHECK (
     core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
