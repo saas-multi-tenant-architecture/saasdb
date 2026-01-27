@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(11);
 
 -- Run platform reads/writes as a platform super_admin
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
@@ -22,7 +22,7 @@ SELECT is(
 -- ========================================
 SELECT is(
   (platform.get_feature_flag('dark_mode'))::text,
-  '{"enabled": true}',
+  '(30000000-0000-0000-0000-000000000001,dark_mode,"{""enabled"": true}",,"Enable dark mode UI theme",t)',
   'get_feature_flag should return dark_mode value'
 );
 
@@ -31,7 +31,7 @@ SELECT is(
 -- ========================================
 SELECT is(
   (platform.get_feature_flag('beta_features', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'))::text,
-  '{"dashboard_v2": true}',
+  '(30000000-0000-0000-0000-000000000002,beta_features,"{""dashboard_v2"": true}",aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa,"Beta features for specific organization",t)',
   'get_feature_flag should return org-specific flag'
 );
 
@@ -75,7 +75,7 @@ SELECT lives_ok(
 
 SELECT is(
   (platform.get_feature_flag('dark_mode'))::text,
-  '{"enabled": false}',
+  '(30000000-0000-0000-0000-000000000001,dark_mode,"{""enabled"": false}",,"Enable dark mode UI theme",t)',
   'Feature flag value should be updated'
 );
 

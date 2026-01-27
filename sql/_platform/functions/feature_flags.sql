@@ -60,9 +60,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- FUNCTION: platform.list_feature_flags()
 -- ========================================
 -- List all feature flags, optionally filtered by organization
+-- Does NOT include Global flags for a specific organization unless p_include_global is true
 CREATE OR REPLACE FUNCTION platform.list_feature_flags(
   p_organization_id UUID DEFAULT NULL,
-  p_include_global BOOLEAN DEFAULT true
+  p_include_global BOOLEAN DEFAULT false
 ) RETURNS TABLE (
   id UUID,
   key TEXT,
