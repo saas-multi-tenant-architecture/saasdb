@@ -416,7 +416,7 @@ BEGIN
 
   -- Ensure org exists and is active
   PERFORM 1
-  FROM core.organizations o
+  FROM core.organizations AS o
   WHERE o.id = p_id
     AND o.is_deleted = false;
 
@@ -431,98 +431,98 @@ BEGIN
     AND u.is_deleted = false;
 
   -- Soft-delete organizations_meta first (1:1)
-  UPDATE core.organizations_meta
+  UPDATE core.organizations_meta AS o
   SET is_deleted = true,
       deleted_at = now(),
       deleted_by = auth.uid(),
       updated_by = auth.uid()
-  WHERE id = p_id
-    AND is_deleted = false;
+  WHERE o.id = p_id
+    AND o.is_deleted = false;
   GET DIAGNOSTICS v_org_meta_rows = ROW_COUNT;
 
   -- Soft-delete units and their dependent rows while units are still active
   IF array_length(v_unit_ids, 1) IS NOT NULL AND array_length(v_unit_ids, 1) > 0 THEN
-    UPDATE core.unit_meta
+    UPDATE core.unit_meta AS u
     SET is_deleted = true,
         deleted_at = now(),
         deleted_by = auth.uid(),
         updated_by = auth.uid()
-    WHERE id = ANY (v_unit_ids)
-      AND is_deleted = false;
+    WHERE u.id = ANY (v_unit_ids)
+      AND u.is_deleted = false;
     GET DIAGNOSTICS v_unit_meta_rows = ROW_COUNT;
 
-    UPDATE core.unit_memberships
+    UPDATE core.unit_memberships AS m
     SET is_deleted = true,
         deleted_at = now(),
         deleted_by = auth.uid(),
         updated_by = auth.uid()
-    WHERE unit_id = ANY (v_unit_ids)
-      AND is_deleted = false;
+    WHERE m.unit_id = ANY (v_unit_ids)
+      AND m.is_deleted = false;
     GET DIAGNOSTICS v_unit_membership_rows = ROW_COUNT;
 
-    UPDATE core.units
+    UPDATE core.units AS u
     SET is_deleted = true,
         deleted_at = now(),
         deleted_by = auth.uid(),
         updated_by = auth.uid()
-    WHERE id = ANY (v_unit_ids)
-      AND is_deleted = false;
+    WHERE u.id = ANY (v_unit_ids)
+      AND u.is_deleted = false;
     GET DIAGNOSTICS v_unit_rows = ROW_COUNT;
   END IF;
 
   -- Soft-delete org files
-  UPDATE core.organization_files
+  UPDATE core.organization_files AS f
   SET is_deleted = true,
       deleted_at = now(),
       deleted_by = auth.uid(),
       updated_by = auth.uid()
-  WHERE organization_id = p_id
-    AND is_deleted = false;
+  WHERE f.organization_id = p_id
+    AND f.is_deleted = false;
   GET DIAGNOSTICS v_org_file_rows = ROW_COUNT;
 
   -- protect_super_admin trigger blocks soft-delete of a super_admin membership.
   -- Clear the flag for the caller first.
-  UPDATE core.memberships
+  UPDATE core.memberships AS m
   SET is_super_admin = false,
       updated_by = auth.uid()
-  WHERE organization_id = p_id
-    AND user_id = auth.uid()
-    AND is_super_admin = true
-    AND is_deleted = false;
+  WHERE m.organization_id = p_id
+    AND m.user_id = auth.uid()
+    AND m.is_super_admin = true
+    AND m.is_deleted = false;
   GET DIAGNOSTICS v_cleared_super_admin_rows = ROW_COUNT;
 
   -- Soft-delete all org memberships (including the former super_admin)
   -- Keep the caller membership active until the end of the process.
-  UPDATE core.memberships
+  UPDATE core.memberships AS m
   SET is_deleted = true,
       deleted_at = now(),
       deleted_by = auth.uid(),
       updated_by = auth.uid()
-  WHERE organization_id = p_id
-    AND user_id <> auth.uid()
-    AND is_deleted = false;
+  WHERE m.organization_id = p_id
+    AND m.user_id <> auth.uid()
+    AND m.is_deleted = false;
   GET DIAGNOSTICS v_membership_rows = ROW_COUNT;
 
-  UPDATE core.memberships
+  UPDATE core.memberships AS m
   SET is_deleted = true,
       deleted_at = now(),
       deleted_by = auth.uid(),
       updated_by = auth.uid()
-  WHERE organization_id = p_id
-    AND user_id = auth.uid()
-    AND is_deleted = false;
+  WHERE m.organization_id = p_id
+    AND m.user_id = auth.uid()
+    AND m.is_deleted = false;
   GET DIAGNOSTICS v_membership_rows_self = ROW_COUNT;
 
   v_membership_rows := v_membership_rows + v_membership_rows_self;
 
   -- Finally, soft-delete the organization
-  UPDATE core.organizations
+  UPDATE core.organizations AS o
   SET is_deleted = true,
       deleted_at = now(),
       deleted_by = auth.uid(),
       updated_by = auth.uid()
-  WHERE id = p_id
-    AND is_deleted = false;
+  WHERE o.id = p_id
+    AND o.is_deleted = false;
   GET DIAGNOSTICS v_org_rows = ROW_COUNT;
 
   PERFORM core.log_audit(
