@@ -236,3 +236,110 @@ BEGIN
   PERFORM core.log_audit('delete', 'core.units', p_id, 'delete_unit', '{}'::jsonb);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core, auth;
+
+-- ========================================
+-- FUNCTION: public.add_member_to_unit()
+-- ========================================
+-- Add an existing org member to a unit by UUID and role
+-- Caller must be org super_admin
+CREATE OR REPLACE FUNCTION public.add_member_to_unit(
+  p_unit_id UUID,
+  p_user_id UUID,
+  p_role_id UUID
+)
+RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
+BEGIN
+  v_org_id := core.get_org_id_for_unit(p_unit_id);
+
+  IF NOT core.is_super_admin(v_org_id) THEN
+    RAISE EXCEPTION 'Only a super_admin can add members to a unit';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM core.users_meta WHERE id = p_user_id) THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by, updated_by)
+  VALUES (p_user_id, p_unit_id, p_role_id, auth.uid(), auth.uid())
+  ON CONFLICT (user_id, unit_id) DO UPDATE
+    SET role_id = EXCLUDED.role_id,
+        is_deleted = false,
+        updated_by = auth.uid(),
+        updated_at = now();
+
+  PERFORM core.log_audit('insert', 'core.unit_memberships', p_user_id, 'add_member_to_unit',
+    jsonb_build_object('unit_id', p_unit_id, 'role_id', p_role_id));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core, auth;
+
+-- ========================================
+-- FUNCTION: public.update_unit_member_role()
+-- ========================================
+-- Update an existing unit member's role
+-- Caller must be org super_admin
+CREATE OR REPLACE FUNCTION public.update_unit_member_role(
+  p_unit_id UUID,
+  p_user_id UUID,
+  p_role_id UUID
+)
+RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
+BEGIN
+  v_org_id := core.get_org_id_for_unit(p_unit_id);
+
+  IF NOT core.is_super_admin(v_org_id) THEN
+    RAISE EXCEPTION 'Only a super_admin can update unit member roles';
+  END IF;
+
+  UPDATE core.unit_memberships
+  SET role_id = p_role_id,
+      updated_by = auth.uid(),
+      updated_at = now()
+  WHERE user_id = p_user_id
+    AND unit_id = p_unit_id
+    AND is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Member not found in unit';
+  END IF;
+
+  PERFORM core.log_audit('update', 'core.unit_memberships', p_user_id, 'update_unit_member_role',
+    jsonb_build_object('unit_id', p_unit_id, 'role_id', p_role_id));
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
+-- FUNCTION: public.remove_member_from_unit()
+-- ========================================
+-- Soft-delete a member from a unit
+-- Caller must be org super_admin
+CREATE OR REPLACE FUNCTION public.remove_member_from_unit(
+  p_unit_id UUID,
+  p_user_id UUID
+)
+RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
+BEGIN
+  v_org_id := core.get_org_id_for_unit(p_unit_id);
+
+  IF NOT core.is_super_admin(v_org_id) THEN
+    RAISE EXCEPTION 'Only a super_admin can remove members from a unit';
+  END IF;
+
+  UPDATE core.unit_memberships
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = auth.uid(),
+      updated_by = auth.uid()
+  WHERE user_id = p_user_id
+    AND unit_id = p_unit_id
+    AND is_deleted = false;
+
+  PERFORM core.log_audit('delete', 'core.unit_memberships', p_user_id, 'remove_member_from_unit',
+    jsonb_build_object('unit_id', p_unit_id));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core, auth;

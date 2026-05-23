@@ -125,6 +125,40 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, public;
 
 -- ========================================
+-- FUNCTION: test_helpers.membership_is_soft_deleted()
+-- ========================================
+-- Check if an org membership is soft-deleted, bypassing RLS
+-- SECURITY DEFINER required because RLS hides is_deleted=true rows
+CREATE OR REPLACE FUNCTION test_helpers.membership_is_soft_deleted(p_user_id UUID, p_org_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM core.memberships
+    WHERE user_id = p_user_id
+      AND organization_id = p_org_id
+      AND is_deleted = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, public;
+
+-- ========================================
+-- FUNCTION: test_helpers.unit_membership_is_soft_deleted()
+-- ========================================
+-- Check if a unit membership is soft-deleted, bypassing RLS
+-- SECURITY DEFINER required because RLS hides is_deleted=true rows
+CREATE OR REPLACE FUNCTION test_helpers.unit_membership_is_soft_deleted(p_user_id UUID, p_unit_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM core.unit_memberships
+    WHERE user_id = p_user_id
+      AND unit_id = p_unit_id
+      AND is_deleted = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, public;
+
+-- ========================================
 -- FUNCTION: test_helpers.get_test_user_id()
 -- ========================================
 -- Returns deterministic UUID for a test email (same as create_test_user)

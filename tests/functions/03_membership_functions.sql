@@ -23,11 +23,8 @@ BEGIN
   PERFORM set_config('test.new_user_id', v_new_user_id::text, true);
 END $$;
 
--- Create a new test user
-INSERT INTO auth.users (id, email) VALUES (current_setting('test.new_user_id')::uuid, 'newmember@test.com');
-INSERT INTO core.users_meta (id, email, first_name, last_name, created_by, updated_by)
-VALUES (current_setting('test.new_user_id')::uuid, 'newmember@test.com', 'New', 'Member',
-        current_setting('test.maria_id')::uuid, current_setting('test.maria_id')::uuid);
+-- Create a new test user (uses SECURITY DEFINER helper to bypass RLS on auth.users)
+SELECT test_helpers.create_test_user('newmember@test.com', 'New', 'Member');
 
 SELECT lives_ok(
   format(
@@ -107,13 +104,11 @@ SELECT ok(
   'Removed member should not appear in member list'
 );
 
--- Verify soft-delete (not hard delete)
+-- Verify soft-delete (not hard delete) - use helper to bypass RLS which hides is_deleted=true rows
 SELECT ok(
-  EXISTS (
-    SELECT 1 FROM core.memberships
-    WHERE organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-      AND user_id = current_setting('test.new_user_id')::uuid
-      AND is_deleted = true
+  test_helpers.membership_is_soft_deleted(
+    current_setting('test.new_user_id')::uuid,
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   ),
   'Membership should be soft-deleted'
 );
@@ -183,6 +178,15 @@ SELECT ok(
     WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   ),
   'Taylor should not appear in Downtown unit members'
+);
+
+-- Verify unit membership soft-delete (not hard delete)
+SELECT ok(
+  test_helpers.unit_membership_is_soft_deleted(
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com'),
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'
+  ),
+  'Unit membership should be soft-deleted'
 );
 
 -- ========================================
