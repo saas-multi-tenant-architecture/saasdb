@@ -178,10 +178,15 @@ RETURNS TABLE (
   updated_at TIMESTAMPTZ
 ) AS $$
 BEGIN
+  IF p_id IS NULL THEN
+    RAISE EXCEPTION 'Unit id is required';
+  END IF;
+
   IF p_name IS NULL OR btrim(p_name) = '' THEN
     RAISE EXCEPTION 'Unit name is required';
   END IF;
 
+  -- NULL p_description explicitly clears the description (matches update_organization convention)
   UPDATE core.units u
   SET name = p_name,
       description = p_description,
@@ -208,6 +213,10 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 CREATE OR REPLACE FUNCTION public.delete_unit(p_id UUID)
 RETURNS VOID AS $$
 BEGIN
+  IF p_id IS NULL THEN
+    RAISE EXCEPTION 'Unit id is required';
+  END IF;
+
   UPDATE core.unit_memberships
   SET is_deleted = true, deleted_at = now(), deleted_by = auth.uid(), updated_by = auth.uid()
   WHERE unit_id = p_id AND is_deleted = false;
