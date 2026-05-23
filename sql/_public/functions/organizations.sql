@@ -491,8 +491,7 @@ BEGIN
     AND m.is_deleted = false;
   GET DIAGNOSTICS v_cleared_super_admin_rows = ROW_COUNT;
 
-  -- Soft-delete all org memberships (including the former super_admin)
-  -- Keep the caller membership active until the end of the process.
+  -- Soft-delete all other org memberships (excluding caller)
   UPDATE core.memberships AS m
   SET is_deleted = true,
       deleted_at = now(),
@@ -503,6 +502,19 @@ BEGIN
     AND m.is_deleted = false;
   GET DIAGNOSTICS v_membership_rows = ROW_COUNT;
 
+  -- Soft-delete the organization BEFORE deleting caller's membership.
+  -- The org UPDATE uses RLS which checks membership; if caller's membership is
+  -- deleted first, the RLS check fails silently (0 rows updated).
+  UPDATE core.organizations AS o
+  SET is_deleted = true,
+      deleted_at = now(),
+      deleted_by = auth.uid(),
+      updated_by = auth.uid()
+  WHERE o.id = p_id
+    AND o.is_deleted = false;
+  GET DIAGNOSTICS v_org_rows = ROW_COUNT;
+
+  -- Finally, soft-delete the caller's own membership
   UPDATE core.memberships AS m
   SET is_deleted = true,
       deleted_at = now(),
@@ -514,16 +526,6 @@ BEGIN
   GET DIAGNOSTICS v_membership_rows_self = ROW_COUNT;
 
   v_membership_rows := v_membership_rows + v_membership_rows_self;
-
-  -- Finally, soft-delete the organization
-  UPDATE core.organizations AS o
-  SET is_deleted = true,
-      deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
-  WHERE o.id = p_id
-    AND o.is_deleted = false;
-  GET DIAGNOSTICS v_org_rows = ROW_COUNT;
 
   PERFORM core.log_audit(
     'delete',
