@@ -101,11 +101,7 @@ SELECT lives_ok(
 );
 
 SELECT ok(
-  EXISTS (
-    SELECT 1 FROM core.units
-    WHERE id = current_setting('test.unit_id')::uuid
-      AND is_deleted = true
-  ),
+  test_helpers.unit_is_soft_deleted(current_setting('test.unit_id')::uuid),
   'Unit should be soft-deleted'
 );
 

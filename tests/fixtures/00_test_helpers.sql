@@ -110,6 +110,21 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, platform, auth, public;
 
 -- ========================================
+-- FUNCTION: test_helpers.unit_is_soft_deleted()
+-- ========================================
+-- Check if a unit is soft-deleted, bypassing RLS
+-- SECURITY DEFINER required because RLS hides is_deleted=true rows from authenticated users
+CREATE OR REPLACE FUNCTION test_helpers.unit_is_soft_deleted(p_unit_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM core.units
+    WHERE id = p_unit_id AND is_deleted = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, public;
+
+-- ========================================
 -- FUNCTION: test_helpers.get_test_user_id()
 -- ========================================
 -- Returns deterministic UUID for a test email (same as create_test_user)
@@ -374,6 +389,15 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, public;
+
+-- ========================================
+-- GRANTS
+-- ========================================
+-- Tests call test_helpers functions after set_auth_user() switches to
+-- the 'authenticated' role. Without these grants the calls fail with
+-- "permission denied for schema test_helpers".
+GRANT USAGE ON SCHEMA test_helpers TO authenticated, anon, service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA test_helpers TO authenticated, anon, service_role;
 
 -- ========================================
 -- NOTES

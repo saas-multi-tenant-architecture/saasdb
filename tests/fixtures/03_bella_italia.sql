@@ -4,7 +4,7 @@
 --
 -- Organization: Bella Italia Restaurant Group
 -- Units (Locations):
---   - Downtown Location
+--   - Downtown
 --   - Airport Location
 --   - Mall Location
 --
@@ -46,8 +46,8 @@ SELECT test_helpers.seed_organization(
 SELECT test_helpers.seed_unit(
   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-  'Downtown Location',
-  'Flagship location in the city center',
+  'Downtown',
+  'Downtown flagship location',
   test_helpers.get_test_user_id('maria@test.bellaitalia.com')
 );
 
@@ -214,7 +214,7 @@ SELECT test_helpers.seed_audit_log(
 -- Organization: Bella Italia Restaurant Group
 --
 -- Units:
---   Downtown Location
+--   Downtown
 --   Airport Location
 --   Mall Location
 --

@@ -139,3 +139,91 @@ BEGIN
   PERFORM core.log_audit('delete', 'core.unit_memberships', p_user_id, 'remove_user_from_unit', jsonb_build_object('unit_id', p_unit_id));
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
+-- FUNCTION: public.list_units()
+-- ========================================
+-- List all active units for an organization (for org members)
+-- Different from list_my_units() which only shows units the caller belongs to
+CREATE OR REPLACE FUNCTION public.list_units(p_org_id UUID)
+RETURNS TABLE (
+  id UUID,
+  organization_id UUID,
+  name TEXT,
+  description TEXT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT u.id, u.organization_id, u.name, u.description, u.created_at, u.updated_at
+  FROM core.units u
+  WHERE u.organization_id = p_org_id
+    AND u.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
+-- FUNCTION: public.update_unit()
+-- ========================================
+CREATE OR REPLACE FUNCTION public.update_unit(
+  p_id UUID,
+  p_name TEXT,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id UUID,
+  name TEXT,
+  description TEXT,
+  updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  IF p_name IS NULL OR btrim(p_name) = '' THEN
+    RAISE EXCEPTION 'Unit name is required';
+  END IF;
+
+  UPDATE core.units u
+  SET name = p_name,
+      description = p_description,
+      updated_by = auth.uid()
+  WHERE u.id = p_id
+    AND u.is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Unit not found';
+  END IF;
+
+  PERFORM core.log_audit('update', 'core.units', p_id, 'update_unit',
+    jsonb_build_object('name', p_name, 'description', p_description));
+
+  RETURN QUERY
+  SELECT u.id, u.name, u.description, u.updated_at
+  FROM core.units u WHERE u.id = p_id AND u.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
+-- FUNCTION: public.delete_unit()
+-- ========================================
+CREATE OR REPLACE FUNCTION public.delete_unit(p_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE core.unit_memberships
+  SET is_deleted = true, deleted_at = now(), deleted_by = auth.uid(), updated_by = auth.uid()
+  WHERE unit_id = p_id AND is_deleted = false;
+
+  UPDATE core.unit_meta
+  SET is_deleted = true, deleted_at = now(), deleted_by = auth.uid(), updated_by = auth.uid()
+  WHERE id = p_id AND is_deleted = false;
+
+  UPDATE core.units u
+  SET is_deleted = true, deleted_at = now(), deleted_by = auth.uid(), updated_by = auth.uid()
+  WHERE u.id = p_id AND u.is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Unit not found';
+  END IF;
+
+  PERFORM core.log_audit('delete', 'core.units', p_id, 'delete_unit', '{}'::jsonb);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core, auth;
