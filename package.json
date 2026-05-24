@@ -7,7 +7,8 @@
     "test": "./scripts/run_tests.sh",
     "build:supabase": "node ./scripts/combine_files.js --adapter supabase",
     "build:payload": "node ./scripts/combine_files.js --adapter payload",
-    "build": "npm run build:supabase && npm run build:payload"
+    "build": "npm run build:supabase && npm run build:payload",
+    "build:docs": "pnpm --filter @smta/docs build"
   },
   "keywords": [],
   "author": "",
