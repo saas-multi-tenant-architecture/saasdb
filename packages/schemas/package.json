@@ -2,8 +2,17 @@
   "name": "@smta/schemas",
   "version": "0.1.0",
   "private": true,
-  "description": "SMTA Zod schemas for public.* RPC function contracts",
+  "description": "Zod schemas for SMTA public.* RPC function contracts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "lint": "tsc --noEmit"
+  },
   "dependencies": {
     "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
   }
 }
