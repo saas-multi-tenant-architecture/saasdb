@@ -3,13 +3,14 @@ import starlight from '@astrojs/starlight'
 
 export default defineConfig({
   output: 'static',
+  site: 'https://smta.dev',
   integrations: [
     starlight({
       title: 'SMTA',
       description: 'SaaS Multi-Tenant Architecture — PostgreSQL multi-tenancy for your SaaS',
       social: [
         // Update href to your GitHub repo URL before deploying
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/YOUR_ORG/saasdb' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/vbuser2004/saasdb' },
       ],
       sidebar: [
         {
