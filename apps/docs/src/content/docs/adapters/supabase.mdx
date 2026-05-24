@@ -30,9 +30,10 @@ SMTA routes per-tenant secret storage through Supabase Vault:
 
 ```sql
 select public.create_secret(
-  p_org_id := 'your-org-uuid',
-  p_name   := 'stripe_secret_key',
-  p_secret := 'sk_live_...'
+  'organization',
+  'your-org-uuid',
+  'stripe_secret_key',
+  'sk_live_...'
 );
 ```
 

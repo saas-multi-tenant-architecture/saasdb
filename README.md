@@ -2,7 +2,7 @@
 
 ## Introduction
 
-*SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to address these challenges by providing a ready-made solution that can be used to quickly bootstrap your SaaS. It exists for developers to rapidly create a structurally sound and secure multi-tenant database, integrated with tools used in many SaaS applications today.
+*SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to quickly bootstrap your SaaS and rapidly create a structurally sound and secure multi-tenant database, integrated with tools used in many SaaS applications today.
 
 The architecture is designed to be modular, scalable, and extensible to customize it to your needs, combine with backend solutions like [Supabase](https://supabase.com/) or [PayloadCMS](https://payloadcms.com/), and reduce the complexity of multi-tenancy so that you can focus on building your MVP.
 
@@ -43,7 +43,7 @@ To further help speed development, **SMTA** offers extensible connections to com
 ## Features
 
 - Tenant isolation via PostgreSQL RLS
-- Integration of database roles with RBAC libraries like [CASL](https://casl.js.org/)
+- Integration of database roles with RBAC library [CASL](https://casl.js.org/)
 - Soft deletion to prevent data loss and enable recovery
 - No-code auditing to track changes and actions at the database level
 - Payment processor integration for billing (Stripe or Lemon Squeezy)
@@ -119,10 +119,15 @@ npm test
 See `TESTING.md` for setup instructions and `AGENTS.md` for contribution guidelines.
 
 
+## Disclaimer
+**USE SMTA AT YOUR OWN RISK!** The author is not responsible for any data loss or other issues that may arise from using this project.
+
+This project is not affiliated with Supabase, PayloadCMS, Stripe, or Lemon Squeezy in any way. 
+
 ## Origin
 
-**SMTA** is a *labor of love*. It was born out of the frustration of having a great SaaS idea, but always stumbling over the same issue: building a structurally sound multi-tenant database. In many fledgling projects, building the elements of SMTA is put aside in the interest of expediency, but this creates substantial technical debt. When an application gains success, establishing a robust multi-tenant architecture can involve awkward workarounds that are annoying to the end-user, or are just too costly to re-write. In some cases, multi-tenancy is achieved using a "one-database-per-tenant" model, which can be more costly or lack cross-tenant integration (such as macro-analytics). This leads to a reduction in tenant isolation, security, or performance — and sometimes all three.
+**SMTA** is a *labor of love*. It was born out of the frustration of having a great SaaS idea, but always stumbling over the same issue: building a structurally sound multi-tenant database. In many fledgling projects, building the elements of SMTA is put aside in the interest of expediency, but this creates substantial technical debt. As an application grows, establishing a robust multi-tenant architecture can involve awkward workarounds, inefficient RLS policies that do not scale, or annoying inconveniences for end-users. In some cases, multi-tenancy is achieved using a "one-database-per-tenant" model, which can be more costly or lack cross-tenant integration (such as macro-analytics).
 
 **SMTA** originated to help solve the problem of building a multi-tenant application from the ground up. A great SaaS idea shouldn't have to begin with the rudimentary tenant isolation question, which is something most SaaS applications need. Rather, focus on the problem you are trying to solve.
 
-*Labor of Love: Hundreds of thousands of AI tokens were used to build this project so you don't have to!*
+*Labor of Love: Thousands of AI tokens were used to build this project so you don't have to!*
