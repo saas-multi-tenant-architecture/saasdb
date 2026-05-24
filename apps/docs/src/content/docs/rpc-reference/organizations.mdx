@@ -140,7 +140,7 @@ const { data, error } = await supabase.rpc('create_organization', {
 
 ### `invite_user_to_organization(p_email, p_role_id)`
 
-Invites a user by email. The organization is inferred from the caller's current membership context. Prefer `create_invitation` (in Invitations RPC) for explicit org/unit targeting.
+Invites a user by email. This function creates a membership in the first active organization the caller belongs to. If the caller belongs to multiple organizations, use `create_invitation` (in the Invitations section) instead, which accepts an explicit `p_organization_id`.
 
 **Signature**
 ```sql
@@ -149,6 +149,11 @@ public.invite_user_to_organization(
   p_role_id UUID
 )
 RETURNS VOID
+```
+
+**Usage**
+```sql
+select public.invite_user_to_organization('newuser@example.com', 'role-uuid-here');
 ```
 
 ---
@@ -191,6 +196,15 @@ RETURNS TABLE (
 )
 ```
 
+**Usage**
+```sql
+select * from public.update_organization(
+  'org-uuid',
+  'New Name',
+  'Updated description'
+);
+```
+
 ---
 
 ### `update_organization_meta(p_id, ...)`
@@ -214,6 +228,16 @@ RETURNS TABLE (
   locale       TEXT,
   updated_at   TIMESTAMPTZ
 )
+```
+
+**Usage**
+```sql
+select * from public.update_organization_meta(
+  'org-uuid',
+  p_address := '123 Main St',
+  p_timezone := 'America/New_York',
+  p_locale := 'en-US'
+);
 ```
 
 ---

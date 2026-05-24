@@ -146,7 +146,7 @@ const { data, error } = await supabase.rpc('create_unit', {
 
 ## Member Management
 
-Two functions exist for assigning users to units. They have **different parameter orders** and **different authorization requirements**.
+SMTA provides two functions for assigning users to units, with different parameter orders and authorization requirements. There are also two corresponding removal functions.
 
 ### `assign_user_to_unit(p_user_id, p_unit_id, p_role_id)`
 
@@ -209,6 +209,11 @@ RETURNS TABLE (
 )
 ```
 
+**Usage**
+```sql
+select * from public.update_unit('unit-uuid', 'Engineering', 'Backend team');
+```
+
 ---
 
 ### `delete_unit(p_id)`
@@ -219,6 +224,12 @@ Soft-deletes the unit and all of its memberships. Sets `is_deleted = true` on th
 ```sql
 public.delete_unit(p_id UUID)
 RETURNS VOID
+```
+
+**Usage**
+```sql
+select public.delete_unit('unit-uuid');
+-- Soft-deletes the unit, its unit_meta record, and all unit memberships
 ```
 
 ---

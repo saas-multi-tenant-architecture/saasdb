@@ -91,7 +91,7 @@ RETURNS TABLE (
 )
 ```
 
-> **Note**: This function does not filter by `is_deleted`. It returns all file records including soft-deleted ones. Filter client-side or check `delete_file` behavior if this matters for your use case.
+> **Note**: This function does not filter by `is_deleted`. It returns all file records including soft-deleted ones. To exclude soft-deleted files, filter client-side: `WHERE is_deleted = false`.
 
 **Usage**
 ```ts
