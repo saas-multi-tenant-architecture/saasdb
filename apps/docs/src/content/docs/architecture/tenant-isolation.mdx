@@ -1,6 +1,67 @@
 ---
-title: "Tenant Isolation & RLS"
-description: How SMTA enforces tenant isolation using Row Level Security.
+title: Tenant Isolation & RLS
+description: How SMTA uses PostgreSQL Row-Level Security to enforce tenant boundaries.
 ---
 
-This page is coming soon.
+## How RLS Works in SMTA
+
+PostgreSQL Row-Level Security (RLS) attaches policies directly to tables. When a query hits a table with RLS enabled, PostgreSQL evaluates the policy for every row before returning it. Rows that fail the policy are silently excluded — the query returns fewer rows, not an error.
+
+SMTA enables RLS on all `core` tables and writes policies that call `core.get_current_user_id()` to identify the authenticated user.
+
+## The Membership Check
+
+The canonical RLS pattern in SMTA uses a helper function `core.is_org_member(organization_id)`:
+
+```sql
+create policy "org members only" on core.some_table
+  for select using (
+    is_deleted = false AND core.is_org_member(organization_id)
+  );
+```
+
+This pattern appears across all org-scoped tables. A user sees a row only if they are an active (non-deleted) member of that row's organization.
+
+## `core.get_current_user_id()`
+
+This function is the keystone of SMTA's RLS system. Every policy ultimately relies on it. It returns the UUID of the currently authenticated user. The implementation is adapter-specific:
+
+- **Supabase adapter:** calls `auth.uid()`, which reads the user ID from the validated Supabase JWT
+- **Payload adapter:** reads the `app.current_user_id` PostgreSQL session variable, which your middleware sets at the start of each request
+
+Because RLS policies reference the function by name rather than by body, switching adapters requires only replacing the function implementation — the policies themselves don't change.
+
+## Platform Lockdown
+
+The `platform` schema is locked down by an additional RLS layer that restricts access to the database service role. End users and application code running under the authenticated role cannot read or write `platform` tables at all.
+
+## Soft Deletion and RLS
+
+SMTA uses soft deletion throughout — records have an `is_deleted` boolean column. RLS policies filter out soft-deleted rows automatically:
+
+```sql
+is_deleted = false AND core.is_org_member(organization_id)
+```
+
+This means:
+- Deleted organizations and memberships are invisible to queries
+- Data is recoverable by a service-role admin query
+- Audit logs are never soft-deleted — they are append-only
+
+## Your App Schema
+
+SMTA's RLS extends naturally into your `app` schema. You write your own policies that follow the same pattern, using `core.is_org_member()` or the raw membership check:
+
+```sql
+alter table app.your_table enable row level security;
+
+create policy "org members" on app.your_table
+  for all using (
+    exists (
+      select 1 from core.memberships m
+      where m.organization_id = app.your_table.org_id
+        and m.user_id = core.get_current_user_id()
+        and m.is_deleted = false
+    )
+  );
+```

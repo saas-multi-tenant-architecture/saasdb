@@ -1,6 +1,55 @@
 ---
 title: Architecture Overview
-description: High-level overview of the SMTA architecture.
+description: The 25,000 ft view of how SMTA is organized.
 ---
 
-This page is coming soon.
+SMTA sits between your authentication platform and your application tables. It is a purely PostgreSQL solution — no servers, no daemons, no runtime processes. It runs inside your existing database as a set of schemas, tables, functions, and RLS policies.
+
+## The Layered Design
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Application Layer                                   │
+│  Your app schema: projects, posts, documents, etc.   │
+│  Accessed via your DAL (CASL, Drizzle, Payload)      │
+├─────────────────────────────────────────────────────┤
+│  SMTA Layer                                          │
+│  core + platform schemas                             │
+│  Orgs, units, memberships, roles, audit, billing     │
+│  Accessed via public.* SQL functions                 │
+├─────────────────────────────────────────────────────┤
+│  Platform Layer                                      │
+│  Authentication adapter: Supabase or Payload CMS     │
+└─────────────────────────────────────────────────────┘
+```
+
+## Core Concept: Membership as the Gate
+
+SMTA's central question is: *"Is this user a member of the requested organization or unit?"*
+
+This is enforced at the database level by PostgreSQL Row-Level Security policies. No query can bypass them — not even from your application code. The RLS policies call `core.get_current_user_id()` on every row evaluation, and the result is the authenticated user's ID as provided by the active adapter.
+
+## Tenant Hierarchy
+
+```
+Organization (top-level tenant)
+└── Unit (sub-group: team, department, project)
+    └── Member (user with a role)
+```
+
+A user can belong to multiple organizations and multiple units within each organization. Roles are scoped per organization, not globally.
+
+## The Public Interface
+
+All client-callable operations go through `public.*` SQL functions. Client code never reads or writes SMTA tables directly — it calls functions. This gives SMTA a clear, auditable API boundary and prevents accidental exposure of internal tables.
+
+## Monorepo Package Structure
+
+```
+packages/
+├── core/       Adapter-agnostic SQL: schemas, tables, RLS, triggers, public functions
+├── supabase/   Supabase-specific: JWT auth impl, Vault secrets, auth.users FK constraints
+├── payload/    Payload-specific: session-variable auth impl
+├── billing/    TypeScript BillingProvider interface + Stripe + Lemon Squeezy implementations
+└── schemas/    Zod v4 schemas for all public.* RPC function inputs and outputs
+```

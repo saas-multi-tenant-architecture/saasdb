@@ -1,6 +1,80 @@
 ---
 title: Adapter Pattern
-description: How the SMTA adapter pattern works.
+description: How SMTA separates adapter-agnostic core SQL from platform-specific implementations.
 ---
 
-This page is coming soon.
+## The Problem
+
+SMTA's RLS policies need to know who the current user is. But "who is the current user" is answered differently by Supabase (JWT) and Payload CMS (session variable). Without an abstraction, the core SQL would be littered with Supabase-specific calls.
+
+## The Solution: Function Stubs
+
+`@smta/core` defines a stub function:
+
+```sql
+create or replace function core.get_current_user_id()
+returns uuid language sql stable security definer as $$
+  select null::uuid
+$$;
+```
+
+This stub always returns `null`. Every RLS policy in `@smta/core` calls this function. The stub is replaced by the adapter implementation after core deploys.
+
+A second pair of stubs handles secret storage:
+
+```sql
+create or replace function core.store_secret_impl(p_name text, p_secret text)
+returns uuid language sql as $$ select null::uuid $$;
+
+create or replace function core.delete_secret_impl(p_secret_id uuid)
+returns void language sql as $$ $$;
+```
+
+## Adapter Implementations
+
+**Supabase adapter** (`@smta/supabase`) replaces all three stubs:
+
+```sql
+-- auth_supabase_impl.sql
+create or replace function core.get_current_user_id()
+returns uuid language sql stable security definer as $$
+  select auth.uid()
+$$;
+
+-- secrets_supabase_impl.sql
+create or replace function core.store_secret_impl(p_name text, p_secret text)
+returns uuid language sql security definer as $$
+  select vault.create_secret(p_secret, p_name)
+$$;
+```
+
+**Payload adapter** (`@smta/payload`) replaces only the auth stub:
+
+```sql
+-- auth_payload_impl.sql
+create or replace function core.get_current_user_id()
+returns uuid language sql stable security definer as $$
+  select nullif(current_setting('app.current_user_id', true), '')::uuid
+$$;
+```
+
+The secret stubs remain as no-ops for Payload unless you implement your own vault.
+
+## Deployment Order
+
+The combined SQL scripts always deploy in this order:
+
+```
+1. @smta/core    — deploys stubs + all core SQL
+2. @smta/<adapter> — replaces stubs with real implementations
+```
+
+This ordering is safe because PostgreSQL resolves function calls by name at runtime, not at definition time. RLS policies defined during step 1 will call the real implementation defined in step 2 as soon as step 2 completes.
+
+## Package Boundaries
+
+| Package | Contains |
+|---|---|
+| `@smta/core` | All adapter-agnostic SQL (56 files) |
+| `@smta/supabase` | Auth + secrets impl + auth.users FK constraints (3 files) |
+| `@smta/payload` | Auth impl only (1 file) |
