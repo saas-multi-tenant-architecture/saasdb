@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION core.is_super_admin(p_org_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM core.memberships
-    WHERE user_id = auth.uid()
+    WHERE user_id = core.get_current_user_id()
       AND organization_id = p_org_id
       AND is_super_admin = true
       AND is_deleted = false
@@ -28,7 +28,7 @@ CREATE OR REPLACE FUNCTION core.is_org_member(p_org_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM core.memberships
-    WHERE user_id = auth.uid()
+    WHERE user_id = core.get_current_user_id()
       AND organization_id = p_org_id
       AND is_deleted = false
   );
@@ -44,7 +44,7 @@ CREATE OR REPLACE FUNCTION core.is_unit_member(p_unit_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM core.unit_memberships
-    WHERE user_id = auth.uid()
+    WHERE user_id = core.get_current_user_id()
       AND unit_id = p_unit_id
       AND is_deleted = false
   );
@@ -61,7 +61,7 @@ RETURNS TEXT AS $$
   SELECT r.name
   FROM core.memberships m
   JOIN core.roles r ON r.id = m.role_id
-  WHERE m.user_id = auth.uid()
+  WHERE m.user_id = core.get_current_user_id()
     AND m.organization_id = p_org_id
     AND m.is_deleted = false
   LIMIT 1;
@@ -90,7 +90,7 @@ RETURNS BOOLEAN AS $$
     SELECT 1
     FROM core.unit_memberships um
     JOIN core.roles r ON r.id = um.role_id
-    WHERE um.user_id = auth.uid()
+    WHERE um.user_id = core.get_current_user_id()
       AND um.unit_id = p_unit_id
       AND um.is_deleted = false
       AND r.name = p_role
@@ -118,7 +118,7 @@ RETURNS BOOLEAN AS $$
     FROM core.memberships current_user_membership
     JOIN core.memberships target_user_membership
       ON current_user_membership.organization_id = target_user_membership.organization_id
-    WHERE current_user_membership.user_id = auth.uid()
+    WHERE current_user_membership.user_id = core.get_current_user_id()
       AND target_user_membership.user_id = p_user_id
       AND current_user_membership.is_deleted = false
       AND target_user_membership.is_deleted = false
