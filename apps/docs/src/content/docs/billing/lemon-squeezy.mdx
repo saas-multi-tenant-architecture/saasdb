@@ -1,6 +1,111 @@
 ---
 title: Lemon Squeezy Integration
-description: Integrating Lemon Squeezy billing with SMTA.
+description: Configure and wire the Lemon Squeezy billing provider in SMTA.
 ---
 
-This page is coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+## Installation
+
+```bash
+pnpm add @smta/billing @lemonsqueezy/lemonsqueezy.js
+```
+
+## Setup
+
+Instantiate `LemonSqueezyProvider` with your API key and store ID. The constructor takes two string arguments.
+
+```typescript
+import { LemonSqueezyProvider } from '@smta/billing/lemon-squeezy';
+
+const billing = new LemonSqueezyProvider(
+  process.env.LEMONSQUEEZY_API_KEY!,
+  process.env.LEMONSQUEEZY_STORE_ID!
+);
+```
+
+## Required Environment Variables
+
+| Variable | Description |
+|---|---|
+| `LEMONSQUEEZY_API_KEY` | Your Lemon Squeezy API key |
+| `LEMONSQUEEZY_STORE_ID` | The numeric ID of your Lemon Squeezy store |
+| `LEMONSQUEEZY_WEBHOOK_SECRET` | The signing secret for your webhook endpoint |
+
+<Aside type="caution">
+The webhook secret variable is `LEMONSQUEEZY_WEBHOOK_SECRET`. Do not use `LEMON_SQUEEZY_WEBHOOK_SECRET` (with an extra underscore) — it will not be picked up by the provider.
+</Aside>
+
+## Creating a Checkout Session
+
+The `createCheckout` interface is identical across providers. Lemon Squeezy receives `organizationId` through the checkout's `custom_data` field automatically, so it will be available in every subsequent webhook event.
+
+```typescript
+const { checkoutUrl, sessionId } = await billing.createCheckout({
+  organizationId: org.id,
+  planId: 'pro',
+  priceId: 'variant_1234567890',
+  billingEmail: user.email,
+  successUrl: 'https://app.example.com/billing/success',
+  cancelUrl: 'https://app.example.com/billing/cancel',
+});
+
+// Redirect the user to checkoutUrl
+```
+
+## Wiring the Webhook
+
+Lemon Squeezy signs its webhook payloads with an HMAC signature sent in the `x-signature` header. Pass the raw body buffer to `handleWebhook` so the signature can be verified correctly.
+
+```typescript
+import express from 'express';
+
+const app = express();
+
+// Use raw body parser for the webhook route only
+app.post(
+  '/webhooks/lemon-squeezy',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['x-signature'] as string;
+
+    let parsed;
+    try {
+      parsed = await billing.handleWebhook({
+        provider: 'lemon_squeezy',
+        rawBody: req.body,   // Buffer — not parsed JSON
+        signature,
+      });
+    } catch (err) {
+      console.error('Lemon Squeezy webhook error:', err);
+      return res.status(400).send('Webhook error');
+    }
+
+    await billing.recordSubscriptionUpdate(parsed, db);
+
+    res.json({ received: true });
+  }
+);
+```
+
+The provider extracts `organizationId` from `custom_data.organization_id` in the webhook payload. This value is injected automatically by `createCheckout`.
+
+## Database Tables Written
+
+- `platform.billing_customers` — org-to-Lemon-Squeezy-customer mapping
+- `platform.billing_subscriptions` — subscription status per org
+
+## Other Operations
+
+**Fetch current subscription state:**
+
+```typescript
+const subscription = await billing.getSubscription(providerSubscriptionId);
+// { plan, status, currentPeriodEnd, cancelAtPeriodEnd, ... }
+```
+
+**Cancel a subscription at period end:**
+
+```typescript
+await billing.cancelSubscription(providerSubscriptionId);
+```

@@ -1,6 +1,115 @@
 ---
 title: Stripe Integration
-description: Integrating Stripe billing with SMTA.
+description: Configure and wire the Stripe billing provider in SMTA.
 ---
 
-This page is coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+## Installation
+
+```bash
+pnpm add @smta/billing stripe
+```
+
+## Setup
+
+Instantiate `StripeProvider` with your Stripe secret key. The constructor takes a single string argument.
+
+```typescript
+import { StripeProvider } from '@smta/billing/stripe';
+
+const billing = new StripeProvider(process.env.STRIPE_SECRET_KEY!);
+```
+
+## Required Environment Variables
+
+| Variable | Description |
+|---|---|
+| `STRIPE_SECRET_KEY` | Your Stripe secret API key (`sk_live_…` or `sk_test_…`) |
+| `STRIPE_WEBHOOK_SECRET` | The signing secret from your Stripe webhook endpoint (`whsec_…`) |
+
+## Creating a Checkout Session
+
+Call `createCheckout` with the organization and plan details. Stripe embeds `organizationId` into the subscription metadata automatically, so it will be available in every future webhook event.
+
+```typescript
+const { checkoutUrl, sessionId } = await billing.createCheckout({
+  organizationId: org.id,
+  planId: 'pro',
+  priceId: 'price_1234567890',
+  billingEmail: user.email,
+  successUrl: 'https://app.example.com/billing/success',
+  cancelUrl: 'https://app.example.com/billing/cancel',
+});
+
+// Redirect the user to checkoutUrl
+```
+
+## Wiring the Webhook
+
+<Aside type="caution">
+Stripe validates its webhook signature against the **raw** request body. Do not use a JSON body parser on the webhook route — read the raw bytes instead.
+</Aside>
+
+```typescript
+import express from 'express';
+
+const app = express();
+
+// Use raw body parser for the webhook route only
+app.post(
+  '/webhooks/stripe',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'] as string;
+
+    let parsed;
+    try {
+      parsed = await billing.handleWebhook({
+        provider: 'stripe',
+        rawBody: req.body,   // Buffer — not parsed JSON
+        signature,
+      });
+    } catch (err) {
+      // Signature verification failed or unrecognized event
+      console.error('Stripe webhook error:', err);
+      return res.status(400).send('Webhook error');
+    }
+
+    await billing.recordSubscriptionUpdate(parsed, db);
+
+    res.json({ received: true });
+  }
+);
+```
+
+## Handled Webhook Events
+
+The `StripeProvider` processes the following Stripe event types:
+
+| Stripe Event | Effect |
+|---|---|
+| `customer.subscription.updated` | Updates plan, status, and period end in `platform.billing_subscriptions` |
+| `customer.subscription.deleted` | Marks the subscription as canceled |
+
+The provider reads `sub.metadata.organization_id` on the Stripe subscription object to associate the event with the correct organization. This value is set automatically by `createCheckout`.
+
+## Database Tables Written
+
+- `platform.billing_customers` — org-to-Stripe-customer mapping
+- `platform.billing_subscriptions` — subscription status per org
+
+## Other Operations
+
+**Fetch current subscription state:**
+
+```typescript
+const subscription = await billing.getSubscription(providerSubscriptionId);
+// { plan, status, currentPeriodEnd, cancelAtPeriodEnd, ... }
+```
+
+**Cancel a subscription at period end:**
+
+```typescript
+await billing.cancelSubscription(providerSubscriptionId);
+```

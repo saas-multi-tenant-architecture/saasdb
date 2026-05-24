@@ -1,6 +1,89 @@
 ---
 title: Billing Integration Overview
-description: Overview of billing integration with SMTA.
+description: How SMTA's billing abstraction layer works, and how to choose a provider.
 ---
 
-This page is coming soon.
+SMTA ships a provider-agnostic billing package (`@smta/billing`) that lets you swap between Stripe and Lemon Squeezy without changing your application code. All billing logic runs through the `BillingProvider` interface.
+
+## The BillingProvider Interface
+
+Every provider implements the same six methods:
+
+| Method | Purpose |
+|---|---|
+| `createCheckout(params)` | Generates a hosted checkout URL and session ID |
+| `handleWebhook(event)` | Parses and validates an inbound webhook payload |
+| `getSubscription(id)` | Fetches current subscription state from the provider |
+| `cancelSubscription(id)` | Schedules a subscription for cancellation |
+| `recordCustomer(orgId, customerId, email, db)` | Persists the org-to-provider-customer mapping |
+| `recordSubscriptionUpdate(parsed, db)` | Writes subscription status changes to the database |
+
+### CheckoutParams
+
+```typescript
+interface CheckoutParams {
+  organizationId: string;
+  planId: string;
+  priceId: string;
+  billingEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+  metadata?: Record<string, string>;
+}
+```
+
+### ParsedWebhookEvent
+
+`handleWebhook` returns a normalized event regardless of provider:
+
+```typescript
+interface ParsedWebhookEvent {
+  type: string;
+  organizationId: string;
+  providerCustomerId: string;
+  providerSubscriptionId: string;
+  plan: string;
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid';
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+}
+```
+
+## Database Tables
+
+Both providers write to the same two tables in the `platform` schema:
+
+- **`platform.billing_customers`** — maps each organization to its provider-side customer ID and billing email.
+- **`platform.billing_subscriptions`** — stores the current subscription status, plan, period end date, and cancellation flag for each organization.
+
+Your application code queries these tables directly; it never needs to call the provider API to check plan status at request time.
+
+## Choosing a Provider
+
+The provider is selected by which class you instantiate in your application code — it is not a database setting or environment flag. Import the provider you want and pass it wherever your app expects a `BillingProvider`.
+
+**Stripe:**
+
+```typescript
+import { StripeProvider } from '@smta/billing/stripe';
+
+const billing = new StripeProvider(process.env.STRIPE_SECRET_KEY!);
+```
+
+**Lemon Squeezy:**
+
+```typescript
+import { LemonSqueezyProvider } from '@smta/billing/lemon-squeezy';
+
+const billing = new LemonSqueezyProvider(
+  process.env.LEMONSQUEEZY_API_KEY!,
+  process.env.LEMONSQUEEZY_STORE_ID!
+);
+```
+
+Once constructed, both objects expose identical methods, so the rest of your code is provider-independent.
+
+## Next Steps
+
+- [Stripe Integration](/billing/stripe) — setup, webhook wiring, and required env vars
+- [Lemon Squeezy Integration](/billing/lemon-squeezy) — setup, webhook wiring, and required env vars
