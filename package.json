@@ -4,18 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "./run_tests.sh",
-    "build": "node ./combine_files.js"
+    "test": "./scripts/run_tests.sh",
+    "build:supabase": "node ./scripts/combine_files.js --adapter supabase",
+    "build:payload": "node ./scripts/combine_files.js --adapter payload",
+    "build": "npm run build:supabase && npm run build:payload"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6",
-  "dependencies": {
-    "fs": "0.0.1-security",
-    "path": "^0.12.7",
-    "zod": "^3.25.76"
-  },
   "devDependencies": {
     "turbo": "^2.9.14"
   }
