@@ -8,7 +8,7 @@
 - PostgreSQL with plpgsql functions
 - Supabase or PayloadCMS integration
 - CASL for isomorphic, granular authorization
-- Stripe of Lemonsqueezy for billing integration
+- Stripe or Lemonsqueezy for billing integration
 - Zod v4 for type-safe validation
 - pgTap for database testing
 
