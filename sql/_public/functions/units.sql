@@ -19,7 +19,7 @@ BEGIN
   FROM core.units u
   JOIN core.unit_memberships um ON um.unit_id = u.id
   JOIN core.roles r ON r.id = um.role_id
-  WHERE um.user_id = auth.uid()
+  WHERE um.user_id = core.get_current_user_id()
     AND um.is_deleted = false
     AND u.is_deleted = false;
 END;
@@ -96,7 +96,7 @@ DECLARE
   v_unit_id UUID;
 BEGIN
   INSERT INTO core.units (organization_id, name, description, created_by, updated_by)
-  VALUES (p_org_id, p_name, p_description, auth.uid(), auth.uid())
+  VALUES (p_org_id, p_name, p_description, core.get_current_user_id(), core.get_current_user_id())
   RETURNING core.units.id INTO v_unit_id;
 
   PERFORM core.log_audit('insert', 'core.units', v_unit_id, 'create_unit', jsonb_build_object('organization_id', p_org_id, 'name', p_name));
@@ -114,7 +114,7 @@ CREATE OR REPLACE FUNCTION public.assign_user_to_unit(p_user_id UUID, p_unit_id 
 RETURNS VOID AS $$
 BEGIN
   INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (p_user_id, p_unit_id, p_role_id, auth.uid());
+  VALUES (p_user_id, p_unit_id, p_role_id, core.get_current_user_id());
 
   PERFORM core.log_audit('insert', 'core.unit_memberships', p_user_id, 'assign_user_to_unit', jsonb_build_object('unit_id', p_unit_id));
 END;
@@ -131,7 +131,7 @@ BEGIN
   UPDATE core.unit_memberships
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid()
+      deleted_by = core.get_current_user_id()
   WHERE user_id = p_user_id
     AND unit_id = p_unit_id
     AND is_deleted = false;
@@ -190,7 +190,7 @@ BEGIN
   UPDATE core.units u
   SET name = p_name,
       description = p_description,
-      updated_by = auth.uid()
+      updated_by = core.get_current_user_id()
   WHERE u.id = p_id
     AND u.is_deleted = false;
 
@@ -218,15 +218,15 @@ BEGIN
   END IF;
 
   UPDATE core.unit_memberships
-  SET is_deleted = true, deleted_at = now(), deleted_by = auth.uid(), updated_by = auth.uid()
+  SET is_deleted = true, deleted_at = now(), deleted_by = core.get_current_user_id(), updated_by = core.get_current_user_id()
   WHERE unit_id = p_id AND is_deleted = false;
 
   UPDATE core.unit_meta
-  SET is_deleted = true, deleted_at = now(), deleted_by = auth.uid(), updated_by = auth.uid()
+  SET is_deleted = true, deleted_at = now(), deleted_by = core.get_current_user_id(), updated_by = core.get_current_user_id()
   WHERE id = p_id AND is_deleted = false;
 
   UPDATE core.units u
-  SET is_deleted = true, deleted_at = now(), deleted_by = auth.uid(), updated_by = auth.uid()
+  SET is_deleted = true, deleted_at = now(), deleted_by = core.get_current_user_id(), updated_by = core.get_current_user_id()
   WHERE u.id = p_id AND u.is_deleted = false;
 
   IF NOT FOUND THEN
@@ -271,13 +271,13 @@ BEGIN
   END IF;
 
   INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by, updated_by)
-  VALUES (p_user_id, p_unit_id, p_role_id, auth.uid(), auth.uid())
+  VALUES (p_user_id, p_unit_id, p_role_id, core.get_current_user_id(), core.get_current_user_id())
   ON CONFLICT (user_id, unit_id) DO UPDATE
     SET role_id = EXCLUDED.role_id,
         is_deleted = false,
         deleted_at = NULL,
         deleted_by = NULL,
-        updated_by = auth.uid(),
+        updated_by = core.get_current_user_id(),
         updated_at = now();
 
   PERFORM core.log_audit('insert', 'core.unit_memberships', p_user_id, 'add_member_to_unit',
@@ -307,7 +307,7 @@ BEGIN
 
   UPDATE core.unit_memberships
   SET role_id = p_role_id,
-      updated_by = auth.uid(),
+      updated_by = core.get_current_user_id(),
       updated_at = now()
   WHERE user_id = p_user_id
     AND unit_id = p_unit_id
@@ -344,8 +344,8 @@ BEGIN
   UPDATE core.unit_memberships
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE user_id = p_user_id
     AND unit_id = p_unit_id
     AND is_deleted = false;

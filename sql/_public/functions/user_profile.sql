@@ -26,7 +26,7 @@ BEGIN
     m.timezone,
     m.locale
   FROM core.users_meta m
-  WHERE m.id = auth.uid();
+  WHERE m.id = core.get_current_user_id();
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
@@ -51,19 +51,19 @@ BEGIN
   UPDATE core.users_meta AS um
   SET first_name = p_first_name,
       last_name  = p_last_name,
-      updated_by = auth.uid()
-  WHERE um.id = auth.uid();
+      updated_by = core.get_current_user_id()
+  WHERE um.id = core.get_current_user_id();
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'User profile not found';
   END IF;
 
-  PERFORM core.log_audit('update', 'core.users_meta', auth.uid(), 'update_user_profile',
+  PERFORM core.log_audit('update', 'core.users_meta', core.get_current_user_id(), 'update_user_profile',
     jsonb_build_object('first_name', p_first_name, 'last_name', p_last_name));
 
   RETURN QUERY
   SELECT m.id, m.email, m.first_name, m.last_name, m.avatar_url, m.timezone, m.locale
-  FROM core.users_meta m WHERE m.id = auth.uid();
+  FROM core.users_meta m WHERE m.id = core.get_current_user_id();
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
@@ -100,7 +100,7 @@ BEGIN
   FROM core.units u
   JOIN core.unit_memberships um ON um.unit_id = u.id
   JOIN core.roles r ON r.id = um.role_id
-  WHERE um.user_id = auth.uid()
+  WHERE um.user_id = core.get_current_user_id()
     AND u.organization_id = p_org_id
     AND um.is_deleted = false
     AND u.is_deleted = false;

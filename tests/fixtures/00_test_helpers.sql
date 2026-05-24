@@ -21,9 +21,8 @@ CREATE SCHEMA IF NOT EXISTS test_helpers;
 CREATE OR REPLACE FUNCTION test_helpers.set_auth_user(p_user_id UUID)
 RETURNS VOID AS $$
 BEGIN
-  -- Set the request.jwt.claim.sub to simulate Supabase auth
   PERFORM set_config('request.jwt.claim.sub', p_user_id::text, true);
-  -- Also set role to authenticated
+  PERFORM set_config('app.current_user_id', p_user_id::text, true);
   PERFORM set_config('role', 'authenticated', true);
 END;
 $$ LANGUAGE plpgsql;

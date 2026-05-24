@@ -25,7 +25,7 @@ BEGIN
     organization_id, file_url, file_type, file_size, file_specs, created_by
   )
   VALUES (
-    p_org_id, p_file_url, p_file_type, p_file_size, p_file_specs, auth.uid()
+    p_org_id, p_file_url, p_file_type, p_file_size, p_file_specs, core.get_current_user_id()
   )
   RETURNING id INTO v_file_id;
 
@@ -65,7 +65,7 @@ BEGIN
   SET
     file_specs = COALESCE(p_file_specs, file_specs),
     file_size = COALESCE(p_file_size, file_size),
-    updated_by = auth.uid(),
+    updated_by = core.get_current_user_id(),
     updated_at = now()
   WHERE id = p_file_id;
 
@@ -132,7 +132,7 @@ BEGIN
   SET
     is_deleted = true,
     deleted_at = now(),
-    deleted_by = auth.uid()
+    deleted_by = core.get_current_user_id()
   WHERE id = p_file_id;
 
   PERFORM core.log_audit(

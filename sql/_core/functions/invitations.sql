@@ -24,7 +24,7 @@ DECLARE
   v_token TEXT;
   v_expires_at TIMESTAMPTZ;
 BEGIN
-  v_caller_id := auth.uid();
+  v_caller_id := core.get_current_user_id();
 
   -- Validation: User must be a member of the organization
   IF NOT core.is_org_member(p_organization_id) THEN
@@ -148,7 +148,7 @@ DECLARE
   v_caller_id UUID;
   v_caller_email TEXT;
 BEGIN
-  v_caller_id := auth.uid();
+  v_caller_id := core.get_current_user_id();
 
   -- Get caller's email (use users_meta — auth.users is not accessible to authenticated role via SECURITY INVOKER)
   SELECT email INTO v_caller_email
@@ -270,7 +270,7 @@ DECLARE
   v_invitation RECORD;
   v_caller_id UUID;
 BEGIN
-  v_caller_id := auth.uid();
+  v_caller_id := core.get_current_user_id();
 
   -- Fetch invitation
   SELECT * INTO v_invitation
@@ -329,7 +329,7 @@ DECLARE
   v_new_token TEXT;
   v_new_expires_at TIMESTAMPTZ;
 BEGIN
-  v_caller_id := auth.uid();
+  v_caller_id := core.get_current_user_id();
 
   -- Fetch invitation
   SELECT * INTO v_invitation

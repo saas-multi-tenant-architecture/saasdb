@@ -20,7 +20,7 @@ BEGIN
     summary,
     metadata
   ) VALUES (
-    auth.uid(),
+    core.get_current_user_id(),
     target_table,
     target_id,
     action_type,

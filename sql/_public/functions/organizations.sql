@@ -18,7 +18,7 @@ BEGIN
   FROM core.organizations o
   JOIN core.memberships m ON m.organization_id = o.id
   JOIN core.roles r ON r.id = m.role_id
-  WHERE m.user_id = auth.uid()
+  WHERE m.user_id = core.get_current_user_id()
     AND m.is_deleted = false
     AND o.is_deleted = false;
 END;
@@ -117,7 +117,7 @@ BEGIN
   v_org_id := gen_random_uuid();
 
   INSERT INTO core.organizations (id, name, description, created_by, updated_by)
-  VALUES (v_org_id, p_name, p_description, auth.uid(), auth.uid());
+  VALUES (v_org_id, p_name, p_description, core.get_current_user_id(), core.get_current_user_id());
 
   -- Membership + platform registry rows are created by core.handle_new_organization() trigger.
   PERFORM core.log_audit(
@@ -148,11 +148,11 @@ BEGIN
   END IF;
 
   SELECT organization_id INTO v_org_id FROM core.memberships
-  WHERE user_id = auth.uid() AND is_deleted = false
+  WHERE user_id = core.get_current_user_id() AND is_deleted = false
   LIMIT 1;
 
   INSERT INTO core.memberships (user_id, organization_id, role_id, created_by)
-  VALUES (v_user_id, v_org_id, p_role_id, auth.uid());
+  VALUES (v_user_id, v_org_id, p_role_id, core.get_current_user_id());
 
   PERFORM core.log_audit('insert', 'core.memberships', v_user_id, 'invite_user_to_organization', jsonb_build_object('organization_id', v_org_id));
 END;
@@ -170,7 +170,7 @@ BEGIN
   UPDATE core.memberships
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid()
+      deleted_by = core.get_current_user_id()
   WHERE user_id = p_user_id
     AND organization_id = p_org_id
     AND is_deleted = false;
@@ -191,7 +191,7 @@ DECLARE
   v_target_membership_exists BOOLEAN;
   v_target_membership_is_deleted BOOLEAN;
 BEGIN
-  v_current_user_id := auth.uid();
+  v_current_user_id := core.get_current_user_id();
 
   -- Verify caller is current super_admin
   IF NOT core.is_super_admin(p_org_id) THEN
@@ -286,7 +286,7 @@ BEGIN
   UPDATE core.organizations as o
   SET name = p_name,
       description = p_description,
-      updated_by = auth.uid()
+      updated_by = core.get_current_user_id()
   WHERE o.id = p_id
     AND is_deleted = false;
 
@@ -360,7 +360,7 @@ BEGIN
       address = p_address,
       timezone = p_timezone,
       locale = p_locale,
-      updated_by = auth.uid()
+      updated_by = core.get_current_user_id()
   WHERE om.id = p_id
     AND om.is_deleted = false;
 
@@ -441,8 +441,8 @@ BEGIN
   UPDATE core.organizations_meta AS o
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE o.id = p_id
     AND o.is_deleted = false;
   GET DIAGNOSTICS v_org_meta_rows = ROW_COUNT;
@@ -452,8 +452,8 @@ BEGIN
     UPDATE core.unit_meta AS u
     SET is_deleted = true,
         deleted_at = now(),
-        deleted_by = auth.uid(),
-        updated_by = auth.uid()
+        deleted_by = core.get_current_user_id(),
+        updated_by = core.get_current_user_id()
     WHERE u.id = ANY (v_unit_ids)
       AND u.is_deleted = false;
     GET DIAGNOSTICS v_unit_meta_rows = ROW_COUNT;
@@ -461,8 +461,8 @@ BEGIN
     UPDATE core.unit_memberships AS m
     SET is_deleted = true,
         deleted_at = now(),
-        deleted_by = auth.uid(),
-        updated_by = auth.uid()
+        deleted_by = core.get_current_user_id(),
+        updated_by = core.get_current_user_id()
     WHERE m.unit_id = ANY (v_unit_ids)
       AND m.is_deleted = false;
     GET DIAGNOSTICS v_unit_membership_rows = ROW_COUNT;
@@ -470,8 +470,8 @@ BEGIN
     UPDATE core.units AS u
     SET is_deleted = true,
         deleted_at = now(),
-        deleted_by = auth.uid(),
-        updated_by = auth.uid()
+        deleted_by = core.get_current_user_id(),
+        updated_by = core.get_current_user_id()
     WHERE u.id = ANY (v_unit_ids)
       AND u.is_deleted = false;
     GET DIAGNOSTICS v_unit_rows = ROW_COUNT;
@@ -481,8 +481,8 @@ BEGIN
   UPDATE core.organization_files AS f
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE f.organization_id = p_id
     AND f.is_deleted = false;
   GET DIAGNOSTICS v_org_file_rows = ROW_COUNT;
@@ -491,9 +491,9 @@ BEGIN
   -- Clear the flag for the caller first.
   UPDATE core.memberships AS m
   SET is_super_admin = false,
-      updated_by = auth.uid()
+      updated_by = core.get_current_user_id()
   WHERE m.organization_id = p_id
-    AND m.user_id = auth.uid()
+    AND m.user_id = core.get_current_user_id()
     AND m.is_super_admin = true
     AND m.is_deleted = false;
   GET DIAGNOSTICS v_cleared_super_admin_rows = ROW_COUNT;
@@ -502,10 +502,10 @@ BEGIN
   UPDATE core.memberships AS m
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE m.organization_id = p_id
-    AND m.user_id <> auth.uid()
+    AND m.user_id <> core.get_current_user_id()
     AND m.is_deleted = false;
   GET DIAGNOSTICS v_membership_rows = ROW_COUNT;
 
@@ -515,8 +515,8 @@ BEGIN
   UPDATE core.organizations AS o
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE o.id = p_id
     AND o.is_deleted = false;
   GET DIAGNOSTICS v_org_rows = ROW_COUNT;
@@ -525,10 +525,10 @@ BEGIN
   UPDATE core.memberships AS m
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE m.organization_id = p_id
-    AND m.user_id = auth.uid()
+    AND m.user_id = core.get_current_user_id()
     AND m.is_deleted = false;
   GET DIAGNOSTICS v_membership_rows_self = ROW_COUNT;
 
@@ -574,13 +574,13 @@ BEGIN
   END IF;
 
   INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by, updated_by)
-  VALUES (p_user_id, p_org_id, p_role_id, false, auth.uid(), auth.uid())
+  VALUES (p_user_id, p_org_id, p_role_id, false, core.get_current_user_id(), core.get_current_user_id())
   ON CONFLICT (user_id, organization_id) DO UPDATE
     SET role_id = EXCLUDED.role_id,
         is_deleted = false,
         deleted_at = NULL,
         deleted_by = NULL,
-        updated_by = auth.uid(),
+        updated_by = core.get_current_user_id(),
         updated_at = now();
 
   PERFORM core.log_audit('insert', 'core.memberships', p_user_id, 'add_member_to_organization',
@@ -606,7 +606,7 @@ BEGIN
 
   UPDATE core.memberships
   SET role_id = p_role_id,
-      updated_by = auth.uid(),
+      updated_by = core.get_current_user_id(),
       updated_at = now()
   WHERE user_id = p_user_id
     AND organization_id = p_org_id
@@ -640,8 +640,8 @@ BEGIN
   UPDATE core.memberships
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = auth.uid(),
-      updated_by = auth.uid()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE user_id = p_user_id
     AND organization_id = p_org_id
     AND is_deleted = false;
