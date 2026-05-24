@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "description": "Payload CMS adapter SQL",
+  "description": "Payload CMS adapter SQL — session-variable auth implementation",
   "scripts": [
-    "sql/auth/get_current_user_id.sql"
+    "sql/init/auth_payload_impl.sql"
   ]
 }
