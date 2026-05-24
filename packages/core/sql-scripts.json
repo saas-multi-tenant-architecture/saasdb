@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "description": "Core package SQL execution order",
+  "scripts": [
+    "sql/init/schemas.sql",
+    "sql/init/auth_interface.sql",
+    "sql/init/auth_supabase_impl.sql",
+    "sql/init/secrets_interface.sql",
+    "sql/init/secrets_supabase_impl.sql",
+    "sql/utils/functions.sql",
+    "sql/tables/organizations.sql",
+    "sql/tables/units.sql",
+    "sql/tables/roles.sql",
+    "sql/tables/memberships.sql",
+    "sql/tables/users_meta.sql",
+    "sql/tables/organization_files.sql",
+    "sql/tables/organizations_meta.sql",
+    "sql/tables/audit_logs.sql",
+    "sql/tables/invitations.sql",
+    "sql/tables/grants.sql",
+    "sql/triggers/new_user.sql",
+    "sql/triggers/new_organization.sql",
+    "sql/triggers/new_unit.sql",
+    "sql/triggers/protect_super_admin.sql",
+    "sql/rls/helpers.sql",
+    "sql/rls/policies.sql",
+    "sql/rls/invitations.sql",
+    "sql/functions/log_audit.sql",
+    "sql/functions/secrets.sql",
+    "sql/functions/invitations.sql"
+  ]
+}
