@@ -3,4 +3,117 @@ title: Testing Setup
 description: How to set up the SMTA test environment.
 ---
 
-This page is coming soon.
+SMTA uses [pgTap](https://pgtap.org/) for database-level unit and integration testing. Tests run directly against PostgreSQL and exercise the full SQL stack: schemas, functions, triggers, and row-level security policies.
+
+## Prerequisites
+
+### PostgreSQL
+
+A running PostgreSQL instance is required. SMTA's local development setup uses [Supabase CLI](https://supabase.com/docs/guides/cli), which starts Postgres on port **54322** — not the standard 5432. If you are connecting to a plain PostgreSQL instance instead, adjust `DB_PORT` accordingly.
+
+### pgTap extension
+
+pgTap must be installed in the target database:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgtap;
+```
+
+With Supabase local dev, pgTap is available in the bundled PostgreSQL image. On a vanilla PostgreSQL install, install the OS package first:
+
+```bash
+# Debian / Ubuntu
+sudo apt-get install postgresql-16-pgtap
+
+# macOS (Homebrew)
+brew install pgtap
+```
+
+### pg_prove
+
+`pg_prove` is the Perl-based TAP harness that runs pgTap test files. Install it via CPAN:
+
+```bash
+cpan TAP::Parser::SourceHandler::pgTAP
+```
+
+Or via your OS package manager if available:
+
+```bash
+# Debian / Ubuntu
+sudo apt-get install libtap-parser-sourcehandler-pgtap-perl
+
+# macOS (Homebrew)
+brew install pgtap  # includes pg_prove
+```
+
+Verify the installation:
+
+```bash
+pg_prove --version
+```
+
+## Environment Variables
+
+The test runner (`scripts/run_tests.sh`) reads the following environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `54322` | PostgreSQL port (Supabase local default) |
+| `DB_NAME` | `postgres` | Database name |
+| `DB_USER` | `postgres` | Database user |
+| `DB_PASSWORD` | `postgres` | Database password |
+| `DB_PROJECT_REF` | *(unset)* | Supabase cloud project ref — when set, the user is formatted as `postgres.PROJECT_REF` |
+
+### Using a `.env` file
+
+The test runner automatically reads a `.env` file in the project root if one is present. Create it to avoid exporting variables manually:
+
+```bash
+# .env
+DB_HOST=localhost
+DB_PORT=54322
+DB_NAME=postgres
+DB_USER=postgres
+DB_PASSWORD=postgres
+```
+
+For Supabase cloud connections, add:
+
+```bash
+DB_PROJECT_REF=your-project-ref
+DB_HOST=db.your-project-ref.supabase.co
+DB_PASSWORD=your-db-password
+```
+
+## Deploying SMTA to the Test Database
+
+Before running tests, the SMTA schema must be deployed to the target database. Build and apply it with:
+
+```bash
+npm run build:supabase
+```
+
+This assembles the combined SQL from all packages (via `scripts/combine_files.js`) and applies it to the database. If you are targeting the Payload adapter instead, use `npm run build:payload`.
+
+## Test Fixtures
+
+The test suite uses shared fixtures that are loaded before every test run. Fixture files live in `tests/fixtures/` and are applied in this order:
+
+| File | Contents |
+|---|---|
+| `00_test_helpers.sql` | Helper functions (`set_auth_user`, `get_test_user_id`, `cleanup_test_data`) |
+| `01_roles.sql` | Test role assignments |
+| `02_test_users.sql` | Test user accounts |
+| `03_bella_italia.sql` | Bella Italia organization and units |
+| `04_pizza_palace.sql` | Pizza Palace organization and units |
+| `05_platform.sql` | Platform-level test data |
+
+Fixture data is cleaned up automatically at the end of every test run via:
+
+```sql
+SELECT test_helpers.cleanup_test_data();
+```
+
+Each individual test file also runs inside a transaction that is rolled back at the end (`ROLLBACK`), so no test leaves persistent state.

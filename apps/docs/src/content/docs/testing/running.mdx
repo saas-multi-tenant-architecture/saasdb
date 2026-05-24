@@ -3,4 +3,173 @@ title: Running the Test Suite
 description: How to run the SMTA test suite.
 ---
 
-This page is coming soon.
+SMTA has 35 test files containing **449 total assertions**. All tests target the live database and exercise SQL directly via pgTap.
+
+## Running All Tests
+
+```bash
+npm test
+```
+
+This executes `scripts/run_tests.sh`, which:
+
+1. Loads all fixture files from `tests/fixtures/`
+2. Runs `pg_prove` against all 35 test files in the order listed below
+3. Calls `SELECT test_helpers.cleanup_test_data()` to remove fixture data
+
+## Running a Single Test File
+
+Pass the file path directly to `pg_prove`:
+
+```bash
+pg_prove --dbname=postgres tests/functions/01_organization_functions.sql
+```
+
+To override connection details:
+
+```bash
+pg_prove \
+  --host=localhost \
+  --port=54322 \
+  --dbname=postgres \
+  --username=postgres \
+  tests/rls/01_orgs.sql
+```
+
+## Test Directories
+
+Tests are organized by concern. Each directory corresponds to a layer of the SMTA schema.
+
+### `schema/` — 5 files
+
+Verifies the database structure exists as expected.
+
+| File | What it tests |
+|---|---|
+| `schemas_exist` | Required schemas are present |
+| `core_tables` | Core schema tables and columns |
+| `platform_tables` | Platform schema tables and columns |
+| `indexes` | Expected indexes exist |
+| `triggers` | Expected triggers are registered |
+
+### `membership/` — 5 files
+
+Tests organization and unit membership management.
+
+| File | What it tests |
+|---|---|
+| `roles_exist` | Membership role enum values |
+| `super_admin_protection` | Super admin cannot be demoted or removed |
+| `transfer` | Ownership transfer logic |
+| `org` | Organization-level membership operations |
+| `unit` | Unit-level membership operations |
+
+### `triggers/` — 2 files
+
+| File | What it tests |
+|---|---|
+| `updated_at` | `updated_at` timestamp is set on row updates |
+| `auto_create` | Auto-creation of related records on insert |
+
+### `platform/` — 4 files
+
+Tests platform-admin functionality.
+
+| File | What it tests |
+|---|---|
+| `roles` | Platform role assignments |
+| `users` | Platform user management |
+| `settings` | Platform-wide settings |
+| `feature_flags` | Feature flag evaluation |
+
+### `functions/` — 4 files
+
+Tests the public-facing SQL functions called by application code.
+
+| File | What it tests |
+|---|---|
+| `organizations` | `public.create_organization` and related functions |
+| `units` | Unit CRUD functions |
+| `membership` | Membership management functions |
+| `user` | User profile functions |
+
+### `invitations/` — 3 files
+
+| File | What it tests |
+|---|---|
+| `create` | Invitation creation and validation |
+| `accept` | Accepting an invitation |
+| `manage` | Revoking and listing invitations |
+
+### `rls/` — 8 files
+
+Verifies row-level security policies enforce access control correctly. Each file tests a specific table.
+
+| File | Table covered |
+|---|---|
+| `orgs` | `core.organizations` |
+| `units` | `core.units` |
+| `memberships` | `core.memberships` |
+| `unit_memberships` | `core.unit_memberships` |
+| `users_meta` | `core.users_meta` |
+| `audit_logs` | `core.audit_logs` |
+| `invitations` | `core.invitations` |
+| `organizations_meta` | `core.organizations_meta` |
+
+### `edge_cases/` — 4 files
+
+| File | What it tests |
+|---|---|
+| `multi_org_user` | A user belonging to multiple organizations |
+| `cascading_deletes` | Soft-delete and cascade behavior |
+| `concurrent_access` | Behavior under concurrent modification |
+| `role_scenarios` | Edge cases in role assignment and escalation |
+
+## Auth Context in Tests
+
+Tests set the current user context using the test helper — not by writing to `app.current_user_id` directly:
+
+```sql
+-- Correct
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+-- Do NOT use this form
+-- SET app.current_user_id = '...';
+```
+
+`set_auth_user` calls `core.get_current_user_id()` internally, which is the same function all production SQL uses to resolve the acting user.
+
+## Test File Structure
+
+Every test file follows the same structure:
+
+```sql
+-- 01_organization_functions.sql
+-- Purpose: Test public organization management functions
+
+BEGIN;
+SELECT plan(12);
+
+-- Set auth context
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+SELECT lives_ok(
+  $$SELECT public.create_organization('Test Restaurant', 'A test organization')$$,
+  'create_organization should succeed'
+);
+
+SELECT ok(
+  EXISTS (SELECT 1 FROM core.organizations WHERE name = 'Test Restaurant'),
+  'Organization should be created with correct name'
+);
+
+SELECT finish();
+ROLLBACK;
+```
+
+Key points:
+
+- Wrap everything in `BEGIN` / `ROLLBACK` so no test state persists
+- Declare the exact assertion count in `SELECT plan(N)` — it must match the number of test calls
+- Call `SELECT finish()` before `ROLLBACK`
+- Set auth context before any operation that depends on the current user

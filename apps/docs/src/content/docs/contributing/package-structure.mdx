@@ -3,4 +3,99 @@ title: Package Structure
 description: How the SMTA monorepo packages are organized.
 ---
 
-This page is coming soon.
+SMTA is structured as a [pnpm](https://pnpm.io/) workspace with [Turborepo](https://turbo.build/). Source is split across packages by concern so that application projects only adopt what they need.
+
+## Repository Layout
+
+```
+packages/
+├── core/       @smta/core      — adapter-agnostic SQL (56 files)
+├── supabase/   @smta/supabase  — Supabase-specific SQL and FK constraints
+├── payload/    @smta/payload   — Payload CMS adapter SQL
+├── billing/    @smta/billing   — TypeScript BillingProvider interface
+└── schemas/    @smta/schemas   — Zod v4 validation schemas
+
+apps/
+└── docs/       @smta/docs      — this documentation site
+
+scripts/
+├── combine_files.js    — assembles combined SQL for deployment
+├── run_tests.sh        — runs the full pgTap test suite
+└── 99_testing_grants.sql
+```
+
+## Packages
+
+### `@smta/core`
+
+Contains all adapter-agnostic SQL: schemas, tables, triggers, RLS policies, and public functions. This is the bulk of SMTA — 56 SQL files organized into subdirectories:
+
+```
+packages/core/sql/
+├── init/                  — extension and schema creation
+├── platform/
+│   ├── tables/            — platform-admin tables
+│   ├── functions/         — platform management functions
+│   └── rls/               — platform table RLS policies
+├── core/
+│   ├── tables/            — org, unit, membership tables
+│   ├── triggers/          — updated_at, auto-create triggers
+│   └── rls/               — core table RLS policies
+├── public/
+│   └── functions/         — public API functions for app code
+└── utils/
+    └── functions/         — internal utility functions
+```
+
+All SQL in this package must be adapter-agnostic. It must not reference Supabase- or Payload-specific constructs.
+
+### `@smta/supabase`
+
+Contains 3 SQL files plus FK constraint additions that complete the schema for Supabase deployments. This package supplements `@smta/core` with Supabase-specific wiring (auth schema foreign keys, etc.).
+
+### `@smta/payload`
+
+Contains 1 SQL file adapting SMTA for use with [Payload CMS](https://payloadcms.com/).
+
+### `@smta/billing`
+
+A TypeScript package exposing the `BillingProvider` interface. Application code implements this interface to connect SMTA's subscription hooks to a billing provider such as Stripe.
+
+### `@smta/schemas`
+
+[Zod v4](https://zod.dev/) schemas for validating SMTA data at the application boundary. Import these in server actions, API routes, or form validation logic.
+
+## `sql-scripts.json` — Deployment Order
+
+Every SQL-containing package has a `sql-scripts.json` file that lists its SQL files in execution order. This file is what `scripts/combine_files.js` reads to assemble the final deployment SQL.
+
+Example structure:
+
+```json
+{
+  "scripts": [
+    "sql/init/01_extensions.sql",
+    "sql/init/02_schemas.sql",
+    "sql/core/tables/01_organizations.sql",
+    "sql/core/tables/02_units.sql",
+    "sql/core/rls/01_organizations.sql"
+  ]
+}
+```
+
+Order matters: a file that creates a table must appear before any file that adds RLS policies or triggers to that table.
+
+## `scripts/combine_files.js`
+
+This script reads the `sql-scripts.json` from each package in dependency order and concatenates the SQL files into a single deployment artifact. Running `npm run build:supabase` or `npm run build:payload` invokes this script with the appropriate package list.
+
+## `apps/docs` — This Site
+
+The documentation site is built with [Starlight](https://starlight.astro.build/) (Astro). Content lives in `apps/docs/src/content/docs/` as `.mdx` files. The sidebar structure is configured in `apps/docs/astro.config.mjs`.
+
+To run the docs site locally:
+
+```bash
+cd apps/docs
+npm run dev
+```

@@ -3,4 +3,131 @@ title: Adding SQL
 description: How to add new SQL to SMTA.
 ---
 
-This page is coming soon.
+This guide covers where to place new SQL, what conventions to follow, and how to wire the file into the deployment pipeline.
+
+## Choose the Right Package
+
+| What you're adding | Package |
+|---|---|
+| Core schema: tables, triggers, RLS, public functions | `packages/core/` |
+| Supabase-specific wiring (auth FK constraints, etc.) | `packages/supabase/` |
+| Payload CMS adapter SQL | `packages/payload/` |
+
+When in doubt, add to `@smta/core`. Only add to `@smta/supabase` or `@smta/payload` if the SQL references adapter-specific constructs that cannot live in the core package.
+
+## Directory Placement in `@smta/core`
+
+Place new files under `packages/core/sql/` in the appropriate subdirectory:
+
+```
+packages/core/sql/
+├── init/                  — extensions, schema declarations
+├── platform/tables/       — platform-admin tables
+├── platform/functions/    — platform management functions
+├── platform/rls/          — platform table policies
+├── core/tables/           — org, unit, membership tables
+├── core/triggers/         — table triggers
+├── core/rls/              — core table policies
+├── public/functions/      — public API functions
+└── utils/functions/       — internal utilities
+```
+
+For example, a new public function belongs in `packages/core/sql/public/functions/`. A new core table belongs in `packages/core/sql/core/tables/`.
+
+## SQL Conventions
+
+### Idempotency
+
+All functions must use `CREATE OR REPLACE FUNCTION`. All tables must use `CREATE TABLE IF NOT EXISTS`. This ensures the SQL can be re-applied safely during development or migration:
+
+```sql
+CREATE OR REPLACE FUNCTION public.my_function(...)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- implementation
+END;
+$$;
+
+CREATE TABLE IF NOT EXISTS core.my_table (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ...
+);
+```
+
+### Required Columns on Entity Tables
+
+Every entity table must include:
+
+```sql
+created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+is_deleted  BOOLEAN     NOT NULL DEFAULT FALSE
+```
+
+`is_deleted` enables soft deletes. Hard deletes are not used for auditable records.
+
+### Row-Level Security
+
+Every new table must have RLS enabled and at least one policy that checks organization membership:
+
+```sql
+ALTER TABLE core.my_table ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "my_table_select"
+  ON core.my_table
+  FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id
+      FROM core.memberships
+      WHERE user_id = core.get_current_user_id()
+    )
+  );
+```
+
+Do not skip RLS. A table without policies will be inaccessible to all non-superusers once RLS is enabled, which will surface as test failures.
+
+## Register the File in `sql-scripts.json`
+
+Open the `sql-scripts.json` in the relevant package and add your file to the `scripts` array at the correct position. Dependencies must come before dependents — a table must be listed before any function or policy that references it.
+
+```json
+{
+  "scripts": [
+    "sql/core/tables/01_organizations.sql",
+    "sql/core/tables/02_units.sql",
+    "sql/core/tables/03_my_new_table.sql",
+    "sql/core/rls/01_organizations.sql",
+    "sql/core/rls/02_units.sql",
+    "sql/core/rls/03_my_new_table.sql"
+  ]
+}
+```
+
+If you omit the file from `sql-scripts.json`, it will not be included in the deployment artifact.
+
+## Verify the Build
+
+After updating `sql-scripts.json`, confirm the assembled SQL is valid:
+
+```bash
+npm run build:supabase
+npm run build:payload
+```
+
+These commands invoke `scripts/combine_files.js`, assemble the full SQL, and apply it to the configured database. Fix any syntax errors or dependency-order problems before proceeding.
+
+## Write Tests
+
+Every new table or function needs tests. See [Test Conventions](/contributing/test-conventions) for the file structure and naming conventions. At minimum:
+
+- Test the happy path (the operation succeeds with a valid user)
+- Test RLS enforcement (an unauthorized user gets no rows, not an error)
+- Test input validation (invalid arguments return the expected error)
+
+Add the new test file to the appropriate directory under `tests/` and confirm it runs:
+
+```bash
+pg_prove --dbname=postgres tests/your_category/your_test.sql
+```

@@ -3,4 +3,146 @@ title: Test Conventions
 description: Conventions for writing SMTA tests.
 ---
 
-This page is coming soon.
+SMTA tests are pgTap SQL files. This page describes the conventions every test file must follow.
+
+## File Location
+
+Test files mirror the source structure. Place your test file in the subdirectory that matches what it is testing:
+
+| Source area | Test directory |
+|---|---|
+| Schema existence | `tests/schema/` |
+| Membership logic | `tests/membership/` |
+| Triggers | `tests/triggers/` |
+| Platform functions | `tests/platform/` |
+| Public functions | `tests/functions/` |
+| Invitations | `tests/invitations/` |
+| RLS policies | `tests/rls/` |
+| Edge cases | `tests/edge_cases/` |
+
+Name the file with a numeric prefix matching others in the directory, e.g. `05_my_feature.sql`.
+
+## Test File Template
+
+Every test file uses this structure without exception:
+
+```sql
+-- 01_organization_functions.sql
+-- Purpose: Test public organization management functions
+
+BEGIN;
+SELECT plan(12);
+
+-- Set auth context before any operation that depends on the current user
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+SELECT lives_ok(
+  $$SELECT public.create_organization('Test Restaurant', 'A test organization')$$,
+  'create_organization should succeed'
+);
+
+SELECT ok(
+  EXISTS (SELECT 1 FROM core.organizations WHERE name = 'Test Restaurant'),
+  'Organization should be created with correct name'
+);
+
+SELECT finish();
+ROLLBACK;
+```
+
+Key rules:
+
+1. `BEGIN` and `ROLLBACK` wrap every test file. No test leaves persistent state.
+2. `SELECT plan(N)` declares the exact number of assertions that follow. The number must be accurate — a mismatch causes the test run to fail.
+3. `SELECT finish()` must appear before `ROLLBACK`.
+4. Set auth context before any operation that depends on `core.get_current_user_id()`.
+
+## Setting Auth Context
+
+Use `test_helpers.set_auth_user()` to set the acting user for a test. Pass the user ID via `test_helpers.get_test_user_id()`:
+
+```sql
+-- Correct
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+```
+
+Do not write to `app.current_user_id` directly:
+
+```sql
+-- Do NOT do this
+SET app.current_user_id = 'some-uuid';
+```
+
+`set_auth_user` sets the session variable through the same path that production code uses, ensuring tests reflect real runtime behavior. You can switch auth context mid-test to simulate operations by different users.
+
+## Counting Assertions Exactly
+
+`SELECT plan(N)` must equal the number of pgTap assertion calls in the file. Count every `lives_ok`, `throws_ok`, `ok`, `is`, `isnt`, `results_eq`, `row_eq`, `is_empty`, `has_table`, and similar calls.
+
+If the plan count does not match, pgTap reports a failure regardless of whether the individual assertions passed. Recount before committing.
+
+## Testing RLS Policies
+
+RLS tests must verify both sides of the policy.
+
+**Unauthorized access returns no rows** (not an error):
+
+```sql
+-- Switch to a user with no access
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('stranger@example.com'));
+
+SELECT is_empty(
+  $$SELECT * FROM core.organizations WHERE id = 'the-org-id'$$,
+  'Unauthorized user should see no rows'
+);
+```
+
+**Authorized access returns the expected rows**:
+
+```sql
+-- Switch to a member of the organization
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+SELECT ok(
+  EXISTS (SELECT 1 FROM core.organizations WHERE id = 'the-org-id'),
+  'Organization member should see the organization'
+);
+```
+
+Never test RLS by checking for an error — RLS silently filters rows, it does not raise exceptions.
+
+## Choosing the Right Assertion
+
+| Situation | Function to use |
+|---|---|
+| Operation should succeed without error | `lives_ok($$...$$, 'description')` |
+| Operation should raise a specific error | `throws_ok($$...$$, error_code, 'description')` |
+| Boolean condition should be true | `ok(condition, 'description')` |
+| Two values should be equal | `is(actual, expected, 'description')` |
+| Query should return no rows | `is_empty($$...$$, 'description')` |
+| Query should return specific rows | `results_eq($$...$$, $$expected...$$, 'description')` |
+
+## Running a Single Test
+
+While iterating on a test file, run it directly without the full suite:
+
+```bash
+pg_prove --dbname=postgres tests/your_category/your_test.sql
+```
+
+With explicit connection options:
+
+```bash
+pg_prove \
+  --host=localhost \
+  --port=54322 \
+  --dbname=postgres \
+  --username=postgres \
+  tests/functions/01_organization_functions.sql
+```
+
+Run the full suite before opening a PR:
+
+```bash
+npm test
+```
