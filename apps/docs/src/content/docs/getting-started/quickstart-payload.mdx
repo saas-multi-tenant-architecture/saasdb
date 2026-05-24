@@ -34,11 +34,9 @@ Payload CMS does not use Supabase Vault — the `core.store_secret_impl()` and `
 SMTA's RLS policies call `core.get_current_user_id()` on every query. For Payload, this function reads a session variable that your application must set at the start of each request:
 
 ```typescript
-// In your Payload server middleware (e.g., server.ts or a beforeOperation hook)
-import { Pool } from 'pg'
-
-// Before running any Payload operation that touches the database:
-await pool.query(`set local app.current_user_id = '${currentUserId}'`)
+// In your Payload beforeOperation hook or middleware
+// Use set_config with a parameterized query — never string-interpolate user IDs
+await db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId])
 ```
 
 This must be set within the same database transaction that Payload uses for the request.

@@ -64,9 +64,9 @@ create policy "org members" on app.projects
   for all using (
     exists (
       select 1 from core.memberships m
-      where m.org_id = app.projects.org_id
+      where m.organization_id = app.projects.org_id
         and m.user_id = core.get_current_user_id()
-        and m.deleted_at is null
+        and m.is_deleted = false
     )
   );
 ```
