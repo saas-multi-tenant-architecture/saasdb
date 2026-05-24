@@ -15,49 +15,49 @@ exports.createOrganizationInputSchema = zod_1.z.object({
     p_description: zod_1.z.string().optional(),
 });
 exports.createOrganizationOutputSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(),
+    id: zod_1.z.uuid(),
     name: zod_1.z.string(),
     created_at: zod_1.z.coerce.date(),
 });
 exports.getOrganizationInputSchema = zod_1.z.object({
-    p_id: zod_1.z.string().uuid(),
+    p_id: zod_1.z.uuid(),
 });
 exports.getOrganizationOutputSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(),
+    id: zod_1.z.uuid(),
     name: zod_1.z.string(),
     description: zod_1.z.string().nullable(),
-    created_by: zod_1.z.string().uuid(),
-    updated_by: zod_1.z.string().uuid().nullable(),
+    created_by: zod_1.z.uuid(),
+    updated_by: zod_1.z.uuid().nullable(),
     is_deleted: zod_1.z.boolean(),
     deleted_at: zod_1.z.coerce.date().nullable(),
-    deleted_by: zod_1.z.string().uuid().nullable(),
+    deleted_by: zod_1.z.uuid().nullable(),
     created_at: zod_1.z.coerce.date(),
     updated_at: zod_1.z.coerce.date(),
 }).nullable();
 exports.listMyOrganizationsItemSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(),
+    id: zod_1.z.uuid(),
     name: zod_1.z.string(),
     description: zod_1.z.string().nullable(),
     role: zod_1.z.string(),
 });
 exports.listMyOrganizationsOutputSchema = zod_1.z.array(exports.listMyOrganizationsItemSchema);
 exports.updateOrganizationInputSchema = zod_1.z.object({
-    p_id: zod_1.z.string().uuid(),
+    p_id: zod_1.z.uuid(),
     p_name: zod_1.z.string().min(1).trim(),
     p_description: zod_1.z.string().optional(),
 });
 exports.updateOrganizationOutputSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(),
+    id: zod_1.z.uuid(),
     name: zod_1.z.string(),
     description: zod_1.z.string().nullable(),
     updated_at: zod_1.z.coerce.date(),
 });
 exports.listOrganizationMembersInputSchema = zod_1.z.object({
-    p_id: zod_1.z.string().uuid(),
+    p_id: zod_1.z.uuid(),
 });
 exports.organizationMemberSchema = zod_1.z.object({
-    user_id: zod_1.z.string().uuid(),
-    email: zod_1.z.string().email(),
+    user_id: zod_1.z.uuid(),
+    email: zod_1.z.email(),
     first_name: zod_1.z.string().nullable(),
     last_name: zod_1.z.string().nullable(),
     role: zod_1.z.string(),
@@ -65,11 +65,11 @@ exports.organizationMemberSchema = zod_1.z.object({
 });
 exports.listOrganizationMembersOutputSchema = zod_1.z.array(exports.organizationMemberSchema);
 exports.addMemberInputSchema = zod_1.z.object({
-    p_org_id: zod_1.z.string().uuid(),
-    p_user_id: zod_1.z.string().uuid(),
-    p_role_id: zod_1.z.string().uuid(),
+    p_org_id: zod_1.z.uuid(),
+    p_user_id: zod_1.z.uuid(),
+    p_role_id: zod_1.z.uuid(),
 });
 exports.transferSuperAdminInputSchema = zod_1.z.object({
-    p_org_id: zod_1.z.string().uuid(),
-    p_new_super_admin_user_id: zod_1.z.string().uuid(),
+    p_org_id: zod_1.z.uuid(),
+    p_new_super_admin_user_id: zod_1.z.uuid(),
 });

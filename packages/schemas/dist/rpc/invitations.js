@@ -10,24 +10,24 @@ exports.invitationListItemSchema = exports.invitationDetailsSchema = exports.acc
 const zod_1 = require("zod");
 exports.invitationStatusSchema = zod_1.z.enum(['pending', 'accepted', 'expired', 'cancelled']);
 exports.createInvitationInputSchema = zod_1.z.object({
-    email: zod_1.z.string().email().transform((email) => email.toLowerCase()),
-    organization_id: zod_1.z.string().uuid(),
-    role_id: zod_1.z.string().uuid(),
-    unit_id: zod_1.z.string().uuid().optional(),
+    email: zod_1.z.email().transform((email) => email.toLowerCase()),
+    organization_id: zod_1.z.uuid(),
+    role_id: zod_1.z.uuid(),
+    unit_id: zod_1.z.uuid().optional(),
     metadata: zod_1.z.record(zod_1.z.string(), zod_1.z.unknown()).optional(),
 });
 exports.invitationResponseSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(),
+    id: zod_1.z.uuid(),
     token: zod_1.z.string(),
-    email: zod_1.z.string().email(),
+    email: zod_1.z.email(),
     expires_at: zod_1.z.coerce.date(),
 });
 exports.acceptInvitationInputSchema = zod_1.z.object({
     token: zod_1.z.string().min(1, 'Invitation token is required'),
 });
 exports.invitationDetailsSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(),
-    email: zod_1.z.string().email(),
+    id: zod_1.z.uuid(),
+    email: zod_1.z.email(),
     organization_name: zod_1.z.string(),
     unit_name: zod_1.z.string().nullable(),
     role_name: zod_1.z.string(),
@@ -36,12 +36,12 @@ exports.invitationDetailsSchema = zod_1.z.object({
     status: exports.invitationStatusSchema,
 });
 exports.invitationListItemSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(),
-    email: zod_1.z.string().email(),
-    organization_id: zod_1.z.string().uuid(),
-    unit_id: zod_1.z.string().uuid().nullable(),
+    id: zod_1.z.uuid(),
+    email: zod_1.z.email(),
+    organization_id: zod_1.z.uuid(),
+    unit_id: zod_1.z.uuid().nullable(),
     role_name: zod_1.z.string(),
-    invited_by_email: zod_1.z.string().email(),
+    invited_by_email: zod_1.z.email(),
     status: exports.invitationStatusSchema,
     expires_at: zod_1.z.coerce.date(),
     created_at: zod_1.z.coerce.date(),

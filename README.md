@@ -8,7 +8,7 @@ The architecture is designed to be modular, scalable, and extensible to customiz
 
 **SMTA** offers a layered approach to tenant isolation that reduces the risk of data leakage at the database level, leaving you free to develop your application knowing that the question of "Are you allowed to be here?" is already answered. 
 
-The core of **SMTA** is a series of PostgreSQL database scripts that create the structure which sits between the application and platform layers of your SaaS. There are no dependencies or complex extensions, so it is all *plain old school SQL* (POSS - the 53+ year old technology that just works).
+The core of **SMTA** is a series of PostgreSQL database scripts that create the structure which sits between the application and platform layers of your SaaS. There are no dependencies or complex extensions, so it is all *plain old school SQL* (the 50+ year old technology that just works).
 
 The following table diagram illustrates the layered design:
 
@@ -33,14 +33,10 @@ These connections include integration with [Supabase](https://supabase.com/) and
 
 ## Goals
 
-- Multi-tenant architecture within a shared database
-
+- Multi-tenant architecture within a single, shared PostgreSQL database
 - PostgreSQL RLS (Row-Level Security) for tenant isolation
-
 - Soft deletion, auditing, and payment processor billing integration
-
 - Clear schema boundaries via SQL functions
-
 - Integration with common platforms like Supabase and PayloadCMS
 
 
@@ -53,6 +49,21 @@ These connections include integration with [Supabase](https://supabase.com/) and
 - Payment processor integration for billing
 - Segmented and Isolated SaaS Management tables
 - SQL functions enhanced with schema boundaries
+
+
+### Schemas
+
+These are the schemas used to segment functionality and enforce security boundaries. Removing access to tables from the `public` schema is an additional security measure to help prevent accidental exposure of sensitive data so that all **SMTA** activity is routed through fully tested, secure SQL functions.
+
+- `core`: identity, access, helper functions, audit logs
+
+- `utils`: Utility functions shared across all tenants and schemas
+
+- `platform`: SaaS-wide management, logs, and overrides (service role only)
+
+- `public`: only for exposing SQL functions callable by clients (RPC)
+
+- `app`: all tenant-specific application logic (customized for each SaaS application)
 
 
 ## Origin

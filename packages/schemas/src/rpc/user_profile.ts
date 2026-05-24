@@ -6,8 +6,8 @@
 import { z } from 'zod';
 
 export const userProfileSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  email: z.email(),
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   avatar_url: z.string().url().nullable(),
@@ -20,10 +20,10 @@ export const updateUserProfileInputSchema = z.object({
   p_last_name: z.string().min(1).trim(),
 });
 
-export const getUserUnitsInputSchema = z.object({ p_org_id: z.string().uuid() });
+export const getUserUnitsInputSchema = z.object({ p_org_id: z.uuid() });
 export const userUnitSchema = z.object({
-  id: z.string().uuid(),
-  organization_id: z.string().uuid(),
+  id: z.uuid(),
+  organization_id: z.uuid(),
   name: z.string(),
   role: z.string(),
 });

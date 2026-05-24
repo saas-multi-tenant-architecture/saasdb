@@ -6,10 +6,10 @@
 
 import { z } from 'zod';
 
-export const listUnitsInputSchema = z.object({ p_org_id: z.string().uuid() });
+export const listUnitsInputSchema = z.object({ p_org_id: z.uuid() });
 export const unitSchema = z.object({
-  id: z.string().uuid(),
-  organization_id: z.string().uuid(),
+  id: z.uuid(),
+  organization_id: z.uuid(),
   name: z.string(),
   description: z.string().nullable(),
   created_at: z.coerce.date(),
@@ -18,20 +18,20 @@ export const unitSchema = z.object({
 export const listUnitsOutputSchema = z.array(unitSchema);
 
 export const createUnitInputSchema = z.object({
-  p_org_id: z.string().uuid(),
+  p_org_id: z.uuid(),
   p_name: z.string().min(1).trim(),
   p_description: z.string().optional(),
 });
 
 export const updateUnitInputSchema = z.object({
-  p_id: z.string().uuid(),
+  p_id: z.uuid(),
   p_name: z.string().min(1).trim(),
   p_description: z.string().optional(),
 });
 
 export const unitMemberSchema = z.object({
-  user_id: z.string().uuid(),
-  email: z.string().email(),
+  user_id: z.uuid(),
+  email: z.email(),
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   role: z.string(),

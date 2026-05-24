@@ -10,17 +10,17 @@ import { z } from 'zod';
 export const invitationStatusSchema = z.enum(['pending', 'accepted', 'expired', 'cancelled']);
 
 export const createInvitationInputSchema = z.object({
-  email: z.string().email().transform((email) => email.toLowerCase()),
-  organization_id: z.string().uuid(),
-  role_id: z.string().uuid(),
-  unit_id: z.string().uuid().optional(),
+  email: z.email().transform((email) => email.toLowerCase()),
+  organization_id: z.uuid(),
+  role_id: z.uuid(),
+  unit_id: z.uuid().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const invitationResponseSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   token: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   expires_at: z.coerce.date(),
 });
 
@@ -29,8 +29,8 @@ export const acceptInvitationInputSchema = z.object({
 });
 
 export const invitationDetailsSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  email: z.email(),
   organization_name: z.string(),
   unit_name: z.string().nullable(),
   role_name: z.string(),
@@ -40,12 +40,12 @@ export const invitationDetailsSchema = z.object({
 });
 
 export const invitationListItemSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
-  organization_id: z.string().uuid(),
-  unit_id: z.string().uuid().nullable(),
+  id: z.uuid(),
+  email: z.email(),
+  organization_id: z.uuid(),
+  unit_id: z.uuid().nullable(),
   role_name: z.string(),
-  invited_by_email: z.string().email(),
+  invited_by_email: z.email(),
   status: invitationStatusSchema,
   expires_at: z.coerce.date(),
   created_at: z.coerce.date(),

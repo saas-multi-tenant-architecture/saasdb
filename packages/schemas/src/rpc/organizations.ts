@@ -14,29 +14,29 @@ export const createOrganizationInputSchema = z.object({
   p_description: z.string().optional(),
 });
 export const createOrganizationOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   created_at: z.coerce.date(),
 });
 
 export const getOrganizationInputSchema = z.object({
-  p_id: z.string().uuid(),
+  p_id: z.uuid(),
 });
 export const getOrganizationOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   description: z.string().nullable(),
-  created_by: z.string().uuid(),
-  updated_by: z.string().uuid().nullable(),
+  created_by: z.uuid(),
+  updated_by: z.uuid().nullable(),
   is_deleted: z.boolean(),
   deleted_at: z.coerce.date().nullable(),
-  deleted_by: z.string().uuid().nullable(),
+  deleted_by: z.uuid().nullable(),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 }).nullable();
 
 export const listMyOrganizationsItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   description: z.string().nullable(),
   role: z.string(),
@@ -44,23 +44,23 @@ export const listMyOrganizationsItemSchema = z.object({
 export const listMyOrganizationsOutputSchema = z.array(listMyOrganizationsItemSchema);
 
 export const updateOrganizationInputSchema = z.object({
-  p_id: z.string().uuid(),
+  p_id: z.uuid(),
   p_name: z.string().min(1).trim(),
   p_description: z.string().optional(),
 });
 export const updateOrganizationOutputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   description: z.string().nullable(),
   updated_at: z.coerce.date(),
 });
 
 export const listOrganizationMembersInputSchema = z.object({
-  p_id: z.string().uuid(),
+  p_id: z.uuid(),
 });
 export const organizationMemberSchema = z.object({
-  user_id: z.string().uuid(),
-  email: z.string().email(),
+  user_id: z.uuid(),
+  email: z.email(),
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   role: z.string(),
@@ -69,14 +69,14 @@ export const organizationMemberSchema = z.object({
 export const listOrganizationMembersOutputSchema = z.array(organizationMemberSchema);
 
 export const addMemberInputSchema = z.object({
-  p_org_id: z.string().uuid(),
-  p_user_id: z.string().uuid(),
-  p_role_id: z.string().uuid(),
+  p_org_id: z.uuid(),
+  p_user_id: z.uuid(),
+  p_role_id: z.uuid(),
 });
 
 export const transferSuperAdminInputSchema = z.object({
-  p_org_id: z.string().uuid(),
-  p_new_super_admin_user_id: z.string().uuid(),
+  p_org_id: z.uuid(),
+  p_new_super_admin_user_id: z.uuid(),
 });
 
 export type CreateOrganizationInput = z.infer<typeof createOrganizationInputSchema>;
