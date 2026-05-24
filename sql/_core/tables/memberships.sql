@@ -6,7 +6,7 @@
 -- ========================================
 CREATE TABLE core.memberships (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
   role_id UUID NOT NULL REFERENCES core.roles(id),
   is_super_admin BOOLEAN NOT NULL DEFAULT false,
@@ -44,7 +44,7 @@ FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 -- ========================================
 CREATE TABLE core.unit_memberships (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
   unit_id UUID NOT NULL REFERENCES core.units(id) ON DELETE CASCADE,
   role_id UUID NOT NULL REFERENCES core.roles(id),
   created_by uuid,

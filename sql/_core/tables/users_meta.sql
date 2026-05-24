@@ -5,7 +5,7 @@
 -- TABLE: core.users_meta
 -- ========================================
 CREATE TABLE core.users_meta (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY,
   first_name TEXT,
   last_name TEXT,
   email TEXT,

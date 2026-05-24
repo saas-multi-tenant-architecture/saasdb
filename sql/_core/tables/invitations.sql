@@ -10,7 +10,7 @@ CREATE TABLE core.invitations (
   organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
   unit_id UUID REFERENCES core.units(id) ON DELETE CASCADE,
   role_id UUID NOT NULL REFERENCES core.roles(id),
-  invited_by UUID NOT NULL REFERENCES auth.users(id),
+  invited_by UUID NOT NULL,
 
   -- Token and security
   token TEXT NOT NULL UNIQUE,
@@ -19,7 +19,7 @@ CREATE TABLE core.invitations (
   -- Status tracking
   status TEXT NOT NULL DEFAULT 'pending',
   accepted_at TIMESTAMPTZ,
-  accepted_by UUID REFERENCES auth.users(id),
+  accepted_by UUID,
 
   -- Metadata for email delivery
   metadata JSONB DEFAULT '{}'::jsonb,
