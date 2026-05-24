@@ -1,6 +1,58 @@
 ---
 title: Supabase Adapter
-description: Using SMTA with Supabase.
+description: What the @smta/supabase adapter provides and how to configure it.
 ---
 
-This page is coming soon.
+The `@smta/supabase` adapter wires SMTA's auth interface to Supabase's JWT system and Vault secrets, and restores `auth.users` foreign keys to SMTA's user tables.
+
+## What It Contains
+
+| File | Purpose |
+|---|---|
+| `auth_supabase_impl.sql` | Implements `core.get_current_user_id()` via `auth.uid()` |
+| `secrets_supabase_impl.sql` | Implements `core.store_secret_impl()` and `core.delete_secret_impl()` via Supabase Vault |
+| `constraints.sql` | Adds foreign keys from SMTA tables to `auth.users` |
+
+## Auth Implementation
+
+```sql
+CREATE OR REPLACE FUNCTION core.get_current_user_id()
+RETURNS UUID AS $$
+  SELECT auth.uid();
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, auth, public;
+```
+
+Supabase validates the JWT and sets `auth.uid()` for every authenticated request. SMTA's RLS policies call `core.get_current_user_id()`, which returns that value. No session setup is required in your application code.
+
+## Secrets Implementation
+
+SMTA routes per-tenant secret storage through Supabase Vault:
+
+```sql
+select public.create_secret(
+  p_org_id := 'your-org-uuid',
+  p_name   := 'stripe_secret_key',
+  p_secret := 'sk_live_...'
+);
+```
+
+Secrets are stored encrypted in Vault and referenced by a text ID in `platform.tenant_secrets`. The plaintext is never stored in SMTA tables.
+
+## Foreign Key Constraints
+
+The `constraints.sql` file adds foreign keys linking SMTA user references back to `auth.users` with cascade-on-delete behavior. These ensure referential integrity with Supabase's auth system — when a user is removed from Supabase Auth, their SMTA records are cleaned up automatically.
+
+## Calling Public Functions from Supabase
+
+Supabase auto-exposes all `public.*` functions via PostgREST. From your frontend or backend:
+
+```typescript
+const { data, error } = await supabase.rpc('list_my_organizations')
+```
+
+## Deployment
+
+```bash
+npm run build:supabase
+# → output/SMTA-supabase-<timestamp>.sql  (59 files)
+```

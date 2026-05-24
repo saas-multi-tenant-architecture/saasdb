@@ -1,6 +1,63 @@
 ---
 title: Payload CMS Adapter
-description: Using SMTA with Payload CMS.
+description: What the @smta/payload adapter provides and how to configure it.
 ---
 
-This page is coming soon.
+The `@smta/payload` adapter wires SMTA's auth interface to Payload CMS's session context via a PostgreSQL session variable, allowing SMTA to run alongside Payload without interfering with Payload's own data layer.
+
+## What It Contains
+
+| File | Purpose |
+|---|---|
+| `auth_payload_impl.sql` | Implements `core.get_current_user_id()` via the `app.current_user_id` session variable |
+
+## Auth Implementation
+
+```sql
+CREATE OR REPLACE FUNCTION core.get_current_user_id()
+RETURNS UUID AS $$
+  SELECT NULLIF(current_setting('app.current_user_id', true), '')::UUID;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
+```
+
+Unlike Supabase, Payload does not set a database-level session variable automatically. Your application middleware must set it using the `injectUserContext` helper from `@smta/payload`:
+
+```typescript
+import { injectUserContext } from '@smta/payload'
+
+// Call before any SMTA-guarded query within the same transaction
+await injectUserContext(db, userId)
+```
+
+The helper uses `set_config` with a parameterized query — safe from SQL injection:
+
+```typescript
+export async function injectUserContext(db: DbExecutor, userId: string): Promise<void> {
+  await db.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId])
+}
+```
+
+## Secrets
+
+The Payload adapter does not implement `core.store_secret_impl()` or `core.delete_secret_impl()`. These remain as exception-raising stubs. Calling them without a secrets implementation will raise a database exception. If you need per-tenant secret storage under Payload, implement the stubs using your preferred secret manager (AWS Secrets Manager, HashiCorp Vault, etc.).
+
+## Schema Compatibility
+
+Payload CMS manages its own tables in the `public` schema. SMTA uses `core`, `platform`, `utils`, and `public` (functions only — no tables). These schemas do not overlap. Payload's collections and SMTA's tenant infrastructure coexist without conflict.
+
+## Calling Public Functions from Payload
+
+From your Payload collection hooks or route handlers:
+
+```typescript
+const { rows } = await db.execute(
+  sql`select * from public.list_my_organizations()`
+)
+```
+
+## Deployment
+
+```bash
+npm run build:payload
+# → output/SMTA-payload-<timestamp>.sql  (57 files)
+```
