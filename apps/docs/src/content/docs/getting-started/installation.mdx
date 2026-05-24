@@ -1,6 +1,55 @@
 ---
 title: Installation
-description: How to install SMTA in your project.
+description: How to deploy SMTA to your PostgreSQL database.
 ---
 
-This page is coming soon.
+## Prerequisites
+
+- A PostgreSQL database (version 14 or later)
+- `psql` or another SQL client to apply the script
+- Node.js 18+ and pnpm installed (to generate the deployment script)
+- A Supabase project **or** a Payload CMS project with a PostgreSQL connection
+
+## Generate the Deployment Script
+
+Clone the SMTA repository and generate a combined SQL script for your chosen adapter:
+
+```bash
+# For Supabase
+npm run build:supabase
+# → output/SMTA-supabase-<timestamp>.sql  (59 SQL files combined)
+
+# For Payload CMS
+npm run build:payload
+# → output/SMTA-payload-<timestamp>.sql  (57 SQL files combined)
+```
+
+Both scripts deploy the full SMTA feature set. The only difference is the auth implementation and, for Supabase, the restoration of `auth.users` foreign keys.
+
+## Apply to Your Database
+
+Apply the generated script to your PostgreSQL database:
+
+```bash
+psql -h YOUR_HOST -U YOUR_USER -d YOUR_DATABASE -f output/SMTA-supabase-<timestamp>.sql
+```
+
+For Supabase, you can paste the contents directly into the Supabase SQL Editor.
+
+## After Deployment
+
+SMTA creates the following schemas in your database:
+
+- `core` — identity, access, memberships, roles, audit
+- `platform` — SaaS-wide management, billing, overrides (service role only)
+- `utils` — shared utility functions
+- `public` — callable SQL functions (RPC interface)
+
+Your application tables go in the `app` schema, which SMTA does not create — you define it to match your domain.
+
+## Next Steps
+
+Follow the Quick Start guide for your adapter:
+
+- [Quick Start: Supabase](/getting-started/quickstart-supabase/)
+- [Quick Start: Payload CMS](/getting-started/quickstart-payload/)

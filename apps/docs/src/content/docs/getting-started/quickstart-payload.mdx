@@ -1,6 +1,58 @@
 ---
-title: "Quick Start: Payload"
-description: Get started with SMTA using the Payload CMS adapter.
+title: Quick Start — Payload CMS
+description: Get SMTA running alongside a Payload CMS project.
 ---
 
-This page is coming soon.
+## 1. Prerequisites
+
+A Payload CMS v3 project connected to a PostgreSQL database.
+
+## 2. Generate and Apply the SQL
+
+```bash
+npm run build:payload
+```
+
+Apply the generated script to your Payload project's database:
+
+```bash
+psql "$DATABASE_URL" -f output/SMTA-payload-<timestamp>.sql
+```
+
+## 3. What the Payload Adapter Provides
+
+The Payload deployment includes one adapter-specific file on top of `@smta/core`:
+
+| File | Purpose |
+|---|---|
+| `auth_payload_impl.sql` | Implements `core.get_current_user_id()` using the `app.current_user_id` PostgreSQL session variable |
+
+Payload CMS does not use Supabase Vault — the `core.store_secret_impl()` and `core.delete_secret_impl()` stubs remain as no-ops unless you implement your own secret storage.
+
+## 4. Set the Session Variable in Payload Middleware
+
+SMTA's RLS policies call `core.get_current_user_id()` on every query. For Payload, this function reads a session variable that your application must set at the start of each request:
+
+```typescript
+// In your Payload server middleware (e.g., server.ts or a beforeOperation hook)
+import { Pool } from 'pg'
+
+// Before running any Payload operation that touches the database:
+await pool.query(`set local app.current_user_id = '${currentUserId}'`)
+```
+
+This must be set within the same database transaction that Payload uses for the request.
+
+## 5. Verify
+
+```sql
+-- Set the session variable to a known user ID
+set app.current_user_id = 'your-user-uuid-here';
+
+-- Should return an empty array (no orgs yet for this user)
+select public.list_my_organizations();
+```
+
+## 6. Add Your App Schema
+
+Same as the Supabase quick start — create your `app` schema tables referencing `core.organizations` or `core.units`, enable RLS, and write policies that call `core.get_current_user_id()`.

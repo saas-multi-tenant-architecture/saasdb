@@ -1,6 +1,72 @@
 ---
-title: "Quick Start: Supabase"
-description: Get started with SMTA using the Supabase adapter.
+title: Quick Start — Supabase
+description: Get SMTA running with a Supabase project.
 ---
 
-This page is coming soon.
+## 1. Create a Supabase Project
+
+If you don't have one, create a project at [supabase.com](https://supabase.com). Note your project's database connection string and service role key.
+
+## 2. Generate and Apply the SQL
+
+```bash
+npm run build:supabase
+```
+
+Open your Supabase project → **SQL Editor** → paste the contents of `output/SMTA-supabase-<timestamp>.sql` and run it.
+
+Alternatively, apply via `psql`:
+
+```bash
+psql "$DATABASE_URL" -f output/SMTA-supabase-<timestamp>.sql
+```
+
+## 3. What the Supabase Adapter Provides
+
+The Supabase deployment includes three adapter-specific files on top of `@smta/core`:
+
+| File | Purpose |
+|---|---|
+| `auth_supabase_impl.sql` | Implements `core.get_current_user_id()` using Supabase's JWT (`auth.uid()`) |
+| `secrets_supabase_impl.sql` | Implements `core.store_secret_impl()` and `core.delete_secret_impl()` using Supabase Vault |
+| `constraints.sql` | Restores foreign keys from SMTA tables to `auth.users` |
+
+## 4. Verify
+
+In the SQL Editor, call a public function to confirm everything is working:
+
+```sql
+-- Should return an empty array (no orgs yet)
+select public.list_my_organizations();
+```
+
+If the function exists and returns without error, SMTA is deployed.
+
+## 5. Add Your App Schema
+
+Create your `app` schema tables on top of SMTA. SMTA's RLS policies gate visibility by org/unit membership — your tables reference `core.organizations` or `core.units` as needed.
+
+```sql
+create schema if not exists app;
+
+create table app.projects (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references core.organizations(id),
+  name text not null,
+  created_at timestamptz default now()
+);
+
+-- Enable RLS
+alter table app.projects enable row level security;
+
+-- Only members of the org can see the project
+create policy "org members" on app.projects
+  for all using (
+    exists (
+      select 1 from core.memberships m
+      where m.org_id = app.projects.org_id
+        and m.user_id = core.get_current_user_id()
+        and m.deleted_at is null
+    )
+  );
+```

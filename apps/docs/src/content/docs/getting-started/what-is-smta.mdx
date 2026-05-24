@@ -1,6 +1,41 @@
 ---
 title: What is SMTA?
-description: An introduction to the SaaS Multi-Tenant Architecture.
+description: An introduction to SaaS Multi-Tenant Architecture and what it provides.
 ---
 
-This page is coming soon.
+**SMTA** (SaaS Multi-Tenant Architecture) is a PostgreSQL framework that handles the tenant infrastructure common to every SaaS application: organizations, sub-units, memberships, roles, auditing, and billing. It sits between your platform (Supabase or Payload CMS) and your application tables.
+
+## The Three Layers
+
+| Layer | Your Responsibility |
+|---|---|
+| **Application Layer** | Your domain tables (`app` schema): projects, posts, documents, etc. Accessed via your DAL (CASL, Drizzle, Payload collections) |
+| **SMTA Layer** | Tenant infrastructure: orgs, units, memberships, roles, audit, billing. Accessed via `public.*` SQL functions |
+| **Platform Layer** | Authentication: Supabase JWT or Payload CMS session |
+
+SMTA occupies the middle layer. You bring the application on top and pick the platform below.
+
+## What SMTA Asks
+
+SMTA's core question is: *"Are you a member of this organization or unit?"* — a yes/no gate on row visibility enforced at the database level via Row-Level Security (RLS).
+
+Once that gate is answered, your application layer (using CASL or another RBAC tool) asks the follow-up: *"Given that you have access, what are you allowed to do?"*
+
+## What SMTA Provides
+
+- **Organizations** — top-level tenants with members and roles
+- **Units** — sub-groups within an organization (teams, departments, projects)
+- **Memberships** — links users to orgs and units with assigned roles
+- **Roles** — named roles scoped per organization
+- **Invitations** — invite users to join an organization by email
+- **Audit logs** — automatic change tracking at the database level
+- **Soft deletion** — records are flagged deleted, not physically removed
+- **Billing** — subscription product and plan management, integrated with Stripe or Lemon Squeezy
+- **Secrets** — per-tenant secret storage via the adapter's secret mechanism
+- **Files** — file metadata tracking scoped to organizations
+
+## What SMTA Does Not Provide
+
+- Authentication — delegated to your adapter (Supabase or Payload)
+- Application business logic — that lives in your `app` schema
+- A backend API — `public.*` functions are exposed via PostgREST (Supabase) or your Payload API layer
