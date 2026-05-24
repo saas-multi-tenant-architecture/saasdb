@@ -1,34 +1,34 @@
-# SaaS Multi-Tenant Architecture - SMTA 
+# SaaS Multi-Tenant Architecture - SMTA
 
 ## Introduction
 
 *SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to address these challenges by providing a ready-made solution that can be used to quickly bootstrap your SaaS. It exists for developers to rapidly create a structurally sound and secure multi-tenant database, integrated with tools used in many SaaS applications today.
 
-The architecture is designed to be modular, scalable, and extensible to customize it to your needs, combine with backend solutions, like [Supabase](https://supabase.com/), and reduce the complexity of multi-tenancy so that you can focus on building your MVP.
+The architecture is designed to be modular, scalable, and extensible to customize it to your needs, combine with backend solutions like [Supabase](https://supabase.com/) or [PayloadCMS](https://payloadcms.com/), and reduce the complexity of multi-tenancy so that you can focus on building your MVP.
 
-**SMTA** offers a layered approach to tenant isolation that reduces the risk of data leakage at the database level, leaving you free to develop your application knowing that the question of "Are you allowed to be here?" is already answered. 
+**SMTA** offers a layered approach to tenant isolation that reduces the risk of data leakage at the database level, leaving you free to develop your application knowing that the question of "Are you allowed to be here?" is already answered.
 
-The core of **SMTA** is a series of PostgreSQL database scripts that create the structure which sits between the application and platform layers of your SaaS. There are no dependencies or complex extensions, so it is all *plain old school SQL* (the 50+ year old technology that just works).
+The core of **SMTA** is a series of PostgreSQL database scripts that create the structure which sits between the application and platform layers of your SaaS. There are no dependencies or complex extensions — it is all *plain old school SQL* (the 50+ year old technology that just works).
 
 The following table diagram illustrates the layered design:
 
 | Layer | Description |
-|--|--| 
-| Application Layer | Your domain tables (_app/): projects, posts, documents, etc. → Accessed via DAL (CASL, Drizzle, Payload collections, Supabase client) |
-| **SMTA Layer** | Tenant Infrastructure: orgs, units, memberships, roles, audit, billing, and SaaS-management → Accessed via *POSS* public.* SQL functions |
-| Platform Layer | Authentication, Storage, Edge Functions: Supabase or PayloadCMS |
+|--|--|
+| Application Layer | Your domain tables (`app` schema): projects, posts, documents, etc. → Accessed via DAL (CASL, Drizzle, Payload collections, Supabase client) |
+| **SMTA Layer** | Tenant infrastructure: orgs, units, memberships, roles, audit, billing, and SaaS-management → Accessed via `public.*` SQL functions |
+| Platform Layer | Authentication adapter: Supabase or PayloadCMS |
 
 ### Membership Has Its Privileges
-In short, **SMTA** asks your authenticated users: "Are you a member of this tenant/organization/unit?" - a yes/no gate on row visibility that is plain and simple. Then within that answer, your application (using CASL or another RBAC tool) can ask, "Given that you have access, what are you allowed to do?" - an action authorization based on the user's role. 
+
+In short, **SMTA** asks your authenticated users: "Are you a member of this tenant/organization/unit?" — a yes/no gate on row visibility that is plain and simple. Then within that answer, your application (using CASL or another RBAC tool) can ask, "Given that you have access, what are you allowed to do?" — action authorization based on the user's role.
 
 ### Extensible Connections
 
-To further help speed development, **SMTA** offers some extensible connections to other common platforms. This not only speeds development, but is an essential part of the **SMTA** model in that **SMTA** does NOT provide any authentication or application-related services. 
+To further help speed development, **SMTA** offers extensible connections to common platforms. **SMTA** does NOT provide authentication or application-related services — it delegates those to an adapter.
 
-These connections include integration with [Supabase](https://supabase.com/) and [PayloadCMS](https://payloadcms.com/), along with payment processors like [Stripe](https://stripe.com/) and [Lemon Squeezy](https://www.lemonsqueezy.com/).
-
-- Supabase - **SMTA** leverages Supabase user authentication, and associated functions like ```auth.uid()```, to fully contain tenants within their respective organizations, along with database adjacent features like storage, edge functions, and Supabase Vault. Supabase does a tremendous job of providing a full-stack solution for a SaaS - **SMTA** just amplifies this functionality.
-- PayloadCMS - **SMTA** works alongside Payload, also utilizing its authentication and storage capabilities, while providing a multi-tenant database layer outside of the core CMS functionality. 
+- **Supabase** — The `@smta/supabase` adapter wires SMTA's auth interface to Supabase's JWT claims and Vault secrets, and exposes `public.*` functions via PostgREST. SMTA amplifies what Supabase already does well.
+- **PayloadCMS** — The `@smta/payload` adapter wires SMTA's auth interface to Payload's session context via a PostgreSQL session variable, allowing SMTA to run alongside Payload's CMS without interfering with it.
+- **Billing** — The `@smta/billing` TypeScript package provides a `BillingProvider` interface with implementations for [Stripe](https://stripe.com/) and [Lemon Squeezy](https://www.lemonsqueezy.com/).
 
 
 ## Goals
@@ -37,39 +37,92 @@ These connections include integration with [Supabase](https://supabase.com/) and
 - PostgreSQL RLS (Row-Level Security) for tenant isolation
 - Soft deletion, auditing, and payment processor billing integration
 - Clear schema boundaries via SQL functions
-- Integration with common platforms like Supabase and PayloadCMS
+- Adapter-agnostic core — same full feature set under Supabase or PayloadCMS
 
 
 ## Features
 
 - Tenant isolation via PostgreSQL RLS
-- Integration database roles with RBAC libraries like [CASL](https://casl.js.org/) 
+- Integration of database roles with RBAC libraries like [CASL](https://casl.js.org/)
 - Soft deletion to prevent data loss and enable recovery
-- No-Code Auditing to track changes and actions at the database level
-- Payment processor integration for billing
-- Segmented and Isolated SaaS Management tables
+- No-code auditing to track changes and actions at the database level
+- Payment processor integration for billing (Stripe or Lemon Squeezy)
+- Segmented and isolated SaaS management tables
 - SQL functions enhanced with schema boundaries
 
 
-### Schemas
+## Schemas
 
-These are the schemas used to segment functionality and enforce security boundaries. Removing access to tables from the `public` schema is an additional security measure to help prevent accidental exposure of sensitive data so that all **SMTA** activity is routed through fully tested, secure SQL functions.
+These are the schemas used to segment functionality and enforce security boundaries. Removing direct table access from the `public` schema is an additional security measure to help prevent accidental exposure of sensitive data — all SMTA activity is routed through fully tested, secure SQL functions.
 
-- `core`: identity, access, helper functions, audit logs
+- `core` — identity, access, memberships, roles, audit logs, helper functions
+- `platform` — SaaS-wide management, logs, billing, and overrides (service role only)
+- `utils` — utility functions shared across all schemas
+- `public` — SQL functions callable by clients (RPC only, no direct table access)
+- `app` — all tenant-specific application logic (customized per SaaS application)
 
-- `utils`: Utility functions shared across all tenants and schemas
 
-- `platform`: SaaS-wide management, logs, and overrides (service role only)
+## Project Structure
 
-- `public`: only for exposing SQL functions callable by clients (RPC)
+SMTA is organized as a pnpm monorepo. Each package has its own `sql-scripts.json` defining the execution order of its SQL files.
 
-- `app`: all tenant-specific application logic (customized for each SaaS application)
+```
+packages/
+├── core/          @smta/core      — adapter-agnostic SMTA schema (SQL)
+├── supabase/      @smta/supabase  — Supabase auth/secrets adapter (SQL)
+├── payload/       @smta/payload   — PayloadCMS auth adapter (SQL + TypeScript)
+├── billing/       @smta/billing   — BillingProvider interface + Stripe + Lemon Squeezy (TypeScript)
+└── schemas/       @smta/schemas   — Zod v4 schemas for public.* RPC contracts (TypeScript)
+
+scripts/
+├── combine_files.js   — assembles a combined SQL deployment script from packages
+├── run_tests.sh       — runs the full pgTap test suite
+└── clean-up-database.sql
+```
+
+### Package boundaries
+
+| Package | Contains |
+|---|---|
+| `@smta/core` | Core + platform schema, billing tables, RLS, public functions, triggers (56 SQL files) |
+| `@smta/supabase` | JWT auth impl, Vault secrets impl, `auth.users` FK constraints (3 SQL files) |
+| `@smta/payload` | Session-variable auth impl (1 SQL file) + TypeScript middleware |
+| `@smta/billing` | `BillingProvider` interface, `StripeProvider`, `LemonSqueezyProvider` |
+| `@smta/schemas` | Zod v4 schemas for all `public.*` RPC function inputs/outputs |
+
+
+## Deployment
+
+Generate a combined SQL deployment script for your chosen adapter:
+
+```bash
+# Supabase deployment (59 files)
+npm run build:supabase   # → output/SMTA-supabase-<timestamp>.sql
+
+# Payload deployment (57 files)
+npm run build:payload    # → output/SMTA-payload-<timestamp>.sql
+```
+
+Both outputs deploy the full SMTA feature set. The only difference is the auth implementation and, for Supabase, the restoration of `auth.users` foreign keys.
+
+Apply the generated script to your PostgreSQL database, then add your `app` schema tables on top.
+
+
+## Testing
+
+SMTA uses [pgTap](https://pgtap.org/) for database-level testing (35 test files, 449 tests).
+
+```bash
+npm test
+```
+
+See `TESTING.md` for setup instructions and `AGENTS.md` for contribution guidelines.
 
 
 ## Origin
 
-**SMTA** is a *labor of love*. It was born out of the frustration of having a great SaaS idea, but always stumbling over the same issue: building a structurally sound multi-tenant database. In many fledgling projects building the elements of **SMTA** is put aside in the interest of expediency, but this creates substantial technical debt. When an application gains success, establishing a robust multi-tenant architecture can involve awkward workarounds that are annoying to the end-user, or are just too costly to re-write. In some cases, multi-tenancy is achieved using a 'one-database-per-tenant model', which can be more costly or lack cross-tenant integration (such as macro-analytics). The leads to a reduction in tenant isolation, security, or performance, and sometimes all three.
+**SMTA** is a *labor of love*. It was born out of the frustration of having a great SaaS idea, but always stumbling over the same issue: building a structurally sound multi-tenant database. In many fledgling projects, building the elements of SMTA is put aside in the interest of expediency, but this creates substantial technical debt. When an application gains success, establishing a robust multi-tenant architecture can involve awkward workarounds that are annoying to the end-user, or are just too costly to re-write. In some cases, multi-tenancy is achieved using a "one-database-per-tenant" model, which can be more costly or lack cross-tenant integration (such as macro-analytics). This leads to a reduction in tenant isolation, security, or performance — and sometimes all three.
 
-**SMTA** originated to help solve the problem of building a multi-tenant application from the ground up. A great SaaS idea shouldn't have to begin with the rudimentary tenant isolation question, which is something most SaaS need. Rather, focus on the problem you are trying to solve.
+**SMTA** originated to help solve the problem of building a multi-tenant application from the ground up. A great SaaS idea shouldn't have to begin with the rudimentary tenant isolation question, which is something most SaaS applications need. Rather, focus on the problem you are trying to solve.
 
 *Labor of Love: Hundreds of thousands of AI tokens were used to build this project so you don't have to!*
