@@ -16,3 +16,7 @@ node_modules
 
 # Do not track test log files
 /tests/test_logs/*.log
+
+# Astro build output and generated types
+apps/docs/.astro/
+apps/docs/dist/
