@@ -1,0 +1,9 @@
+{
+  "name": "@smta/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SMTA Supabase adapter — auth.uid(), Vault, PostgREST config, platform schema",
+  "dependencies": {
+    "@smta/core": "workspace:*"
+  }
+}

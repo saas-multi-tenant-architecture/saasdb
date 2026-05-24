@@ -1,0 +1,6 @@
+{
+  "name": "@smta/billing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SMTA billing abstraction — BillingProvider interface, Stripe, Lemon Squeezy"
+}

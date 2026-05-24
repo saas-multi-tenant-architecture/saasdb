@@ -1,0 +1,9 @@
+{
+  "name": "@smta/payload",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SMTA Payload CMS adapter — JWT session injection, custom endpoints",
+  "dependencies": {
+    "@smta/core": "workspace:*"
+  }
+}

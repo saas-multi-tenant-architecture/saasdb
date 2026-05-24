@@ -1,0 +1,9 @@
+{
+  "name": "@smta/schemas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SMTA Zod schemas for public.* RPC function contracts",
+  "dependencies": {
+    "zod": "^4.0.0"
+  }
+}
