@@ -4,9 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
-    "deploy": "npm run build && wrangler deploy",
-    "preview": "npm run build && wrangler dev"
+    "preview": "astro preview",
+    "build": "astro build"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.39.2",
