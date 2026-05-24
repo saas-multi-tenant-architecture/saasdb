@@ -7,7 +7,8 @@
 CREATE TABLE platform.billing_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES core.organizations(id) ON DELETE CASCADE,
-  paymentprocessor_subscription_id TEXT NOT NULL UNIQUE,
+  provider_subscription_id TEXT NOT NULL UNIQUE,
+  provider TEXT NOT NULL DEFAULT 'stripe' CONSTRAINT billing_subscriptions_provider_check CHECK (provider IN ('stripe', 'lemon_squeezy')),
   plan TEXT NOT NULL,
   status TEXT NOT NULL,
   current_period_end TIMESTAMPTZ,

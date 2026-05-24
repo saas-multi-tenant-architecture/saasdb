@@ -379,12 +379,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, public;
 -- Insert a billing customer (bypasses RLS)
 CREATE OR REPLACE FUNCTION test_helpers.seed_billing_customer(
   p_organization_id UUID,
-  p_paymentprocessor_customer_id TEXT,
+  p_provider_customer_id TEXT,
   p_billing_email TEXT DEFAULT NULL
 ) RETURNS VOID AS $$
 BEGIN
-  INSERT INTO platform.billing_customers (organization_id, paymentprocessor_customer_id, billing_email)
-  VALUES (p_organization_id, p_paymentprocessor_customer_id, p_billing_email)
+  INSERT INTO platform.billing_customers (organization_id, provider_customer_id, billing_email)
+  VALUES (p_organization_id, p_provider_customer_id, p_billing_email)
   ON CONFLICT (organization_id) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, public;
@@ -415,13 +415,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, public;
 CREATE OR REPLACE FUNCTION test_helpers.seed_billing_subscription(
   p_id UUID,
   p_organization_id UUID,
-  p_paymentprocessor_subscription_id TEXT,
+  p_provider_subscription_id TEXT,
   p_plan TEXT,
   p_status TEXT
 ) RETURNS VOID AS $$
 BEGIN
-  INSERT INTO platform.billing_subscriptions (id, organization_id, paymentprocessor_subscription_id, plan, status)
-  VALUES (p_id, p_organization_id, p_paymentprocessor_subscription_id, p_plan, p_status)
+  INSERT INTO platform.billing_subscriptions (id, organization_id, provider_subscription_id, plan, status)
+  VALUES (p_id, p_organization_id, p_provider_subscription_id, p_plan, p_status)
   ON CONFLICT (id) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, public;

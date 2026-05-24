@@ -6,7 +6,8 @@
 -- ========================================
 CREATE TABLE platform.billing_customers (
   organization_id UUID PRIMARY KEY REFERENCES core.organizations(id) ON DELETE CASCADE,
-  paymentprocessor_customer_id TEXT NOT NULL UNIQUE,
+  provider_customer_id TEXT NOT NULL UNIQUE,
+  provider TEXT NOT NULL DEFAULT 'stripe' CONSTRAINT billing_customers_provider_check CHECK (provider IN ('stripe', 'lemon_squeezy')),
   billing_email TEXT,
   created_by uuid,
   updated_by uuid,

@@ -2,5 +2,20 @@
   "name": "@smta/billing",
   "version": "0.1.0",
   "private": true,
-  "description": "SMTA billing abstraction — BillingProvider interface, Stripe, Lemon Squeezy"
+  "description": "SMTA billing provider abstraction — Stripe and Lemon Squeezy",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "stripe": "^17.0.0",
+    "@lemonsqueezy/lemonsqueezy.js": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/pg": "^8.0.0",
+    "pg": "^8.0.0"
+  }
 }
