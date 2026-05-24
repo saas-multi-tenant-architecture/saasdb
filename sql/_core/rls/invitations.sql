@@ -25,7 +25,7 @@ CREATE POLICY invitations_select ON core.invitations
     OR
     -- Users can view invitations sent to their email
     (
-      email = (SELECT email FROM core.users_meta WHERE id = auth.uid())
+      email = (SELECT email FROM core.users_meta WHERE id = core.get_current_user_id())
       AND status = 'pending'
       AND is_deleted = false
     )
@@ -52,7 +52,7 @@ CREATE POLICY invitations_update ON core.invitations
     core.is_org_member(organization_id)
     OR
     (
-      email = (SELECT email FROM core.users_meta WHERE id = auth.uid())
+      email = (SELECT email FROM core.users_meta WHERE id = core.get_current_user_id())
       AND status = 'pending'
     )
   )
@@ -60,7 +60,7 @@ CREATE POLICY invitations_update ON core.invitations
     core.is_org_member(organization_id)
     OR
     (
-      email = (SELECT email FROM core.users_meta WHERE id = auth.uid())
+      email = (SELECT email FROM core.users_meta WHERE id = core.get_current_user_id())
       AND status IN ('accepted', 'expired')  -- Can only mark as accepted or expired
     )
   );

@@ -34,12 +34,12 @@ ALTER TABLE core.organization_files ENABLE ROW LEVEL SECURITY;
 -- Only the user can update their own record
 CREATE POLICY users_meta_select ON core.users_meta
   FOR SELECT USING (
-    (SELECT auth.uid()) = id OR core.shares_organization(id)
+    (SELECT core.get_current_user_id()) = id OR core.shares_organization(id)
   );
 
 CREATE POLICY users_meta_update ON core.users_meta
-  FOR UPDATE USING ((SELECT auth.uid()) = id)
-  WITH CHECK ((SELECT auth.uid()) = id);
+  FOR UPDATE USING ((SELECT core.get_current_user_id()) = id)
+  WITH CHECK ((SELECT core.get_current_user_id()) = id);
 
 -- ========================================
 -- POLICIES: organizations_meta
@@ -68,7 +68,7 @@ CREATE POLICY organizations_select ON core.organizations
   );
 
 CREATE POLICY organizations_insert ON core.organizations
-  FOR INSERT WITH CHECK ((SELECT auth.uid()) = created_by);
+  FOR INSERT WITH CHECK ((SELECT core.get_current_user_id()) = created_by);
 
 CREATE POLICY organizations_update ON core.organizations
   FOR UPDATE USING (
@@ -124,7 +124,7 @@ CREATE POLICY unit_meta_update ON core.unit_meta
 -- Note: protect_super_admin trigger prevents deletion of super_admin membership
 CREATE POLICY memberships_select ON core.memberships
   FOR SELECT USING (
-    is_deleted = false AND ((SELECT auth.uid()) = user_id OR core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
+    is_deleted = false AND ((SELECT core.get_current_user_id()) = user_id OR core.is_org_member(organization_id) OR core.is_super_admin(organization_id))
   );
 
 CREATE POLICY memberships_insert ON core.memberships
@@ -146,7 +146,7 @@ CREATE POLICY memberships_update ON core.memberships
 -- Users see their own rows, org members can manage (CASL controls fine-grained access)
 CREATE POLICY unit_memberships_select ON core.unit_memberships
   FOR SELECT USING (
-    is_deleted = false AND ((SELECT auth.uid()) = user_id OR core.is_org_member_for_unit(unit_id) OR core.is_org_super_admin_for_unit(unit_id))
+    is_deleted = false AND ((SELECT core.get_current_user_id()) = user_id OR core.is_org_member_for_unit(unit_id) OR core.is_org_super_admin_for_unit(unit_id))
   );
 
 CREATE POLICY unit_memberships_insert ON core.unit_memberships
