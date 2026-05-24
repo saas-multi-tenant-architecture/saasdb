@@ -2,8 +2,14 @@
   "name": "@smta/payload",
   "version": "0.1.0",
   "private": true,
-  "description": "SMTA Payload CMS adapter — JWT session injection, custom endpoints",
-  "dependencies": {
-    "@smta/core": "workspace:*"
+  "description": "SMTA Payload CMS adapter — auth context injection middleware",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
   }
 }
