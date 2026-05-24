@@ -9,16 +9,17 @@ SMTA uses five PostgreSQL schemas to enforce security boundaries and separate co
 
 The heart of SMTA. Contains:
 
-- **`core.users`** — mirrors your auth provider's user records
 - **`core.organizations`** — top-level tenants
+- **`core.organizations_meta`** — extended metadata for organizations
 - **`core.units`** — sub-groups within organizations
-- **`core.memberships`** — links users to organizations
-- **`core.unit_memberships`** — links users to units
+- **`core.unit_meta`** — extended metadata for units
+- **`core.memberships`** — links users to organizations with roles
+- **`core.unit_memberships`** — links users to units with roles
 - **`core.roles`** — named roles scoped per organization
 - **`core.invitations`** — pending invitations to join an organization
 - **`core.audit_logs`** — immutable record of data changes
-- **`core.files`** — file metadata scoped to organizations
-- **`core.tenant_secrets`** — per-tenant secret references
+- **`core.organization_files`** — file metadata scoped to organizations
+- **`core.users_meta`** — extended profile data for authenticated users
 
 RLS is enabled on all `core` tables. Policies use `core.get_current_user_id()` to determine the authenticated user.
 
@@ -27,12 +28,18 @@ RLS is enabled on all `core` tables. Policies use `core.get_current_user_id()` t
 Service-role-only tables for SaaS-wide management. Application code cannot read or write `platform` tables — only database service roles (your backend, not your end users) can access them.
 
 Contains:
-- **`platform.plans`** — subscription plan definitions
-- **`platform.products`** — billable products
-- **`platform.subscriptions`** — org-level subscription records
-- **`platform.billing_events`** — webhook and billing lifecycle events
-- **`platform.feature_flags`** — org-level feature overrides
-- **`platform.org_overrides`** — admin overrides per organization
+- **`platform.billing_customers`** — links organizations to payment processor customer records
+- **`platform.billing_subscriptions`** — active subscription records per organization
+- **`platform.subscription_products`** — billable products synced from the payment processor
+- **`platform.platform_subscription_overrides`** — admin-applied subscription overrides
+- **`platform.platform_organizations`** — SaaS-wide organization registry for admin use
+- **`platform.platform_users`** — SaaS-wide user registry for admin use
+- **`platform.platform_roles`** — global role definitions
+- **`platform.platform_feature_flags`** — org-level feature flag overrides
+- **`platform.platform_settings`** — global SaaS configuration settings
+- **`platform.platform_action_logs`** — admin action audit trail
+- **`platform.platform_system_events`** — system-level event log
+- **`platform.tenant_secrets`** — per-tenant secret references (vault IDs)
 
 ## `utils` Schema
 

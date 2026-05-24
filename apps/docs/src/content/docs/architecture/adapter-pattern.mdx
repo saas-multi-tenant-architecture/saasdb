@@ -12,22 +12,32 @@ SMTA's RLS policies need to know who the current user is. But "who is the curren
 `@smta/core` defines a stub function:
 
 ```sql
-create or replace function core.get_current_user_id()
-returns uuid language sql stable security definer as $$
-  select null::uuid
-$$;
+CREATE OR REPLACE FUNCTION core.get_current_user_id()
+RETURNS UUID AS $$
+BEGIN
+  RAISE EXCEPTION 'core.get_current_user_id() not implemented. Deploy an adapter (supabase or payload).';
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = core;
 ```
 
-This stub always returns `null`. Every RLS policy in `@smta/core` calls this function. The stub is replaced by the adapter implementation after core deploys.
+This stub raises an exception if called without an adapter — it is a deployment guard, not a silent fallback. Every RLS policy in `@smta/core` calls this function. The stub is replaced by the adapter implementation after core deploys.
 
 A second pair of stubs handles secret storage:
 
 ```sql
-create or replace function core.store_secret_impl(p_name text, p_secret text)
-returns uuid language sql as $$ select null::uuid $$;
+CREATE OR REPLACE FUNCTION core.store_secret_impl(p_secret TEXT, p_name TEXT DEFAULT NULL)
+RETURNS TEXT AS $$
+BEGIN
+  RAISE EXCEPTION 'core.store_secret_impl() not implemented. Deploy an adapter.';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core;
 
-create or replace function core.delete_secret_impl(p_secret_id uuid)
-returns void language sql as $$ $$;
+CREATE OR REPLACE FUNCTION core.delete_secret_impl(p_secret_ref TEXT)
+RETURNS VOID AS $$
+BEGIN
+  RAISE EXCEPTION 'core.delete_secret_impl() not implemented. Deploy an adapter.';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core;
 ```
 
 ## Adapter Implementations
@@ -42,10 +52,15 @@ returns uuid language sql stable security definer as $$
 $$;
 
 -- secrets_supabase_impl.sql
-create or replace function core.store_secret_impl(p_name text, p_secret text)
-returns uuid language sql security definer as $$
-  select vault.create_secret(p_secret, p_name)
-$$;
+CREATE OR REPLACE FUNCTION core.store_secret_impl(p_secret TEXT, p_name TEXT DEFAULT NULL)
+RETURNS TEXT AS $$
+DECLARE
+  v_vault_id UUID;
+BEGIN
+  SELECT vault.create_secret(p_secret, p_name) INTO v_vault_id;
+  RETURN v_vault_id::TEXT;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, vault, public;
 ```
 
 **Payload adapter** (`@smta/payload`) replaces only the auth stub:
@@ -58,7 +73,7 @@ returns uuid language sql stable security definer as $$
 $$;
 ```
 
-The secret stubs remain as no-ops for Payload unless you implement your own vault.
+The secret stubs remain as exception-raising guards for Payload — calling `store_secret_impl()` or `delete_secret_impl()` without an implementation will raise a database exception. Implement your own vault adapter if you need per-tenant secrets under Payload.
 
 ## Deployment Order
 
