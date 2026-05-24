@@ -7,6 +7,8 @@
   },
   "scripts": [
     "sql/00_init/schemas.sql",
+    "sql/00_init/auth_interface.sql",
+    "sql/00_init/auth_supabase_impl.sql",
 
     "sql/_utils/functions.sql",
 
