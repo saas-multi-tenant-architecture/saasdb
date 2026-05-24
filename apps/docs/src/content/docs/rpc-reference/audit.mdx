@@ -1,6 +1,77 @@
 ---
 title: Audit RPC
-description: Public RPC functions for audit logging.
+description: Public RPC function for reading the audit log for an organization.
 ---
 
-This page is coming soon.
+The audit log records changes made to organizations, units, memberships, roles, and invitations. Entries are written automatically by database triggers — no application code needs to call an audit-write function.
+
+---
+
+## `get_audit_log(p_org_id, p_limit)`
+
+Returns recent audit log entries for an organization, ordered by most recent first.
+
+**Signature**
+```sql
+public.get_audit_log(
+  p_org_id UUID,
+  p_limit  INT
+)
+RETURNS TABLE (
+  id           UUID,
+  actor_id     UUID,
+  target_table TEXT,
+  target_id    UUID,
+  action       TEXT,
+  summary      TEXT,
+  metadata     JSONB,
+  created_at   TIMESTAMPTZ
+)
+```
+
+**Parameters**
+
+| Parameter | Description |
+|---|---|
+| `p_org_id` | The organization to fetch audit entries for |
+| `p_limit` | Maximum number of entries to return |
+
+**Return columns**
+
+| Column | Description |
+|---|---|
+| `id` | Unique audit entry ID |
+| `actor_id` | UUID of the user who performed the action |
+| `target_table` | The database table that was affected (e.g. `'core.organizations'`, `'core.memberships'`) |
+| `target_id` | UUID of the specific record that was affected |
+| `action` | The type of change: `'INSERT'`, `'UPDATE'`, or `'DELETE'` |
+| `summary` | Human-readable description of what changed |
+| `metadata` | JSONB field with additional context (e.g. old/new values, role names) |
+| `created_at` | Timestamp when the audit entry was written |
+
+**Usage**
+```ts
+// Fetch the last 50 audit entries
+const { data, error } = await supabase.rpc('get_audit_log', {
+  p_org_id: 'org-uuid',
+  p_limit: 50
+});
+
+for (const entry of data) {
+  console.log(`${entry.created_at} — ${entry.actor_id}: ${entry.summary}`);
+}
+```
+
+---
+
+## What Creates Audit Entries
+
+Audit entries are written automatically by database triggers when changes occur to:
+
+- **Organizations** — create, update, delete, metadata updates
+- **Units** — create, update, delete
+- **Memberships** — org and unit member add/remove/role-change
+- **Roles** — role assignments and changes
+- **Invitations** — create, accept, cancel
+
+Application code does not write to the audit log directly.

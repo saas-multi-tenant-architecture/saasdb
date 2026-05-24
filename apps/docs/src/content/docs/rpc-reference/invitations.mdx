@@ -1,6 +1,194 @@
 ---
 title: Invitations RPC
-description: Public RPC functions for managing invitations.
+description: Public RPC functions for creating, managing, and accepting organization invitations.
 ---
 
-This page is coming soon.
+The invitation flow allows organization admins to invite users by email. Invited users receive a token-based link to accept their invitation.
+
+## Invitation Flow
+
+```
+create_invitation()          → generates token, sends email
+        ↓
+get_invitation_details()     → landing page reads invite info (no auth required)
+        ↓
+accept_invitation()          → authenticated user accepts, joins org/unit
+```
+
+---
+
+## `create_invitation(p_email, p_organization_id, p_role_id, p_unit_id?, p_metadata?)`
+
+Creates a new invitation for a user to join an organization (and optionally a unit). Returns the invitation token used to construct the acceptance link.
+
+**Signature**
+```sql
+public.create_invitation(
+  p_email           TEXT,
+  p_organization_id UUID,
+  p_role_id         UUID,
+  p_unit_id         UUID    DEFAULT NULL,
+  p_metadata        JSONB   DEFAULT '{}'
+)
+RETURNS TABLE (
+  id         UUID,
+  token      TEXT,
+  email      TEXT,
+  expires_at TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('create_invitation', {
+  p_email: 'newuser@example.com',
+  p_organization_id: 'org-uuid',
+  p_role_id: 'role-uuid',
+  p_unit_id: 'unit-uuid'    // optional
+});
+
+// data.token is used to build the acceptance URL
+const acceptUrl = `https://yourapp.com/accept-invite?token=${data[0].token}`;
+```
+
+---
+
+## `get_invitation_details(p_token)`
+
+Returns human-readable details about an invitation from its token. **No authentication is required** — this function is designed for public landing pages shown to invitees before they log in.
+
+**Signature**
+```sql
+public.get_invitation_details(p_token TEXT)
+RETURNS TABLE (
+  id               UUID,
+  email            TEXT,
+  organization_name TEXT,
+  unit_name        TEXT,
+  role_name        TEXT,
+  invited_by_name  TEXT,
+  expires_at       TIMESTAMPTZ,
+  status           TEXT
+)
+```
+
+**Usage**
+```ts
+// No auth needed — safe to call on a public landing page
+const { data, error } = await supabase.rpc('get_invitation_details', {
+  p_token: tokenFromUrl
+});
+
+// Check status before showing accept UI
+if (data[0].status !== 'pending') {
+  // show expired/cancelled message
+}
+```
+
+---
+
+## `accept_invitation(p_token)`
+
+Accepts an invitation. The caller must be authenticated. The user is added to the organization (and unit, if specified in the invitation). Returns context about what was joined.
+
+**Signature**
+```sql
+public.accept_invitation(p_token TEXT)
+RETURNS TABLE (
+  organization_id   UUID,
+  unit_id           UUID,
+  role_id           UUID,
+  organization_name TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('accept_invitation', {
+  p_token: tokenFromUrl
+});
+```
+
+---
+
+## `list_invitations(p_organization_id, p_status?)`
+
+Returns invitations for an organization. Optionally filter by status.
+
+**Signature**
+```sql
+public.list_invitations(
+  p_organization_id UUID,
+  p_status          TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id               UUID,
+  email            TEXT,
+  organization_id  UUID,
+  unit_id          UUID,
+  role_name        TEXT,
+  invited_by_email TEXT,
+  status           TEXT,
+  expires_at       TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ
+)
+```
+
+**`p_status` values**: `'pending'`, `'accepted'`, `'expired'`, `'cancelled'`
+
+**Usage**
+```ts
+// All invitations
+const { data } = await supabase.rpc('list_invitations', {
+  p_organization_id: 'org-uuid'
+});
+
+// Only pending
+const { data } = await supabase.rpc('list_invitations', {
+  p_organization_id: 'org-uuid',
+  p_status: 'pending'
+});
+```
+
+---
+
+## `cancel_invitation(p_invitation_id)`
+
+Cancels a pending invitation. The invitation status is set to `'cancelled'` and can no longer be accepted.
+
+**Signature**
+```sql
+public.cancel_invitation(p_invitation_id UUID)
+RETURNS VOID
+```
+
+**Usage**
+```ts
+await supabase.rpc('cancel_invitation', {
+  p_invitation_id: 'invite-uuid'
+});
+```
+
+---
+
+## `resend_invitation(p_invitation_id)`
+
+Re-sends an invitation email and returns a refreshed token with a new expiry.
+
+**Signature**
+```sql
+public.resend_invitation(p_invitation_id UUID)
+RETURNS TABLE (
+  id         UUID,
+  token      TEXT,
+  email      TEXT,
+  expires_at TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('resend_invitation', {
+  p_invitation_id: 'invite-uuid'
+});
+```

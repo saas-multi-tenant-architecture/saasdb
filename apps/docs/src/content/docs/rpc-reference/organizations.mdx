@@ -1,6 +1,293 @@
 ---
 title: Organizations RPC
-description: Public RPC functions for managing organizations.
+description: Public RPC functions for reading, creating, and managing organizations and their members.
 ---
 
-This page is coming soon.
+All functions are called via Supabase's `rpc()` method and execute as the authenticated user. Role enforcement is applied server-side.
+
+---
+
+## Reading Organizations
+
+### `list_my_organizations()`
+
+Returns all organizations the current user belongs to, along with the user's role in each.
+
+**Signature**
+```sql
+public.list_my_organizations()
+RETURNS TABLE (
+  id          UUID,
+  name        TEXT,
+  description TEXT,
+  role        TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('list_my_organizations');
+```
+
+---
+
+### `get_organization(p_id)`
+
+Returns full details for a single organization. The caller must be a member.
+
+**Signature**
+```sql
+public.get_organization(p_id UUID)
+RETURNS TABLE (
+  id          UUID,
+  name        TEXT,
+  description TEXT,
+  created_by  UUID,
+  updated_by  UUID,
+  is_deleted  BOOLEAN,
+  deleted_at  TIMESTAMPTZ,
+  deleted_by  UUID,
+  created_at  TIMESTAMPTZ,
+  updated_at  TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_organization', {
+  p_id: 'org-uuid'
+});
+```
+
+---
+
+### `list_organization_members(p_id)`
+
+Returns all members of an organization, including their roles and super-admin status.
+
+**Signature**
+```sql
+public.list_organization_members(p_id UUID)
+RETURNS TABLE (
+  user_id        UUID,
+  email          TEXT,
+  first_name     TEXT,
+  last_name      TEXT,
+  role           TEXT,
+  is_super_admin BOOLEAN
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('list_organization_members', {
+  p_id: 'org-uuid'
+});
+```
+
+---
+
+### `get_user_role(p_org_id)`
+
+Returns the current user's role name in the specified organization as a plain `TEXT` value.
+
+**Signature**
+```sql
+public.get_user_role(p_org_id UUID)
+RETURNS TEXT
+```
+
+**Usage**
+```ts
+const { data: role, error } = await supabase.rpc('get_user_role', {
+  p_org_id: 'org-uuid'
+});
+// role === 'admin' | 'member' | etc.
+```
+
+---
+
+## Creating Organizations
+
+### `create_organization(p_name, p_description?)`
+
+Creates a new organization. The calling user becomes its super admin.
+
+**Signature**
+```sql
+public.create_organization(
+  p_name        TEXT,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id         UUID,
+  name       TEXT,
+  created_at TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('create_organization', {
+  p_name: 'Acme Corp',
+  p_description: 'Our main organization'
+});
+```
+
+---
+
+## Member Management
+
+### `invite_user_to_organization(p_email, p_role_id)`
+
+Invites a user by email. The organization is inferred from the caller's current membership context. Prefer `create_invitation` (in Invitations RPC) for explicit org/unit targeting.
+
+**Signature**
+```sql
+public.invite_user_to_organization(
+  p_email   TEXT,
+  p_role_id UUID
+)
+RETURNS VOID
+```
+
+---
+
+### `remove_user_from_organization(p_user_id, p_org_id)`
+
+Removes a user from an organization. Available to members with sufficient permissions.
+
+**Signature**
+```sql
+public.remove_user_from_organization(
+  p_user_id UUID,
+  p_org_id  UUID
+)
+RETURNS VOID
+```
+
+---
+
+## Admin Operations
+
+These functions require the caller to be the organization's **super admin**.
+
+### `update_organization(p_id, p_name, p_description?)`
+
+Updates the organization's name and description.
+
+**Signature**
+```sql
+public.update_organization(
+  p_id          UUID,
+  p_name        TEXT,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id          UUID,
+  name        TEXT,
+  description TEXT,
+  updated_at  TIMESTAMPTZ
+)
+```
+
+---
+
+### `update_organization_meta(p_id, ...)`
+
+Updates optional metadata fields on the organization.
+
+**Signature**
+```sql
+public.update_organization_meta(
+  p_id          UUID,
+  p_logo_file_id UUID    DEFAULT NULL,
+  p_address      TEXT    DEFAULT NULL,
+  p_timezone     TEXT    DEFAULT NULL,
+  p_locale       TEXT    DEFAULT NULL
+)
+RETURNS TABLE (
+  id           UUID,
+  logo_file_id UUID,
+  address      TEXT,
+  timezone     TEXT,
+  locale       TEXT,
+  updated_at   TIMESTAMPTZ
+)
+```
+
+---
+
+### `delete_organization(p_id)`
+
+Soft-deletes the organization and all of its members and units. Sets `is_deleted = true` on the org and cascades to related records.
+
+**Signature**
+```sql
+public.delete_organization(p_id UUID)
+RETURNS VOID
+```
+
+> **Caution**: This is a cascading soft delete. All memberships and units are also marked deleted.
+
+---
+
+### `transfer_super_admin(p_org_id, p_new_super_admin_user_id)`
+
+Transfers super-admin status to another existing member. The calling user loses super-admin status.
+
+**Signature**
+```sql
+public.transfer_super_admin(
+  p_org_id                  UUID,
+  p_new_super_admin_user_id UUID
+)
+RETURNS VOID
+```
+
+---
+
+### `add_member_to_organization(p_org_id, p_user_id, p_role_id)`
+
+Adds an existing platform user to an organization with a specified role. Super admin only.
+
+**Signature**
+```sql
+public.add_member_to_organization(
+  p_org_id  UUID,
+  p_user_id UUID,
+  p_role_id UUID
+)
+RETURNS VOID
+```
+
+---
+
+### `update_member_role(p_org_id, p_user_id, p_role_id)`
+
+Changes the role of an existing organization member. Super admin only.
+
+**Signature**
+```sql
+public.update_member_role(
+  p_org_id  UUID,
+  p_user_id UUID,
+  p_role_id UUID
+)
+RETURNS VOID
+```
+
+---
+
+### `remove_member_from_organization(p_org_id, p_user_id)`
+
+Removes a member from the organization. Super admin only. The super admin cannot be removed — use `transfer_super_admin` first.
+
+**Signature**
+```sql
+public.remove_member_from_organization(
+  p_org_id  UUID,
+  p_user_id UUID
+)
+RETURNS VOID
+```

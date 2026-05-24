@@ -1,6 +1,110 @@
 ---
 title: User Profile RPC
-description: Public RPC functions for managing user profiles.
+description: Public RPC functions for reading and updating the current user's profile, organizations, and units.
 ---
 
-This page is coming soon.
+These functions operate on the currently authenticated user. No `user_id` parameter is needed — the user is determined from the session.
+
+---
+
+## `get_user_profile()`
+
+Returns the current user's profile.
+
+**Signature**
+```sql
+public.get_user_profile()
+RETURNS TABLE (
+  id         UUID,
+  email      TEXT,
+  first_name TEXT,
+  last_name  TEXT,
+  avatar_url TEXT,
+  timezone   TEXT,
+  locale     TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_user_profile');
+```
+
+---
+
+## `update_user_profile(p_first_name, p_last_name)`
+
+Updates the current user's first and last name. Returns the updated profile.
+
+**Signature**
+```sql
+public.update_user_profile(
+  p_first_name TEXT,
+  p_last_name  TEXT
+)
+RETURNS TABLE (
+  id         UUID,
+  email      TEXT,
+  first_name TEXT,
+  last_name  TEXT,
+  avatar_url TEXT,
+  timezone   TEXT,
+  locale     TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('update_user_profile', {
+  p_first_name: 'Jane',
+  p_last_name: 'Smith'
+});
+```
+
+---
+
+## `get_user_organizations()`
+
+Returns all organizations the current user belongs to, including their role in each. This is an alias for `list_my_organizations()` — both functions return identical results.
+
+**Signature**
+```sql
+public.get_user_organizations()
+RETURNS TABLE (
+  id          UUID,
+  name        TEXT,
+  description TEXT,
+  role        TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_user_organizations');
+```
+
+> **Alias**: `list_my_organizations()` returns the same data. Use whichever name fits your context.
+
+---
+
+## `get_user_units(p_org_id)`
+
+Returns all units within a specific organization that the current user belongs to.
+
+**Signature**
+```sql
+public.get_user_units(p_org_id UUID)
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  name            TEXT,
+  role            TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_user_units', {
+  p_org_id: 'org-uuid'
+});
+```

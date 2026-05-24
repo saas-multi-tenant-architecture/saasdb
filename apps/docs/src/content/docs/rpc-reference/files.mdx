@@ -1,6 +1,150 @@
 ---
 title: Files RPC
-description: Public RPC functions for managing files.
+description: Public RPC functions for tracking file metadata within an organization.
 ---
 
-This page is coming soon.
+The files API stores **metadata only** — not file contents. File contents are stored externally (e.g. Supabase Storage or a CDN), and the resulting URL is passed to these functions.
+
+Fields:
+- `file_url` — the URL where the file can be accessed
+- `file_type` — MIME type or a descriptor (e.g. `'image/png'`)
+- `file_size` — size in bytes (optional)
+- `file_specs` — a JSONB field for any additional metadata (dimensions, duration, etc.)
+
+---
+
+## `create_file(p_org_id, p_file_url, p_file_type, p_file_size?, p_file_specs?)`
+
+Registers a new file record for an organization.
+
+**Signature**
+```sql
+public.create_file(
+  p_org_id     UUID,
+  p_file_url   TEXT,
+  p_file_type  TEXT,
+  p_file_size  INTEGER DEFAULT NULL,
+  p_file_specs JSONB   DEFAULT NULL
+)
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  file_url        TEXT,
+  file_type       TEXT,
+  created_at      TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('create_file', {
+  p_org_id: 'org-uuid',
+  p_file_url: 'https://cdn.example.com/uploads/logo.png',
+  p_file_type: 'image/png',
+  p_file_size: 48210,
+  p_file_specs: { width: 512, height: 512 }
+});
+```
+
+---
+
+## `get_file(p_file_id)`
+
+Returns details for a single file record.
+
+**Signature**
+```sql
+public.get_file(p_file_id UUID)
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  file_url        TEXT,
+  file_type       TEXT,
+  created_at      TIMESTAMPTZ,
+  updated_at      TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_file', {
+  p_file_id: 'file-uuid'
+});
+```
+
+---
+
+## `list_files(p_org_id)`
+
+Returns all file records for an organization.
+
+**Signature**
+```sql
+public.list_files(p_org_id UUID)
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  file_url        TEXT,
+  file_type       TEXT,
+  created_at      TIMESTAMPTZ,
+  updated_at      TIMESTAMPTZ
+)
+```
+
+> **Note**: This function does not filter by `is_deleted`. It returns all file records including soft-deleted ones. Filter client-side or check `delete_file` behavior if this matters for your use case.
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('list_files', {
+  p_org_id: 'org-uuid'
+});
+```
+
+---
+
+## `update_file_metadata(p_file_id, p_file_specs?, p_file_size?)`
+
+Updates the `file_specs` and/or `file_size` on an existing file record. Useful for updating metadata after processing (e.g. storing image dimensions after a resize pipeline completes).
+
+**Signature**
+```sql
+public.update_file_metadata(
+  p_file_id    UUID,
+  p_file_specs JSONB   DEFAULT NULL,
+  p_file_size  INTEGER DEFAULT NULL
+)
+RETURNS TABLE (
+  id         UUID,
+  file_url   TEXT,
+  file_type  TEXT,
+  updated_at TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('update_file_metadata', {
+  p_file_id: 'file-uuid',
+  p_file_specs: { width: 1024, height: 768, processed: true },
+  p_file_size: 94320
+});
+```
+
+---
+
+## `delete_file(p_file_id)`
+
+Soft-deletes a file record. Sets `is_deleted = true` on the record. The file URL and external storage object are not affected.
+
+**Signature**
+```sql
+public.delete_file(p_file_id UUID)
+RETURNS VOID
+```
+
+**Usage**
+```ts
+await supabase.rpc('delete_file', {
+  p_file_id: 'file-uuid'
+});
+```

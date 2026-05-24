@@ -1,6 +1,295 @@
 ---
 title: Units RPC
-description: Public RPC functions for managing units.
+description: Public RPC functions for reading, creating, and managing units and their members.
 ---
 
-This page is coming soon.
+Units are sub-groups within an organization. A user must be an organization member before they can be added to a unit.
+
+All functions execute as the authenticated user with server-side role enforcement.
+
+---
+
+## Reading Units
+
+### `list_my_units()`
+
+Returns all units the current user belongs to across all organizations.
+
+**Signature**
+```sql
+public.list_my_units()
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  name            TEXT,
+  role            TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('list_my_units');
+```
+
+---
+
+### `list_units(p_org_id)`
+
+Returns all units in a given organization (not just the units the current user belongs to). Useful for admin views.
+
+**Signature**
+```sql
+public.list_units(p_org_id UUID)
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  name            TEXT,
+  description     TEXT,
+  created_at      TIMESTAMPTZ,
+  updated_at      TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('list_units', {
+  p_org_id: 'org-uuid'
+});
+```
+
+---
+
+### `get_unit(p_id)`
+
+Returns details for a single unit.
+
+**Signature**
+```sql
+public.get_unit(p_id UUID)
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  name            TEXT,
+  description     TEXT,
+  created_at      TIMESTAMPTZ,
+  updated_at      TIMESTAMPTZ
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_unit', {
+  p_id: 'unit-uuid'
+});
+```
+
+---
+
+### `list_unit_members(p_unit_id)`
+
+Returns all members of a unit with their roles.
+
+**Signature**
+```sql
+public.list_unit_members(p_unit_id UUID)
+RETURNS TABLE (
+  user_id    UUID,
+  email      TEXT,
+  first_name TEXT,
+  last_name  TEXT,
+  role       TEXT
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('list_unit_members', {
+  p_unit_id: 'unit-uuid'
+});
+```
+
+---
+
+## Creating Units
+
+### `create_unit(p_org_id, p_name, p_description?)`
+
+Creates a new unit within an organization.
+
+**Signature**
+```sql
+public.create_unit(
+  p_org_id      UUID,
+  p_name        TEXT,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id              UUID,
+  organization_id UUID,
+  name            TEXT,
+  description     TEXT,
+  created_by      UUID,
+  updated_by      UUID
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('create_unit', {
+  p_org_id: 'org-uuid',
+  p_name: 'Engineering',
+  p_description: 'Engineering team'
+});
+```
+
+---
+
+## Member Management
+
+Two functions exist for assigning users to units. They have **different parameter orders** and **different authorization requirements**.
+
+### `assign_user_to_unit(p_user_id, p_unit_id, p_role_id)`
+
+Assigns an org member to a unit. **No elevated permissions required.** Available to any authorized org member.
+
+**Signature**
+```sql
+public.assign_user_to_unit(
+  p_user_id UUID,
+  p_unit_id UUID,
+  p_role_id UUID
+)
+RETURNS VOID
+```
+
+**Usage**
+```ts
+await supabase.rpc('assign_user_to_unit', {
+  p_user_id: 'user-uuid',
+  p_unit_id: 'unit-uuid',
+  p_role_id: 'role-uuid'
+});
+```
+
+---
+
+### `remove_user_from_unit(p_user_id, p_unit_id)`
+
+Soft-deletes a user's membership in a unit. Sets `is_deleted = true` on the membership record.
+
+**Signature**
+```sql
+public.remove_user_from_unit(
+  p_user_id UUID,
+  p_unit_id UUID
+)
+RETURNS VOID
+```
+
+---
+
+## Updating Units
+
+### `update_unit(p_id, p_name, p_description?)`
+
+Updates the unit's name and description.
+
+**Signature**
+```sql
+public.update_unit(
+  p_id          UUID,
+  p_name        TEXT,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id          UUID,
+  name        TEXT,
+  description TEXT,
+  updated_at  TIMESTAMPTZ
+)
+```
+
+---
+
+### `delete_unit(p_id)`
+
+Soft-deletes the unit and all of its memberships. Sets `is_deleted = true` on the unit and cascades to membership records.
+
+**Signature**
+```sql
+public.delete_unit(p_id UUID)
+RETURNS VOID
+```
+
+---
+
+## Super Admin Operations
+
+These functions require the caller to be the organization's **super admin**. They also require the target user to already be an organization member before being added to a unit.
+
+### `add_member_to_unit(p_unit_id, p_user_id, p_role_id)`
+
+Adds an existing org member to a unit. **Super admin only.** Note the parameter order: `p_unit_id` comes first, unlike `assign_user_to_unit`.
+
+**Signature**
+```sql
+public.add_member_to_unit(
+  p_unit_id UUID,
+  p_user_id UUID,
+  p_role_id UUID
+)
+RETURNS VOID
+```
+
+> **Note**: The user must already be a member of the parent organization. Use `add_member_to_organization` first if needed.
+
+**Usage**
+```ts
+await supabase.rpc('add_member_to_unit', {
+  p_unit_id: 'unit-uuid',
+  p_user_id: 'user-uuid',
+  p_role_id: 'role-uuid'
+});
+```
+
+---
+
+### `update_unit_member_role(p_unit_id, p_user_id, p_role_id)`
+
+Changes the role of an existing unit member. Super admin only.
+
+**Signature**
+```sql
+public.update_unit_member_role(
+  p_unit_id UUID,
+  p_user_id UUID,
+  p_role_id UUID
+)
+RETURNS VOID
+```
+
+---
+
+### `remove_member_from_unit(p_unit_id, p_user_id)`
+
+Removes a member from a unit. Super admin only.
+
+**Signature**
+```sql
+public.remove_member_from_unit(
+  p_unit_id UUID,
+  p_user_id UUID
+)
+RETURNS VOID
+```
+
+---
+
+## Parameter Order Summary
+
+| Function | First param | Second param | Third param | Super admin? |
+|---|---|---|---|---|
+| `assign_user_to_unit` | `p_user_id` | `p_unit_id` | `p_role_id` | No |
+| `add_member_to_unit` | `p_unit_id` | `p_user_id` | `p_role_id` | Yes |
+
+Always double-check the parameter order when calling these two functions, as the `p_user_id` and `p_unit_id` positions are swapped.

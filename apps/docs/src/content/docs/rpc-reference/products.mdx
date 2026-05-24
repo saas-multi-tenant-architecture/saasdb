@@ -1,6 +1,50 @@
 ---
 title: Products RPC
-description: Public RPC functions for managing products.
+description: Public RPC function for listing available subscription products.
 ---
 
-This page is coming soon.
+Subscription products are managed by platform administrators and stored in `platform.subscription_products`. This function exposes active, non-deleted products to authenticated users so applications can display pricing and plan options.
+
+---
+
+## `list_subscription_products()`
+
+Returns all active subscription products available on the platform.
+
+**Signature**
+```sql
+public.list_subscription_products()
+RETURNS TABLE (
+  id               UUID,
+  name             TEXT,
+  description      TEXT,
+  billing_interval TEXT,
+  amount           INTEGER,
+  created_at       TIMESTAMPTZ,
+  updated_at       TIMESTAMPTZ,
+  created_by       UUID,
+  updated_by       UUID
+)
+```
+
+**Filtering**: Only records with `is_active = true` and `is_deleted = false` are returned. Inactive or deleted products are never included.
+
+**`amount` field**: The `amount` column is an `INTEGER` and represents the price in the smallest currency unit (e.g. cents for USD). A value of `2900` means $29.00.
+
+**`billing_interval` field**: Describes the billing cycle. Common values include `'month'` and `'year'`, but the exact values depend on how products are configured in your platform.
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('list_subscription_products');
+
+for (const product of data) {
+  const price = (product.amount / 100).toFixed(2);
+  console.log(`${product.name} — $${price} / ${product.billing_interval}`);
+}
+```
+
+---
+
+## How Products Are Populated
+
+Products are created and managed by platform admins directly in the `platform.subscription_products` table — not through a public RPC function. See the **Billing** section for details on how to set up products and connect them to a billing provider (e.g. Stripe).
