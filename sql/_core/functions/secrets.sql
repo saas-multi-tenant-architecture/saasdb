@@ -5,7 +5,7 @@
 -- FUNCTION: core.create_tenant_secret()
 -- ========================================
 -- Creates a new tenant secret for an organization or user
--- Secrets are stored in Supabase Vault with references in tenant_secrets table
+-- Secrets are stored via core.store_secret_impl (provider-specific) with references in tenant_secrets table
 CREATE OR REPLACE FUNCTION core.create_tenant_secret(
   p_scope TEXT,
   p_id UUID,
@@ -17,7 +17,7 @@ DECLARE
   v_secret_id UUID;
   v_caller_id UUID;
 BEGIN
-  v_caller_id := auth.uid();
+  v_caller_id := core.get_current_user_id();
 
   -- Validate scope
   IF p_scope NOT IN ('organization', 'user') THEN
@@ -44,9 +44,8 @@ BEGIN
     END IF;
   END IF;
 
-  -- Create secret in Supabase Vault
-  -- Note: vault.create_secret may require SECURITY DEFINER or appropriate grants
-  SELECT vault.create_secret(p_secret) INTO v_vault_key_id;
+  -- Create secret via provider implementation
+  v_vault_key_id := core.store_secret_impl(p_secret, p_name)::UUID;
 
   -- Store reference in tenant_secrets table
   INSERT INTO platform.tenant_secrets (
@@ -80,13 +79,13 @@ BEGIN
 
   RETURN v_secret_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, platform, vault;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, platform;
 
 -- ========================================
 -- FUNCTION: core.delete_tenant_secret()
 -- ========================================
 -- Deletes a tenant secret for an organization or user
--- Soft-deletes the reference, hard-deletes from Vault
+-- Soft-deletes the reference, hard-deletes from the secrets provider
 CREATE OR REPLACE FUNCTION core.delete_tenant_secret(
   p_secret_id UUID
 ) RETURNS VOID AS $$
@@ -98,7 +97,7 @@ DECLARE
   v_secret_name TEXT;
   v_caller_id UUID;
 BEGIN
-  v_caller_id := auth.uid();
+  v_caller_id := core.get_current_user_id();
 
   -- Fetch the secret details first
   SELECT scope, organization_id, user_id, vault_key_id, secret_name
@@ -139,8 +138,8 @@ BEGIN
   WHERE id = p_secret_id
     AND is_deleted = false;
 
-  -- Hard-delete from Vault (cannot be recovered)
-  DELETE FROM vault.secrets WHERE id = v_vault_key_id;
+  -- Hard-delete from secrets provider (cannot be recovered)
+  PERFORM core.delete_secret_impl(v_vault_key_id::TEXT);
 
   -- Log the action
   PERFORM core.log_audit(
@@ -155,7 +154,7 @@ BEGIN
     )
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, platform, vault;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, platform;
 
 -- ========================================
 -- FUNCTION: core.list_tenant_secrets()
@@ -177,7 +176,7 @@ RETURNS TABLE (
 DECLARE
   v_caller_id UUID;
 BEGIN
-  v_caller_id := auth.uid();
+  v_caller_id := core.get_current_user_id();
 
   -- If scope and id provided, validate authorization
   IF p_scope IS NOT NULL AND p_id IS NOT NULL THEN
@@ -249,8 +248,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, platform;
 -- ========================================
 -- These functions use SECURITY DEFINER because:
 -- 1. They need to access platform.tenant_secrets (authenticated users have no access)
--- 2. They need to interact with vault.secrets (requires elevated privileges)
--- 3. Authorization is enforced within the function body using auth.uid()
+-- 2. They need to call provider-specific secret storage (core.store_secret_impl / core.delete_secret_impl)
+-- 3. Authorization is enforced within the function body using core.get_current_user_id()
 --
 -- The secret value is NEVER returned to the user - only metadata
 -- Actual secret values are retrieved by the system when needed (e.g., for SMTP)
