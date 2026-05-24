@@ -1,0 +1,5 @@
+"module name","license","repository"
+"fs@0.0.1-security","ISC","https://github.com/npm/security-holder"
+"path@0.12.7","MIT","https://github.com/jinder/path"
+"saasdb@1.0.0","ISC",""
+"zod@3.25.76","MIT","https://github.com/colinhacks/zod"

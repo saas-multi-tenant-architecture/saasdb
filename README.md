@@ -1,509 +1,64 @@
 # SaaS Multi-Tenant Architecture - SMTA 
-### Based on Supabase / PostgreSQL / CASL
 
-## General Overview
+## Introduction
 
-Building a multi-tenant database can be a daunting task, particularly for a newly developing product. In many fledgling projects it is typically relegated to 'phase 2' in the interest of expediency, but this creates a substantial amount of technical debt. When an application gains success, establishing multi-tenancy can involve awkward workarounds that are annoying to the end-user because the limitations of the initial database are just too costly to re-write. In some cases, multi-tenancy is achieved using a 'one-database-per-tenant model', that can be more costly to maintain or lack cross-tenant integration (such as user log-ins across multiple tenants or macro-analytics) when done unintentionally. Sometimes a multi-tenant database is designed on top of the original database, reducing isolation, security, or performance, and sometimes all three.
+*SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to address these challenges by providing a ready-made solution that can be used to quickly bootstrap your SaaS. It exists for developers to rapidly create a structurally sound and secure multi-tenant database, integrated with tools used in many SaaS applications today.
 
-This *SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to address these challenges by providing a ready-made solution that can be used to quickly bootstrap your SaaS. The architecture is designed to be modular, scalable, and extensible to customize it to your needs. **SMTA**, combined with Supabase, helps to reduce the complexity of multi-tenancy so that you can focus on building your MVP. 
+The architecture is designed to be modular, scalable, and extensible to customize it to your needs, combine with backend solutions, like [Supabase](https://supabase.com/), and reduce the complexity of multi-tenancy so that you can focus on building your MVP.
 
-To accomplish this goal, **SMTA** relies heavily on Supabase and PostgreSQL core features. Supabase provides excellent integration with its authentication layer and the database, including via Row Level Security (RLS) and user-specific functions (like ```auth.uid()```). This integration makes security and tenant isolation easier to implement. This is also true of other database-adjacent features that Supabase brings, such as the secrets Vault and an s3-compatible storage, both of which are an inherent part of almost every SaaS. 
+**SMTA** offers a layered approach to tenant isolation that reduces the risk of data leakage at the database level, leaving you free to develop your application knowing that the question of "Are you allowed to be here?" is already answered. 
 
-The outcome is that many of the complicated tasks associated with a multi-tenant SaaS are abstracted behind clearly defined and tested SQL functions. At the same time, authentication (Supabase) and authorization (CASL-based roles) are divided into separate layers, allowing for a clear separation of concerns and a very customized approach. Keeping the user authentication process outside of the access and authorization control keeps the system more flexible and portable too.
+The core of **SMTA** is a series of PostgreSQL database scripts that create the structure which sits between the application and platform layers of your SaaS. There are no dependencies or complex extensions, so it is all *plain old school SQL* (POSS - the 53+ year old technology that just works).
+
+The following table diagram illustrates the layered design:
+
+| Layer | Description |
+|--|--| 
+| Application Layer | Your domain tables (_app/): projects, posts, documents, etc. → Accessed via DAL (CASL, Drizzle, Payload collections, Supabase client) |
+| **SMTA Layer** | Tenant Infrastructure: orgs, units, memberships, roles, audit, billing, and SaaS-management → Accessed via *POSS* public.* SQL functions |
+| Platform Layer | Authentication, Storage, Edge Functions: Supabase or PayloadCMS |
+
+### Membership Has Its Privileges
+In short, **SMTA** asks your authenticated users: "Are you a member of this tenant/organization/unit?" - a yes/no gate on row visibility that is plain and simple. Then within that answer, your application (using CASL or another RBAC tool) can ask, "Given that you have access, what are you allowed to do?" - an action authorization based on the user's role. 
+
+### Extensible Connections
+
+To further help speed development, **SMTA** offers some extensible connections to other common platforms. This not only speeds development, but is an essential part of the **SMTA** model in that **SMTA** does NOT provide any authentication or application-related services. 
+
+These connections include integration with [Supabase](https://supabase.com/) and [PayloadCMS](https://payloadcms.com/), along with payment processors like [Stripe](https://stripe.com/) and [Lemon Squeezy](https://www.lemonsqueezy.com/).
+
+- Supabase - **SMTA** leverages Supabase user authentication, and associated functions like ```auth.uid()```, to fully contain tenants within their respective organizations, along with database adjacent features like storage, edge functions, and Supabase Vault. Supabase does a tremendous job of providing a full-stack solution for a SaaS - **SMTA** just amplifies this functionality.
+- PayloadCMS - **SMTA** works alongside Payload, also utilizing its authentication and storage capabilities, while providing a multi-tenant database layer outside of the core CMS functionality. 
 
 
-## 🎯 Goal
-
-Create a reusable, secure, and modular SaaS backend using Supabase as the backend service. The system supports:
+## Goals
 
 - Multi-tenant architecture within a shared database
-
-- Fine-grained role-based access at both the organization and sub-entity ("unit") level
 
 - PostgreSQL RLS (Row-Level Security) for tenant isolation
 
 - Soft deletion, auditing, and payment processor billing integration
 
-- Clear schema boundaries and API control via SQL functions
+- Clear schema boundaries via SQL functions
 
-## ✅ Key Features
+- Integration with common platforms like Supabase and PayloadCMS
 
-### Tenancy & Access
 
-- Single Postgres database (shared schema)
+## Features
 
-- Users can belong to multiple organizations with different roles
+- Tenant isolation via PostgreSQL RLS
+- Integration database roles with RBAC libraries like [CASL](https://casl.js.org/) 
+- Soft deletion to prevent data loss and enable recovery
+- No-Code Auditing to track changes and actions at the database level
+- Payment processor integration for billing
+- Segmented and Isolated SaaS Management tables
+- SQL functions enhanced with schema boundaries
 
-- Role-based access at both organization and unit level
 
-- Roles based on [CASL](https://casl.js.org/v6/en/guide/intro) access control system
+## Origin
 
-### Schemas
+**SMTA** is a *labor of love*. It was born out of the frustration of having a great SaaS idea, but always stumbling over the same issue: building a structurally sound multi-tenant database. In many fledgling projects building the elements of **SMTA** is put aside in the interest of expediency, but this creates substantial technical debt. When an application gains success, establishing a robust multi-tenant architecture can involve awkward workarounds that are annoying to the end-user, or are just too costly to re-write. In some cases, multi-tenancy is achieved using a 'one-database-per-tenant model', which can be more costly or lack cross-tenant integration (such as macro-analytics). The leads to a reduction in tenant isolation, security, or performance, and sometimes all three.
 
-The following schemas complement those provided by Supabase. These are designed to segment functionality and enforce security boundaries. Removing access to tables from the `public` schema is an additional security measure to help prevent accidental exposure of sensitive data.
+**SMTA** originated to help solve the problem of building a multi-tenant application from the ground up. A great SaaS idea shouldn't have to begin with the rudimentary tenant isolation question, which is something most SaaS need. Rather, focus on the problem you are trying to solve.
 
-- `core`: identity, access, helper functions, audit logs
-
-- `utils`: Utility functions shared across all tenants and schemas
-
-- `platform`: SaaS-wide management, logs, and overrides (service role only)
-
-- `public`: only for exposing SQL functions callable by clients (RPC)
-
-- `app`: all tenant-specific application logic (customized for each SaaS application)
-
-### Access Control
-
-- PostgreSQL RLS enforced on all tenant-aware tables
-
-- Centralized helper functions (e.g., `is_org_member`) enforce membership in organizations and units
-
-- `roles.name` enables scalable role comparison logic using CASL-style permissions for fine-grained access control
-
-### Platform Schema Security
-
-- Platform functionality (`platform.*`) is strictly backend-only (SaaS operator only)
-
-- The `platform` schema is not exposed to tenant users. Base privileges are granted to `authenticated`, but row access is enforced with RLS so only platform users can read and only platform `super_admin` can write.
-
-```sql
-
-GRANT USAGE ON SCHEMA platform TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA platform TO authenticated;
--- RLS policies enforce platform user/super_admin access.
-
-```
-
-- No SQL functions or tables from `platform` are exposed in the `public` schema
-
--- Platform functionality can be accessed via SQL or Edge Functions using the Supabase **service role**
-
-- RLS policies applied to `platform.*` tables with `USING (false)` for defense in depth, except for bona fide platform users.
-
-### Soft Deletion
-
-- All identity/domain tables include:
-
-- `is_deleted BOOLEAN`
-
-- `deleted_at TIMESTAMPTZ`
-
-- `deleted_by UUID`
-
-- All soft deletes are logged in audit log
-
-- Tenant Secrets are soft-deleted in the meta table, but hard deleted from the Supabase Vault to avoid the potential for future leaks.
-
-### Audit Logging
-
-- Central `core.audit_logs` table records:
-
-- Who acted, on what, and when
-
-- Table and row IDs
-
-- Action type and change summary
-
-- Platform admin actions are recorded in `platform_action_logs` for traceability
-
-### Billing
-
-- Common structure for integration with a billing providers like Stripe or Lemon Squeezy
-
-- `billing_customers`, `billing_subscriptions`, and `billing_plans` tables
-
-- Feature limits enforced via plan metadata, not RLS
-
-### Secrets Management
-
-- Secrets such as API keys and SMTP credentials are securely referenced via `platform.tenant_secrets`
-
-- Secrets are scoped per organization or per user using a `scope` column (`'organization'` or `'user'`)
-
-- Secret values are stored in Supabase Vault, and only the `vault_key_id` is saved in the SMTA database
-
-- RLS support ensures tenant/user isolation for secret access
-
-- Values stored in the Supabase Vault are hard deleted (when requested), but the `tenant_secrets` row is soft-deleted for audit purposes. 
-
-### API & Client Access
-
-- Tables only exist in `core`, `app`, `platform` schemas
-
-- Supabase client accesses only `public` via Remote Procedure Calls (RPC) functions
-
-- SQL functions in `public` execute in the context of the calling user (not SECURITY DEFINER)
-
-- Edge Functions used only when needed (e.g. for Stripe hooks, admin)
-
-- Application-specific logic resides in the `app` schema to make the SaaS database more extensible and portable
-
----
-
-## 📂 Tables by Schema
-
-### core
-
-- `users_meta`
-
-- `organizations`
-
-- `organizations_meta`
-
-- `units`
-
-- `unit_meta`
-
-- `memberships`
-
-- `unit_memberships`
-
-- `roles`
-
-- `audit_logs`
-
-### app
-
-- Domain-specific tables (e.g. `documents`, `projects`, etc.)
-
-- Each table includes `organization_id`, optional `unit_id`, and full audit fields
-
-### platform
-
-- `platform_users` (SaaS admins)
-
-- `platform_organizations` (platform control layer)
-
-- `platform_subscription_overrides` (non-standard plan/feature exceptions)
-
-- `platform_action_logs` (tracks all admin-level activity)
-
-- `platform_settings` (central configuration flags in JSONB)
-
-- `platform_feature_flags` (per-tenant and global toggles)
-
-- `platform_system_events` (platform-wide activity stream, failures, notices)
-
-- `platform.tenant_secrets` (Vault-based secret references with scope control)
-
-### public
-
-- SQL functions only (e.g., `create_project`, `get_user_profile`)
-
-- All functions execute under the privileges of the calling user (not SECURITY DEFINER) to ensure RLS validates context
-
-- Functions (RPCs) also explicitly validate context to create a 'belt and suspenders' approach to tenant isolation and security.
-
----
-
-## ⚙️ Planned Automation
-
-- On creation of:
-
-  - a user → auto-create `users_meta`
-
-  - an organization → auto-create `organizations_meta` and `platform_organizations`
-
-  - a unit → auto-create `unit_meta`
-
-- Shared `updated_at` trigger function for all tables
-
-- Centralized helper functions for org/unit membership checks
-
-- Platform-facing automation functions for:
-
-  - creating `platform_action_logs`
-
-  - applying `platform_subscription_overrides`
-
-  - registering feature flags via `platform_feature_flags`
-
-  - logging system-wide failures, syncs, or alerts via `platform_system_events`
-
----
-
-## 🧠 Naming Conventions
-
-### Table Naming
-
-- Use `snake_case`, all lowercase
-
-- Use plural nouns unless singular makes more sense (e.g. `audit_logs`, `documents`)
-
-- Prefix platform tables with `platform_` (e.g. `platform_users`) to reduce ambiguity
-
-### Column Naming
-
-- Primary key: `id`
-
-- Foreign keys: `<entity>_id` (e.g. `organization_id`, `unit_id`)
-
-- Timestamps: `<action>_at` (e.g. `created_at`, `updated_at`, `deleted_at`)
-
-- Actors: `<action>_by` (e.g. `created_by`, `deleted_by`)
-
-- Booleans: `is_` or `has_` prefix (e.g. `is_deleted`, `has_access`)
-
-### Standard Audit Fields
-
-```sql
-
-created_at TIMESTAMPTZ DEFAULT now(),
-
-updated_at TIMESTAMPTZ DEFAULT now(),
-
-created_by UUID,
-
-is_deleted BOOLEAN DEFAULT false,
-
-deleted_at TIMESTAMPTZ,
-
-deleted_by UUID
-
-```
-
-## 📡 Public RPC Function Conventions
-
-Public functions serve as the client-facing API for the database. They are always defined in the `public` schema and operate under the privileges of the **calling user** (`SECURITY INVOKER`).
-
-### ✅ Naming Conventions
-
-Use `verb_noun[_context]` structure for clarity and consistency:
-
-| Verb      | Description                            | Example                       |
-| --------- | -------------------------------------- | ----------------------------- |
-| `get_`    | Fetch a single record                  | `get_user_profile()`          |
-| `list_`   | Fetch a collection                     | `list_org_members(org_id)`    |
-| `create_` | Insert a new record                    | `create_project(...)`         |
-| `update_` | Modify a record                        | `update_document_status(...)` |
-| `delete_` | Soft delete a record                   | `delete_unit(unit_id)`        |
-| `sync_`   | Idempotent state sync or recalculation | `sync_billing(...)`           |
-| `log_`    | Track events or custom logs            | `log_invitation(...)`         |
-
-Functions should:
-
-- Use `auth.uid()` where applicable to avoid passing user IDs from the client
-- Validate input and verify access control via helper functions or RLS
-- Return structured JSON or typed rows for client parsing
-
----
-
-### 🛡️ Security Practices
-
-- All public functions are `SECURITY INVOKER`
-- RLS on underlying tables enforces tenant isolation
-- No direct access to core or platform tables by clients
-- No direct access to any table unless via a 'public'-schema function
-
----
-
-### 🧾 Audit Logging in RPC
-
-To support traceability, public functions that mutate data (create, update, delete) should log activity using the following:
-
-```sql
-core.log_audit(
-  action_type TEXT,
-  target_table TEXT,
-  target_id UUID,
-  summary TEXT,
-  metadata JSONB
-)
-```
-
-## 📡 Public RPC Functions
-
-This section defines the client-facing SQL functions exposed via the `public` schema.
-
-The functions should have the following in common:
-
-- Are `SECURITY INVOKER`
-- Use `auth.uid()` internally to ensure identity context; This ties the user to their role and organization.
-- Respect RLS policies on underlying tables
-- Perform input validation and enforce business rules (where applicable)
-
-### 🧾 Core Identity & Membership Functions
-
-| Function Name                                              | Description                                                 |
-| ---------------------------------------------------------- | ----------------------------------------------------------- |
-| `get_user_profile()`                                       | Returns metadata for the currently authenticated user       |
-| `update_user_profile(data JSON)`                           | Updates profile fields for the current user                 |
-| `list_my_organizations()`                                  | Lists all organizations the user belongs to                 |
-| `get_organization(id UUID)`                                | Returns metadata for a specific organization                |
-| `list_organization_members(id UUID)`                       | Lists members (users) in the specified organization         |
-| `get_user_role(org_id UUID)`                               | Returns the role of the calling user within an organization |
-| `create_organization(name TEXT)`                           | Creates a new organization (with plan/user limits enforced) |
-| `invite_user_to_organization(email TEXT, role_id UUID)`    | Sends invite to another user to join org                    |
-| `remove_user_from_organization(user_id UUID, org_id UUID)` | Removes a user from the org                                 |
-
-### 🏢 Unit Functions
-
-Units are sub-organizations within an organization and can represent any number of entities in the real world. A unit could be a location, a department, or any other grouping. Units can have their own level of access control, and users can be assigned to one or more units within an organization. 
-
-| Function Name                                                   | Description                                         |
-| --------------------------------------------------------------- | --------------------------------------------------- |
-| `list_my_units()`                                               | Lists all units the user belongs to across all orgs |
-| `get_unit(id UUID)`                                             | Returns metadata for a specific unit                |
-| `create_unit(org_id UUID, name TEXT)`                           | Creates a new unit in an organization               |
-| `assign_user_to_unit(user_id UUID, unit_id UUID, role_id UUID)` | Assigns a user to a unit                            |
-| `remove_user_from_unit(user_id UUID, unit_id UUID)`             | Removes user from unit                              |
-
-### 🧾 Audit and Admin
-
-| Function Name                           | Description                                        |
-| --------------------------------------- | -------------------------------------------------- |
-| `get_audit_log(org_id UUID, limit INT)` | Returns audit log entries for a given organization |
-
----
-
-## ✅ Sample: `get_user_profile()`
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_user_profile()
-RETURNS TABLE (
-  id UUID,
-  email TEXT,
-  first_name TEXT,
-  last_name TEXT,
-  avatar_url TEXT,
-  timezone TEXT,
-  locale TEXT
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    u.id,
-    u.email,
-    m.first_name,
-    m.last_name,
-    m.avatar_url,
-    m.timezone,
-    m.locale
-  FROM auth.users u
-  JOIN core.users_meta m ON u.id = m.id
-  WHERE u.id = auth.uid();
-END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
-```
-
-### 🔒 Notes
-
-- Uses `auth.uid()` to determine the user
-- Safe to expose directly to clients
-- Can be extended to include roles or membership context
-
-## 🛠️ Platform RPC Functions
-
-These SQL functions live in the `platform` schema and are executed by trusted platform users (e.g., SaaS admins). They are protected by RLS policies (`USING (false)`) and are invoked with elevated privileges using `SECURITY DEFINER`. Each function validates the caller's identity and role via `platform.ensure_platform_admin()`.
-
-All write operations should log an entry in `platform.platform_action_logs` for auditability.
-
-### 📋 Proposed Platform Functions
-
-| Function Name                                                                     | Description                                             |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `create_platform_user(user_id UUID, role TEXT)`                                   | Adds a new platform user with a specific role           |
-| `update_platform_user_role(user_id UUID, role TEXT)`                              | Changes the assigned role for a platform user           |
-| `delete_platform_user(user_id UUID)`                                              | Soft-deletes a platform user                            |
-| `create_platform_organization(org_id UUID)`                                       | Registers a new org in the platform control layer       |
-| `set_platform_override(org_id UUID, key TEXT, value JSONB)`                       | Stores or updates a subscription override for an org    |
-| `delete_platform_override(org_id UUID, key TEXT)`                                 | Removes a subscription override                         |
-| `create_platform_feature_flag(key TEXT, value JSONB, org_id UUID DEFAULT NULL)`   | Registers a global or per-org feature toggle            |
-| `log_platform_event(event_type TEXT, message TEXT, metadata JSONB)`               | Records a system-level or admin-triggered event         |
-| `get_platform_user_role()`                                                        | Returns the current user's platform role                |
-| `create_tenant_secret(scope TEXT, id UUID, name TEXT, secret TEXT, user_id UUID)` | Creates a new tenant secret for an organization or user |
-| `delete_tenant_secret(secret_id UUID, user_id UUID)`                              | Deletes a tenant secret for an organization or user     |
-| `get_platform_action_log(limit INT DEFAULT 100)`                                  | Fetches recent platform actions for monitoring or audit |
-
-### 🔒 Security Model
-
-- Where scope is referenced it is either `organization` or `user`, and id refers to `organization_id` or `user_id`
-- Functions must validate the user's role, along with the organization and unit membership.
-- A platform or tenant user can never access an unencrypted secret directly
-  - The secret will be retrieved by the system as part of other functionality
-- For tenant_secrets, validate if the user is part of the organization.
-
-  - This may require that the user_id (tenant) is retrieved by the frontend and included in the function parameters.
-  - Example:
-
-  ```sql
-    -- Ensure caller is a valid member of the org/user they are targeting
-    IF NOT EXISTS (
-        SELECT 1
-        FROM core.memberships
-        WHERE user_id = userid
-          AND organization_id = _organization_id
-          AND role_id = (SELECT id FROM core.roles WHERE name = 'super_admin')
-      ) THEN
-        RAISE EXCEPTION 'You are not authorized to manage secrets for this organization.';
-      END IF;
-  ```
-
-  Or for user secrets:
-
-  ```sql
-  IF NOT EXISTS (
-      SELECT 1
-      FROM auth.users
-      WHERE id = userid
-        AND user_id = _user_id
-    ) THEN
-      RAISE EXCEPTION 'You are not authorized to manage secrets for this user.';
-    END IF;
-  ```
-
-- All functions use `SECURITY DEFINER`
-- Access is only granted through explicit role validation inside each function
-- RLS on all tables prevents any raw table access, even for authenticated users
-
-#### 🔐 Final Access Flow for Platform Functions: Belt & Suspenders
-
-| Layer                  | Responsibility                                        | Enforced? |
-| ---------------------- | ----------------------------------------------------- | --------- |
-| Edge Function          | Auth + role validation                                | ✅        |
-| SQL Function           | Membership and/or identity check (platform or tenant) | ✅        |
-| RLS on platform tables | `USING (false)` fallback barrier                      | ✅        |
-
-### 🧾 Logging Convention
-
-Every time a function is invoked, add a row to `platform.platform_action_logs` with:
-
-- `actor_id = auth.uid()`
-- `action = 'select' | 'create' | 'update' | 'delete' | 'log' | 'override'`
-- `target_table` and `target_id` where applicable
-- `summary` and `metadata` to describe the action
-- `created_at` timestamp with timezone
-
-This enforces accountability and traceability across platform operations.
-
-### Best Practices
-
-- Avoid abbreviations like `org_id`; prefer `organization_id`
-
-- Use consistent names across tables (e.g. always use `unit_id` when referencing `units`)
-
-- Fully qualify fields in joins for readability and traceability
-
----
-
-## 🔧 Technology
-
-- PostgreSQL and plpgsql for database, functions, and Row Level Security
-
-- Zod v4 and Typescript for type-safe integration with any front/backend
-
-- [CASL](https://casl.js.org) - role-based abilities for rapid role-based access control
-
-- pgTap for Database Testing
-
----
-
-## 🚫 What’s Explicitly Avoided
-
-- No PostgreSQL enums (lookup tables used instead); Enums are used in Zod
-
-- No Supabase client access to raw tables
-
-- No direct use of Supabase Edge Functions for CRUD unless necessary
-
----
+*Labor of Love: Hundreds of thousands of AI tokens were used to build this project so you don't have to!*

@@ -26,16 +26,14 @@ DB_SSLMODE="${DB_SSLMODE:-disable}"
 DB_PROJECT_REF="${DB_PROJECT_REF:-}"
 
 # Construct connection URL
-# For Supabase pooler (port 6543): use postgres.PROJECT_REF format
-# For direct connection (port 5432): use just the username
-# DB_URL="postgresql://${DB_USER}.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
-DB_URL="postgresql://${DB_USER}.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
-
-# if [[ "$DB_HOST" == *"pooler.supabase.com"* ]] && [[ -n "$DB_PROJECT_REF" ]]; then
-#   DB_URL="postgresql://${DB_USER}.${DB_PROJECT_REF}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
-# else
-#   DB_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
-# fi
+# Supabase pooler (port 6543) uses "postgres.PROJECT_REF" username format.
+# Local/direct connections (port 54322) use plain "postgres".
+if [[ -n "$DB_PROJECT_REF" ]]; then
+  DB_QUALIFIED_USER="${DB_USER}.${DB_PROJECT_REF}"
+else
+  DB_QUALIFIED_USER="${DB_USER}"
+fi
+DB_URL="postgresql://${DB_QUALIFIED_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
 
 echo -e "${YELLOW}=== SMTA Test Suite ===${NC}"
 echo "Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
@@ -99,7 +97,7 @@ echo ""
 export PGHOST="$DB_HOST"
 export PGPORT="$DB_PORT"
 export PGDATABASE="$DB_NAME"
-export PGUSER="${DB_USER}.${DB_PROJECT_REF}"
+export PGUSER="${DB_QUALIFIED_USER}"
 export PGPASSWORD="$DB_PASSWORD"
 export PGSSLMODE="$DB_SSLMODE"
 # Suppress NOTICE/INFO messages from PostgreSQL (reduces noise like "SQL function X statement Y")

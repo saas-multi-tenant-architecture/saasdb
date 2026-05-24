@@ -2,13 +2,14 @@
 
 ## Project Overview
 
-**SMTA (SaaS Multi-Tenant Architecture)** is a PostgreSQL/Supabase-based multi-tenant SaaS backend framework. It provides tenant isolation, role-based access control, audit logging, soft deletion, and billing integration.
+**SMTA (SaaS Multi-Tenant Architecture)** is a PostgreSQL multi-tenant SaaS backend framework. It provides tenant isolation, role-based access control, audit logging, soft deletion, and billing integration.
 
 **Key Technologies:**
 - PostgreSQL with plpgsql functions
-- Supabase (authentication, RLS, Vault)
+- Supabase or PayloadCMS integration
 - CASL for isomorphic, granular authorization
-- Zod v3 for type-safe validation
+- Stripe of Lemonsqueezy for billing integration
+- Zod v4 for type-safe validation
 - pgTap for database testing
 
 **Security Model:**
