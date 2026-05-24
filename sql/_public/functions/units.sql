@@ -261,11 +261,22 @@ BEGIN
     RAISE EXCEPTION 'User not found';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM core.memberships
+    WHERE user_id = p_user_id
+      AND organization_id = v_org_id
+      AND is_deleted = false
+  ) THEN
+    RAISE EXCEPTION 'User is not a member of the organization';
+  END IF;
+
   INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by, updated_by)
   VALUES (p_user_id, p_unit_id, p_role_id, auth.uid(), auth.uid())
   ON CONFLICT (user_id, unit_id) DO UPDATE
     SET role_id = EXCLUDED.role_id,
         is_deleted = false,
+        deleted_at = NULL,
+        deleted_by = NULL,
         updated_by = auth.uid(),
         updated_at = now();
 
@@ -338,6 +349,10 @@ BEGIN
   WHERE user_id = p_user_id
     AND unit_id = p_unit_id
     AND is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Member not found';
+  END IF;
 
   PERFORM core.log_audit('delete', 'core.unit_memberships', p_user_id, 'remove_member_from_unit',
     jsonb_build_object('unit_id', p_unit_id));

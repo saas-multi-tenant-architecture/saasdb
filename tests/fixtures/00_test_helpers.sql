@@ -74,12 +74,15 @@ BEGIN
   VALUES (v_user_id, p_email, now(), now(), now())
   ON CONFLICT (id) DO NOTHING;
 
-  -- Update users_meta with name (trigger should have created the row)
-  UPDATE core.users_meta
-  SET first_name = p_first_name,
-      last_name = p_last_name,
-      email = p_email
-  WHERE id = v_user_id;
+  -- Upsert users_meta: the trigger populates it on INSERT to auth.users,
+  -- but ON CONFLICT DO NOTHING above suppresses the trigger for existing rows.
+  -- We upsert directly to handle both the first-run and schema-rebuild cases.
+  INSERT INTO core.users_meta (id, email, first_name, last_name)
+  VALUES (v_user_id, p_email, p_first_name, p_last_name)
+  ON CONFLICT (id) DO UPDATE
+    SET email = EXCLUDED.email,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name;
 
   RETURN v_user_id;
 END;

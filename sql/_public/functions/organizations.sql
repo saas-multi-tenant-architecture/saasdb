@@ -571,6 +571,8 @@ BEGIN
   ON CONFLICT (user_id, organization_id) DO UPDATE
     SET role_id = EXCLUDED.role_id,
         is_deleted = false,
+        deleted_at = NULL,
+        deleted_by = NULL,
         updated_by = auth.uid(),
         updated_at = now();
 
@@ -636,6 +638,10 @@ BEGIN
   WHERE user_id = p_user_id
     AND organization_id = p_org_id
     AND is_deleted = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Member not found';
+  END IF;
 
   PERFORM core.log_audit('delete', 'core.memberships', p_user_id, 'remove_member_from_organization',
     jsonb_build_object('organization_id', p_org_id));
