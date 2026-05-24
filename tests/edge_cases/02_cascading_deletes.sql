@@ -1,103 +1,24 @@
 -- 02_cascading_deletes.sql
--- Purpose: Test that soft-deletes cascade correctly and data integrity is maintained
+-- Purpose: Test soft-delete behaviors via public API functions
+-- Note: Direct UPDATE SET is_deleted=true is blocked by RLS by design.
+--       All soft-deletes must go through SECURITY DEFINER public API functions.
 
 BEGIN;
 
-SELECT plan(10);
+SELECT plan(7);
 
 -- ========================================
--- TEST: Soft-deleting org doesn't cascade to units (intentional)
+-- SETUP
 -- ========================================
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
--- Count units before
+-- ========================================
+-- TEST: delete_unit hides unit from active queries
+-- ========================================
 DO $$
-BEGIN
-  PERFORM set_config('test.units_before',
-    (SELECT COUNT(*)::text FROM core.units
-     WHERE organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-       AND is_deleted = false), true);
-END $$;
-
--- Soft-delete org
-UPDATE core.organizations
-SET is_deleted = true, deleted_at = now(), deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
--- Units should still exist (not cascaded)
-SELECT is(
-  (SELECT COUNT(*)::int FROM core.units
-   WHERE organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-     AND is_deleted = false),
-  current_setting('test.units_before')::int,
-  'Units should not be cascaded when org is soft-deleted'
-);
-
--- Restore org
-UPDATE core.organizations
-SET is_deleted = false, deleted_at = NULL, deleted_by = NULL
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
--- ========================================
--- TEST: Soft-deleting unit doesn't cascade to unit_memberships
--- ========================================
--- Count unit_memberships before
-DO $$
-BEGIN
-  PERFORM set_config('test.memberships_before',
-    (SELECT COUNT(*)::text FROM core.unit_memberships
-     WHERE unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'
-       AND is_deleted = false), true);
-END $$;
-
--- Soft-delete unit
-UPDATE core.units
-SET is_deleted = true, deleted_at = now()
-WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
-
--- Unit memberships should still exist
-SELECT is(
-  (SELECT COUNT(*)::int FROM core.unit_memberships
-   WHERE unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'
-     AND is_deleted = false),
-  current_setting('test.memberships_before')::int,
-  'Unit memberships should not be cascaded when unit is soft-deleted'
-);
-
--- Restore unit
-UPDATE core.units
-SET is_deleted = false, deleted_at = NULL
-WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
-
--- ========================================
--- TEST: Memberships table integrity with soft-deleted org
--- ========================================
-UPDATE core.organizations
-SET is_deleted = true, deleted_at = now()
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
--- Org memberships should still exist in database
-SELECT ok(
-  (SELECT COUNT(*)::int FROM core.memberships
-   WHERE organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') > 0,
-  'Org memberships should exist even when org is soft-deleted'
-);
-
--- Restore
-UPDATE core.organizations
-SET is_deleted = false, deleted_at = NULL
-WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
--- ========================================
--- TEST: Can query historical data (soft-deleted)
--- ========================================
--- Create and soft-delete a unit
-DO $$
-DECLARE
-  v_maria_id UUID;
+DECLARE v_maria_id UUID;
 BEGIN
   v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
-
   INSERT INTO core.units (id, organization_id, name, created_by, updated_by)
   VALUES (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99',
@@ -106,84 +27,86 @@ BEGIN
     v_maria_id,
     v_maria_id
   );
-
-  UPDATE core.units
-  SET is_deleted = true, deleted_at = now(), deleted_by = v_maria_id
-  WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99';
 END $$;
 
--- Can query the deleted record directly (for audit purposes)
-SELECT ok(
-  EXISTS (
-    SELECT 1 FROM core.units
-    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99'
-      AND is_deleted = true
-  ),
-  'Soft-deleted data should be queryable for auditing'
-);
+SELECT public.delete_unit('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99');
 
--- But RLS hides it from normal queries
 SELECT ok(
-  NOT EXISTS (
-    SELECT 1 FROM core.units
-    WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99'
-      AND is_deleted = false
-  ),
-  'Soft-deleted data should be hidden from active queries'
+  NOT EXISTS (SELECT 1 FROM core.units WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99'),
+  'Soft-deleted unit is hidden from active queries'
 );
 
 -- ========================================
--- TEST: Deleted user can be restored
+-- TEST: Soft-deleted unit is physically preserved (via SECURITY DEFINER helper)
 -- ========================================
--- Soft-delete Taylor's membership
-UPDATE core.memberships
-SET is_deleted = true, deleted_at = now()
-WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
-  AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+SELECT ok(
+  test_helpers.unit_is_soft_deleted('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb99'),
+  'Soft-deleted unit still exists in database (is_deleted = true)'
+);
+
+-- ========================================
+-- TEST: delete_unit cascades to unit_memberships
+-- ========================================
+-- Downtown has 4 unit_memberships (Carlos, Sofia, Alex, Sam)
+SELECT public.delete_unit('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01');
+
+-- Carlos had a Downtown membership; it should now be soft-deleted
+SELECT ok(
+  test_helpers.unit_membership_is_soft_deleted(
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'
+  ),
+  'delete_unit cascades soft-delete to unit_memberships'
+);
+
+-- ========================================
+-- TEST: Soft-deleted member does not appear in org member list
+-- ========================================
+SELECT public.remove_member_from_organization(
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+);
 
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
     WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
   ),
-  'Deleted member should not appear in list'
+  'Removed member does not appear in org member list'
 );
 
--- Restore membership
-UPDATE core.memberships
-SET is_deleted = false, deleted_at = NULL
-WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
-  AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
+-- ========================================
+-- TEST: Soft-deleted membership is physically preserved
+-- ========================================
 SELECT ok(
-  EXISTS (
-    SELECT 1 FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+  test_helpers.membership_is_soft_deleted(
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com'),
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   ),
-  'Restored member should appear in list'
+  'Soft-deleted membership still exists in database (is_deleted = true)'
 );
 
 -- ========================================
--- TEST: Audit trail preserved for deletes
+-- TEST: Cannot re-insert a soft-deleted membership (unique constraint)
 -- ========================================
--- Soft-delete Sam
-UPDATE core.memberships
-SET is_deleted = true, deleted_at = now(), deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
-WHERE user_id = test_helpers.get_test_user_id('sam@test.bellaitalia.com')
-  AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
-SELECT ok(
-  (SELECT deleted_by FROM core.memberships
-   WHERE user_id = test_helpers.get_test_user_id('sam@test.bellaitalia.com')
-     AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') = test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
-  'deleted_by should be recorded'
+SELECT throws_ok(
+  format($$INSERT INTO core.memberships (user_id, organization_id, role_id, is_super_admin, created_by, updated_by)
+    VALUES (%L, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000003', false, %L, %L)$$,
+    test_helpers.get_test_user_id('taylor@test.bellaitalia.com'),
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+  ),
+  '23505',
+  NULL,
+  'Cannot re-insert membership that was soft-deleted (unique constraint)'
 );
 
+-- ========================================
+-- TEST: Org remains visible after member removal
+-- ========================================
 SELECT ok(
-  (SELECT deleted_at FROM core.memberships
-   WHERE user_id = test_helpers.get_test_user_id('sam@test.bellaitalia.com')
-     AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') IS NOT NULL,
-  'deleted_at should be recorded'
+  EXISTS (SELECT 1 FROM core.organizations WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  'Organization remains visible after removing a member'
 );
 
 SELECT * FROM finish();

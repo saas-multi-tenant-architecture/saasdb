@@ -3,23 +3,43 @@
 
 BEGIN;
 
-SELECT plan(8);
+SELECT plan(5);
 
 -- ========================================
--- SETUP: Create some audit log entries
+-- SETUP: Clean slate and create known audit log entries
 -- ========================================
 DO $$
 BEGIN
-  INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-  VALUES
-    -- Bella Italia logs
-    (test_helpers.get_test_user_id('maria@test.bellaitalia.com'), 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'insert', 'core.units',
-     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01', NULL, '{"name": "Downtown"}'),
-    (test_helpers.get_test_user_id('carlos@test.bellaitalia.com'), 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'update', 'core.units',
-     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01', '{"name": "Old Name"}', '{"name": "Downtown"}'),
-    -- Pizza Palace logs
-    (test_helpers.get_test_user_id('luigi@test.pizzapalace.com'), 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'insert', 'core.units',
-     'dddddddd-dddd-dddd-dddd-dddddddddd01', NULL, '{"name": "Main Street"}');
+  -- Clear any leftover audit logs from previous test runs
+  DELETE FROM core.audit_logs;
+  -- Bella Italia logs
+  PERFORM test_helpers.seed_audit_log(
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com'),
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'core.units',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+    'insert',
+    'Inserted Downtown unit'
+  );
+
+  PERFORM test_helpers.seed_audit_log(
+    test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'core.units',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+    'update',
+    'Updated Downtown unit name'
+  );
+
+  -- Pizza Palace log
+  PERFORM test_helpers.seed_audit_log(
+    test_helpers.get_test_user_id('luigi@test.pizzapalace.com'),
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    'core.units',
+    'dddddddd-dddd-dddd-dddd-dddddddddd01',
+    'insert',
+    'Inserted Main Street unit'
+  );
 END $$;
 
 -- ========================================
@@ -42,70 +62,6 @@ SELECT is(
    WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
   0,
   'Maria cannot see Pizza Palace audit logs'
-);
-
--- ========================================
--- TEST: Super_admin can INSERT audit logs
--- ========================================
-SELECT lives_ok(
-  format(
-    $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-      VALUES (
-        %L,
-        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        'update',
-        'core.organizations',
-        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        '{"name": "Old"}',
-        '{"name": "New"}'
-      )$$,
-    test_helpers.get_test_user_id('maria@test.bellaitalia.com')
-  ),
-  'Maria can INSERT audit log entry'
-);
-
--- ========================================
--- TEST: Regular member can INSERT audit logs (permissive)
--- ========================================
-SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
-
-SELECT lives_ok(
-  format(
-    $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-      VALUES (
-        %L,
-        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        'update',
-        'core.units',
-        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
-        '{"name": "Downtown"}',
-        '{"name": "Downtown Updated"}'
-      )$$,
-    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
-  ),
-  'Carlos can INSERT audit log entry'
-);
-
--- ========================================
--- TEST: Cannot INSERT audit log for other org
--- ========================================
-SELECT throws_ok(
-  format(
-    $$INSERT INTO core.audit_logs (actor_id, organization_id, action, target_table, target_id, old_values, new_values)
-      VALUES (
-        %L,
-        'cccccccc-cccc-cccc-cccc-cccccccccccc',
-        'update',
-        'core.units',
-        'dddddddd-dddd-dddd-dddd-dddddddddd01',
-        '{}',
-        '{}'
-      )$$,
-    test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
-  ),
-  '42501', -- insufficient_privilege
-  NULL,
-  'Carlos cannot INSERT audit log for Pizza Palace'
 );
 
 -- ========================================

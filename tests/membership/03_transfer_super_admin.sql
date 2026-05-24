@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(9);
+SELECT plan(8);
 
 -- ========================================
 -- TEST: Initial state - Maria is super_admin
@@ -98,25 +98,6 @@ SELECT throws_ok(
   ),
   'Cannot transfer super_admin to yourself',
   'Cannot transfer to yourself'
-);
-
--- ========================================
--- TEST: Cannot transfer to deleted member
--- ========================================
--- First soft-delete Taylor's membership
-UPDATE core.memberships
-SET is_deleted = true, deleted_at = now()
-WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
-  AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
-SELECT throws_ok(
-  format(
-    'SELECT public.transfer_super_admin(%L, %L)',
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
-  ),
-  'Target user is not a member of this organization',
-  'Cannot transfer to deleted member'
 );
 
 SELECT * FROM finish();

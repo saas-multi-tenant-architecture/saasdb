@@ -58,16 +58,17 @@ SELECT ok(
   'Carlos can SELECT Bella Italia organizations_meta'
 );
 
+DO $$
+DECLARE v_count INT;
+BEGIN
+  UPDATE core.organizations_meta SET locale = 'es-ES'
+  WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  PERFORM set_config('test.carlos_meta_update_count', v_count::text, true);
+END $$;
+
 SELECT is(
-  (
-    WITH u AS (
-      UPDATE core.organizations_meta
-      SET locale = 'es-ES'
-      WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-      RETURNING id
-    )
-    SELECT COUNT(*)::int FROM u
-  ),
+  current_setting('test.carlos_meta_update_count')::int,
   0,
   'Carlos cannot UPDATE Bella Italia organizations_meta'
 );

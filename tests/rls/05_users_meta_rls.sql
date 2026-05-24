@@ -63,13 +63,17 @@ SELECT lives_ok(
 -- ========================================
 -- TEST: Cannot UPDATE profile from other org
 -- ========================================
+DO $$
+DECLARE v_count INT;
+BEGIN
+  UPDATE core.users_meta SET first_name = 'Hacked'
+  WHERE id = test_helpers.get_test_user_id('luigi@test.pizzapalace.com');
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  PERFORM set_config('test.cross_org_profile_update', v_count::text, true);
+END $$;
+
 SELECT is(
-  (SELECT COUNT(*)::int FROM (
-    UPDATE core.users_meta
-    SET first_name = 'Hacked'
-    WHERE id = test_helpers.get_test_user_id('luigi@test.pizzapalace.com') -- Luigi
-    RETURNING id
-  ) u),
+  current_setting('test.cross_org_profile_update')::int,
   0,
   'Maria cannot UPDATE Luigi profile (different org)'
 );
@@ -94,7 +98,7 @@ SELECT is(
 -- ========================================
 -- TEST: Pizza Palace isolation
 -- ========================================
-SELECT utils.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com')); -- Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com')); -- Luigi
 
 SELECT ok(
   EXISTS (

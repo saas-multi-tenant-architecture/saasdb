@@ -34,7 +34,7 @@ SELECT ok(
   EXISTS (
     SELECT 1 FROM public.get_invitation_details(current_setting('test.invitation_token'))
     WHERE email = 'testaccept@example.com'
-      AND organization_name = 'Bella Italia'
+      AND organization_name = 'Bella Italia Restaurant Group'
   ),
   'Can get invitation details without authentication'
 );
@@ -117,12 +117,15 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Cannot accept expired invitation
 -- ========================================
+-- Strategy: create invitation, backdate expires_at, run expire_old_invitations()
+-- to mark it expired (persists), then try to accept (fails with already-expired status)
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
   v_expired_token TEXT;
   v_invitation_id UUID;
+  v_expired_user_id UUID;
 BEGIN
   SELECT token, id INTO v_expired_token, v_invitation_id
   FROM public.create_invitation(
@@ -131,20 +134,18 @@ BEGIN
     '00000000-0000-0000-0000-000000000002'::uuid
   );
 
-  -- Manually expire the invitation
+  -- Backdate the invitation so expire_old_invitations() will pick it up
   UPDATE core.invitations
   SET expires_at = now() - INTERVAL '1 day'
   WHERE id = v_invitation_id;
 
-  PERFORM set_config('test.expired_token', v_expired_token, false);
-END $$;
+  -- Run the expire function to mark status as 'expired' (this persists since no exception)
+  PERFORM core.expire_old_invitations();
 
--- Create user for expired invitation
-DO $$
-DECLARE
-  v_expired_user_id UUID;
-BEGIN
+  -- Create the user who would accept
   v_expired_user_id := test_helpers.create_test_user('expired@example.com', 'Expired', 'User');
+
+  PERFORM set_config('test.expired_token', v_expired_token, false);
   PERFORM set_config('test.expired_user_id', v_expired_user_id::text, false);
 END $$;
 
@@ -152,13 +153,15 @@ SELECT test_helpers.set_auth_user(current_setting('test.expired_user_id')::uuid)
 
 SELECT throws_ok(
   format($$SELECT * FROM public.accept_invitation('%s')$$, current_setting('test.expired_token')),
-  'This invitation has expired',
+  'This invitation has already been expired',
   'Cannot accept expired invitation'
 );
 
 -- ========================================
 -- TEST: Expired invitation is marked as expired
 -- ========================================
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
 SELECT is(
   (SELECT status FROM core.invitations WHERE token = current_setting('test.expired_token')),
   'expired',
@@ -168,19 +171,37 @@ SELECT is(
 -- ========================================
 -- TEST: Cannot accept invitation if already a member
 -- ========================================
+-- Create invitation for a new user, then seed them as a member before they accept
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 DO $$
 DECLARE
   v_duplicate_token TEXT;
+  v_already_member_id UUID;
 BEGIN
+  -- Create a new user and invite them
+  v_already_member_id := test_helpers.create_test_user('alreadymember@example.com', 'Already', 'Member');
+
   SELECT token INTO v_duplicate_token FROM public.create_invitation(
-    'maria@test.bellaitalia.com',
+    'alreadymember@example.com',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    '00000000-0000-0000-0000-000000000002'::uuid
+    '00000000-0000-0000-0000-000000000003'::uuid
   );
+
+  -- Manually add them as a member (bypasses RLS via SECURITY DEFINER)
+  PERFORM test_helpers.seed_membership(
+    v_already_member_id,
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+    '00000000-0000-0000-0000-000000000003'::uuid,
+    false,
+    test_helpers.get_test_user_id('maria@test.bellaitalia.com')
+  );
+
   PERFORM set_config('test.duplicate_token', v_duplicate_token, false);
+  PERFORM set_config('test.already_member_id', v_already_member_id::text, false);
 END $$;
+
+SELECT test_helpers.set_auth_user(current_setting('test.already_member_id')::uuid);
 
 SELECT throws_ok(
   format($$SELECT * FROM public.accept_invitation('%s')$$, current_setting('test.duplicate_token')),

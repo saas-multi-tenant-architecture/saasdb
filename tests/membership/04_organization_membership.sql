@@ -76,10 +76,10 @@ SELECT is(
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 -- Soft-delete Taylor's membership
-UPDATE core.memberships
-SET is_deleted = true, deleted_at = now(), deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
-WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
-  AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+SELECT public.remove_member_from_organization(
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+);
 
 SELECT is(
   (SELECT COUNT(*)::int FROM public.list_organization_members('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')),

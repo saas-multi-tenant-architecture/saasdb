@@ -202,7 +202,7 @@ BEGIN
   RETURN QUERY
   SELECT * FROM core.get_invitation_by_token(p_token);
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
 
 -- ========================================
 -- NOTES

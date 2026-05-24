@@ -153,11 +153,14 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Non-member cannot cancel invitation
 -- ========================================
+-- Fetch Bella Italia invitation ID as Maria (who can see it), before switching to Luigi
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
 DO $$
 DECLARE
   v_bella_invitation_id UUID;
 BEGIN
-  -- Get a Bella Italia invitation ID
+  -- Get a Bella Italia invitation ID (must query as org member)
   SELECT id INTO v_bella_invitation_id
   FROM core.invitations
   WHERE organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -168,9 +171,11 @@ BEGIN
   PERFORM set_config('test.bella_invitation_id', v_bella_invitation_id::text, false);
 END $$;
 
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
+
 SELECT throws_ok(
   format($$SELECT public.cancel_invitation('%s'::uuid)$$, current_setting('test.bella_invitation_id')),
-  'You are not authorized to cancel this invitation',
+  'Invitation not found',
   'Non-member cannot cancel invitation'
 );
 

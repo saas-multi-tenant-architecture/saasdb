@@ -144,14 +144,14 @@ SELECT ok(
 -- ========================================
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('alex@test.bellaitalia.com'));
 
--- Alex is manager at org level, but team at Downtown unit
+-- Alex is team at org level, but also manager at Mall unit (independent roles)
 SELECT is(
   (SELECT r.name FROM core.memberships m
    JOIN core.roles r ON r.id = m.role_id
    WHERE m.user_id = current_setting('test.alex_id')::uuid
      AND m.organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  'manager',
-  'Alex org role is manager'
+  'team',
+  'Alex org role is team'
 );
 
 SELECT is(
@@ -160,7 +160,7 @@ SELECT is(
    WHERE um.user_id = current_setting('test.alex_id')::uuid
      AND um.unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'),
   'team',
-  'Alex unit role at Downtown is team (independent of org role)'
+  'Alex unit role at Downtown is team (same as org role, different from Mall unit role)'
 );
 
 SELECT * FROM finish();

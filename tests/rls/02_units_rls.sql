@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(14);
+SELECT plan(13);
 
 -- ========================================
 -- TEST: Org member can SELECT all units in their org
@@ -136,13 +136,16 @@ SELECT lives_ok(
 -- ========================================
 -- TEST: Cannot UPDATE unit in other org
 -- ========================================
+DO $$
+DECLARE v_count INT;
+BEGIN
+  UPDATE core.units SET description = 'Should not work' WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddd01';
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  PERFORM set_config('test.cross_unit_update_count', v_count::text, true);
+END $$;
+
 SELECT is(
-  (SELECT COUNT(*)::int FROM (
-    UPDATE core.units
-    SET description = 'Should not work'
-    WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddd01'
-    RETURNING id
-  ) u),
+  current_setting('test.cross_unit_update_count')::int,
   0,
   'Carlos cannot UPDATE Pizza Palace unit'
 );
@@ -171,9 +174,7 @@ SELECT is(
 -- ========================================
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
-UPDATE core.units
-SET is_deleted = true, deleted_at = now()
-WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb04'; -- New Location we created
+SELECT public.delete_unit('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb04');
 
 SELECT ok(
   NOT EXISTS (

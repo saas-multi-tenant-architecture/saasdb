@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(14);
+SELECT plan(12);
 
 -- ========================================
 -- TEST: Member can SELECT memberships in their org
@@ -38,16 +38,10 @@ DECLARE
   v_new_user_id UUID;
 BEGIN
   v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
-  v_new_user_id := extensions.uuid_generate_v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8'::uuid, 'newuser@rls.test.com');
+  v_new_user_id := test_helpers.create_test_user('newuser@rls.test.com', 'New', 'User');
   PERFORM set_config('test.maria_id', v_maria_id::text, true);
   PERFORM set_config('test.new_user_id', v_new_user_id::text, true);
 END $$;
-
--- Create a new test user first
-INSERT INTO auth.users (id, email) VALUES (current_setting('test.new_user_id')::uuid, 'newuser@rls.test.com');
-INSERT INTO core.users_meta (id, email, first_name, last_name, created_by, updated_by)
-VALUES (current_setting('test.new_user_id')::uuid, 'newuser@rls.test.com', 'New', 'User',
-        current_setting('test.maria_id')::uuid, current_setting('test.maria_id')::uuid);
 
 SELECT lives_ok(
   format(
@@ -78,15 +72,10 @@ DECLARE
   v_another_user_id UUID;
 BEGIN
   v_carlos_id := test_helpers.get_test_user_id('carlos@test.bellaitalia.com');
-  v_another_user_id := extensions.uuid_generate_v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8'::uuid, 'anotheruser@rls.test.com');
+  v_another_user_id := test_helpers.create_test_user('anotheruser@rls.test.com', 'Another', 'User');
   PERFORM set_config('test.carlos_id', v_carlos_id::text, true);
   PERFORM set_config('test.another_user_id', v_another_user_id::text, true);
 END $$;
-
-INSERT INTO auth.users (id, email) VALUES (current_setting('test.another_user_id')::uuid, 'anotheruser@rls.test.com');
-INSERT INTO core.users_meta (id, email, first_name, last_name, created_by, updated_by)
-VALUES (current_setting('test.another_user_id')::uuid, 'anotheruser@rls.test.com', 'Another', 'User',
-        current_setting('test.carlos_id')::uuid, current_setting('test.carlos_id')::uuid);
 
 SELECT lives_ok(
   format(
@@ -148,27 +137,27 @@ SELECT lives_ok(
 -- ========================================
 -- TEST: Cannot UPDATE membership in other org
 -- ========================================
+DO $$
+DECLARE v_count INT;
+BEGIN
+  UPDATE core.memberships SET role_id = '00000000-0000-0000-0000-000000000002'
+  WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  PERFORM set_config('test.cross_membership_update', v_count::text, true);
+END $$;
+
 SELECT is(
-  (SELECT COUNT(*)::int FROM (
-    UPDATE core.memberships
-    SET role_id = '00000000-0000-0000-0000-000000000002'
-    WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
-    RETURNING id
-  ) u),
+  current_setting('test.cross_membership_update')::int,
   0,
   'Maria cannot UPDATE Pizza Palace memberships'
 );
 
 -- ========================================
--- TEST: Can soft-delete non-super_admin membership
+-- TEST: Can soft-delete non-super_admin membership via public API
 -- ========================================
 SELECT lives_ok(
   format(
-    $$UPDATE core.memberships
-      SET is_deleted = true, deleted_at = now(), deleted_by = %L
-      WHERE user_id = %L
-        AND organization_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
-    current_setting('test.maria_id')::uuid,
+    $$SELECT public.remove_member_from_organization('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', %L)$$,
     current_setting('test.new_user_id')::uuid
   ),
   'Maria can soft-delete non-super_admin membership'

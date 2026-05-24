@@ -101,23 +101,14 @@ SELECT throws_ok(
 );
 
 -- ========================================
--- TEST: User email uniqueness in users_meta
+-- TEST: Authenticated user cannot directly INSERT into users_meta (no INSERT RLS policy)
 -- ========================================
 SELECT throws_ok(
-  format($$INSERT INTO core.users_meta (id, email, first_name, last_name, created_by, updated_by)
-    VALUES (
-      gen_random_uuid(),
-      'maria@test.bellaitalia.com', -- Duplicate email
-      'Fake',
-      'Maria',
-      %L,
-      %L
-    )$$,
-    current_setting('test.maria_id')::uuid,
-    current_setting('test.maria_id')::uuid),
-  '23505', -- unique_violation
+  format($$INSERT INTO core.users_meta (id, email, first_name, last_name)
+    VALUES (gen_random_uuid(), 'newuser@example.com', 'New', 'User')$$),
+  '42501', -- insufficient_privilege (no INSERT policy on users_meta)
   NULL,
-  'Cannot create duplicate user email'
+  'Authenticated user cannot directly INSERT into users_meta'
 );
 
 -- ========================================
@@ -147,13 +138,16 @@ SELECT throws_ok(
   $$INSERT INTO platform.platform_roles (name, description)
     VALUES ('super_admin', 'Duplicate role')$$,
   '23505', -- unique_violation
+  NULL,
   'Cannot create duplicate platform role name'
 );
 
 -- ========================================
 -- TEST: Super_admin can be set when previous is deleted
 -- ========================================
--- First transfer to Carlos
+-- First transfer to Carlos (must be called as Maria, who is super_admin)
+SELECT test_helpers.set_auth_user(current_setting('test.maria_id')::uuid);
+
 SELECT public.transfer_super_admin(
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   current_setting('test.carlos_id')::uuid

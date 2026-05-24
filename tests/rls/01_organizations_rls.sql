@@ -44,16 +44,16 @@ SELECT lives_ok(
 -- ========================================
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
+DO $$
+DECLARE v_count INT;
+BEGIN
+  UPDATE core.organizations SET description = 'Carlos update' WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  PERFORM set_config('test.carlos_update_count', v_count::text, true);
+END $$;
+
 SELECT is(
-  (
-    WITH u AS (
-      UPDATE core.organizations
-      SET description = 'Carlos update'
-      WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-      RETURNING id
-    )
-    SELECT COUNT(*)::int FROM u
-  ),
+  current_setting('test.carlos_update_count')::int,
   0,
   'Carlos (manager) cannot UPDATE Bella Italia'
 );
@@ -62,16 +62,16 @@ SELECT is(
 -- TEST: Member cannot UPDATE other organization
 -- ========================================
 -- Carlos trying to update Pizza Palace (should affect 0 rows due to SELECT policy)
+DO $$
+DECLARE v_count INT;
+BEGIN
+  UPDATE core.organizations SET description = 'Should not work' WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  PERFORM set_config('test.cross_org_update_count', v_count::text, true);
+END $$;
+
 SELECT is(
-  (
-    WITH u AS (
-      UPDATE core.organizations
-      SET description = 'Should not work'
-      WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
-      RETURNING id
-    )
-    SELECT COUNT(*)::int FROM u
-  ),
+  current_setting('test.cross_org_update_count')::int,
   0,
   'Carlos cannot UPDATE Pizza Palace (not visible)'
 );
@@ -122,12 +122,7 @@ SELECT is(
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT lives_ok(
-  format(
-    $$UPDATE core.organizations
-      SET is_deleted = true, deleted_at = now(), deleted_by = %L
-      WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
-    test_helpers.get_test_user_id('maria@test.bellaitalia.com')
-  ),
+  $$SELECT public.delete_organization('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')$$,
   'Maria (super_admin) can soft-delete Bella Italia'
 );
 

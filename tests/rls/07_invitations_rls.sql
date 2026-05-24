@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(10);
+SELECT plan(11);
 
 -- ========================================
 -- SETUP: Create test invitations
@@ -133,30 +133,35 @@ SELECT is(
 );
 
 -- ========================================
--- TEST: Soft-deleted invitations are not visible
+-- TEST: Cancelled invitation is visible to org member but not to invitee
 -- ========================================
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
-UPDATE core.invitations
-SET is_deleted = true,
-    deleted_at = now(),
-    deleted_by = test_helpers.get_test_user_id('maria@test.bellaitalia.com')
-WHERE id = current_setting('test.bella_invitation_id')::uuid;
+SELECT public.cancel_invitation(current_setting('test.bella_invitation_id')::uuid);
+
+-- Org member can still see cancelled invitations
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM core.invitations
+    WHERE id = current_setting('test.bella_invitation_id')::uuid
+      AND status = 'cancelled'
+  ),
+  'Cancelled invitation still visible to org member'
+);
+
+-- Invitee can no longer see the cancelled invitation (status is not pending)
+SELECT test_helpers.set_auth_user(current_setting('test.invitee_id')::uuid);
 
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM core.invitations
-    WHERE id = current_setting('test.bella_invitation_id')::uuid
+    WHERE email = 'bellainvite@example.com'
+      AND status = 'pending'
   ),
-  'Soft-deleted invitation is not visible'
+  'Cancelled invitation not visible to invitee (status not pending)'
 );
 
--- Restore for further tests
-UPDATE core.invitations
-SET is_deleted = false,
-    deleted_at = NULL,
-    deleted_by = NULL
-WHERE id = current_setting('test.bella_invitation_id')::uuid;
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 -- ========================================
 -- TEST: Org member can UPDATE invitations (for cancel/resend)

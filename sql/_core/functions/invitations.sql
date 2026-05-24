@@ -39,43 +39,44 @@ BEGIN
 
     -- Ensure unit belongs to the organization
     IF NOT EXISTS (
-      SELECT 1 FROM core.units
-      WHERE id = p_unit_id AND organization_id = p_organization_id
+      SELECT 1 FROM core.units u_check
+      WHERE u_check.id = p_unit_id AND u_check.organization_id = p_organization_id
     ) THEN
       RAISE EXCEPTION 'Unit does not belong to this organization';
     END IF;
   END IF;
 
   -- Validation: Role must exist
-  IF NOT EXISTS (SELECT 1 FROM core.roles WHERE id = p_role_id) THEN
+  IF NOT EXISTS (SELECT 1 FROM core.roles r_check WHERE r_check.id = p_role_id) THEN
     RAISE EXCEPTION 'Invalid role specified';
   END IF;
 
   -- Validation: Cannot invite as super_admin (must use transfer function)
   IF EXISTS (
-    SELECT 1 FROM core.roles
-    WHERE id = p_role_id AND name = 'super_admin'
+    SELECT 1 FROM core.roles r_check
+    WHERE r_check.id = p_role_id AND r_check.name = 'super_admin'
   ) THEN
     RAISE EXCEPTION 'Cannot invite users as super_admin. Use public.transfer_super_admin() to transfer ownership.';
   END IF;
 
   -- Validation: Check for duplicate pending invitation
   IF EXISTS (
-    SELECT 1 FROM core.invitations
-    WHERE email = p_email
-      AND organization_id = p_organization_id
-      AND status = 'pending'
-      AND is_deleted = false
-      AND expires_at > now()
+    SELECT 1 FROM core.invitations inv_check
+    WHERE inv_check.email = p_email
+      AND inv_check.organization_id = p_organization_id
+      AND inv_check.status = 'pending'
+      AND inv_check.is_deleted = false
+      AND inv_check.expires_at > now()
   ) THEN
     RAISE EXCEPTION 'A pending invitation to this email already exists for this organization';
   END IF;
 
-  -- Validation: Check if user is already a member
+  -- Validation: Check if user is already a member (use users_meta instead of auth.users —
+  -- auth.users is not accessible by the authenticated role via SECURITY INVOKER)
   IF EXISTS (
     SELECT 1 FROM core.memberships m
-    JOIN auth.users u ON u.id = m.user_id
-    WHERE u.email = p_email
+    JOIN core.users_meta um ON um.id = m.user_id
+    WHERE um.email = lower(p_email)
       AND m.organization_id = p_organization_id
       AND m.is_deleted = false
   ) THEN
@@ -127,7 +128,7 @@ BEGIN
   RETURN QUERY
   SELECT v_invitation_id, v_token, lower(p_email), v_expires_at;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, extensions;
 
 -- ========================================
 -- FUNCTION: core.accept_invitation()
@@ -149,9 +150,9 @@ DECLARE
 BEGIN
   v_caller_id := auth.uid();
 
-  -- Get caller's email
+  -- Get caller's email (use users_meta — auth.users is not accessible to authenticated role via SECURITY INVOKER)
   SELECT email INTO v_caller_email
-  FROM auth.users
+  FROM core.users_meta
   WHERE id = v_caller_id;
 
   -- Fetch and validate invitation
@@ -187,10 +188,10 @@ BEGIN
 
   -- Check if already a member
   IF EXISTS (
-    SELECT 1 FROM core.memberships
-    WHERE user_id = v_caller_id
-      AND organization_id = v_invitation.organization_id
-      AND is_deleted = false
+    SELECT 1 FROM core.memberships m
+    WHERE m.user_id = v_caller_id
+      AND m.organization_id = v_invitation.organization_id
+      AND m.is_deleted = false
   ) THEN
     RAISE EXCEPTION 'You are already a member of this organization';
   END IF;
@@ -255,7 +256,7 @@ BEGIN
   FROM core.organizations o
   WHERE o.id = v_invitation.organization_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core;
 
 -- ========================================
 -- FUNCTION: core.cancel_invitation()
@@ -376,7 +377,7 @@ BEGIN
   RETURN QUERY
   SELECT p_invitation_id, v_new_token, v_invitation.email, v_new_expires_at;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, extensions;
 
 -- ========================================
 -- FUNCTION: core.list_organization_invitations()
@@ -410,13 +411,13 @@ BEGIN
     i.organization_id,
     i.unit_id,
     r.name AS role_name,
-    u.email AS invited_by_email,
+    um.email AS invited_by_email,
     i.status,
     i.expires_at,
     i.created_at
   FROM core.invitations i
   JOIN core.roles r ON r.id = i.role_id
-  JOIN auth.users u ON u.id = i.invited_by
+  LEFT JOIN core.users_meta um ON um.id = i.invited_by
   WHERE i.organization_id = p_organization_id
     AND i.is_deleted = false
     AND (p_status IS NULL OR i.status = p_status)
@@ -449,14 +450,13 @@ BEGIN
     o.name AS organization_name,
     u.name AS unit_name,
     r.name AS role_name,
-    COALESCE(um.first_name || ' ' || um.last_name, inviter.email) AS invited_by_name,
+    COALESCE(um.first_name || ' ' || um.last_name, um.email) AS invited_by_name,
     i.expires_at,
     i.status
   FROM core.invitations i
   JOIN core.organizations o ON o.id = i.organization_id
   LEFT JOIN core.units u ON u.id = i.unit_id
   JOIN core.roles r ON r.id = i.role_id
-  JOIN auth.users inviter ON inviter.id = i.invited_by
   LEFT JOIN core.users_meta um ON um.id = i.invited_by
   WHERE i.token = p_token
     AND i.is_deleted = false;

@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(11);
 
 -- ========================================
 -- TEST: Org member can SELECT all unit_memberships in their org
@@ -69,12 +69,8 @@ SELECT lives_ok(
 -- ========================================
 -- TEST: Regular member can INSERT unit_membership (permissive RLS)
 -- ========================================
+-- Use Jordan (not in Downtown) to avoid duplicate key from Taylor above
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
-
--- First remove the one we just added
-DELETE FROM core.unit_memberships
-WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
-  AND unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
 
 SELECT lives_ok(
   format(
@@ -86,7 +82,7 @@ SELECT lives_ok(
         %L,
         %L
       )$$,
-    test_helpers.get_test_user_id('taylor@test.bellaitalia.com'),
+    test_helpers.get_test_user_id('jordan@test.bellaitalia.com'),
     test_helpers.get_test_user_id('carlos@test.bellaitalia.com'),
     test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
   ),
@@ -134,13 +130,17 @@ SELECT lives_ok(
 -- ========================================
 -- TEST: Cannot UPDATE unit_membership in other org
 -- ========================================
+DO $$
+DECLARE v_count INT;
+BEGIN
+  UPDATE core.unit_memberships SET role_id = '00000000-0000-0000-0000-000000000002'
+  WHERE unit_id = 'dddddddd-dddd-dddd-dddd-dddddddddd01';
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  PERFORM set_config('test.cross_unit_membership_update', v_count::text, true);
+END $$;
+
 SELECT is(
-  (SELECT COUNT(*)::int FROM (
-    UPDATE core.unit_memberships
-    SET role_id = '00000000-0000-0000-0000-000000000002'
-    WHERE unit_id = 'dddddddd-dddd-dddd-dddd-dddddddddd01' -- Pizza Palace
-    RETURNING id
-  ) u),
+  current_setting('test.cross_unit_membership_update')::int,
   0,
   'Maria cannot UPDATE Pizza Palace unit_memberships'
 );
@@ -148,15 +148,17 @@ SELECT is(
 -- ========================================
 -- TEST: Soft-deleted unit_memberships not visible
 -- ========================================
-UPDATE core.unit_memberships
-SET is_deleted = true, deleted_at = now()
-WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
-  AND unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01';
+-- Remove Jordan (the user Carlos added above)
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+SELECT public.remove_member_from_unit(
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+  test_helpers.get_test_user_id('jordan@test.bellaitalia.com')
+);
 
 SELECT ok(
   NOT EXISTS (
     SELECT 1 FROM core.unit_memberships
-    WHERE user_id = test_helpers.get_test_user_id('taylor@test.bellaitalia.com')
+    WHERE user_id = test_helpers.get_test_user_id('jordan@test.bellaitalia.com')
       AND unit_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'
   ),
   'Soft-deleted unit_membership not visible'

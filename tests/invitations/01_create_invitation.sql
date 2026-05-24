@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(15);
+SELECT plan(14);
 
 -- ========================================
 -- TEST: Organization member can create invitation
@@ -106,7 +106,7 @@ SELECT throws_ok(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
     '00000000-0000-0000-0000-000000000001'::uuid
   )$$,
-  'Cannot invite users as super_admin',
+  'Cannot invite users as super_admin. Use public.transfer_super_admin() to transfer ownership.',
   'Cannot invite as super_admin'
 );
 

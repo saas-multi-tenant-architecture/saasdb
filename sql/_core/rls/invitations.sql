@@ -20,12 +20,12 @@ ALTER TABLE core.invitations ENABLE ROW LEVEL SECURITY;
 -- 2. The invitation is addressed to their email (to accept invitations)
 CREATE POLICY invitations_select ON core.invitations
   FOR SELECT USING (
-    -- Org members can view all invitations for their org
-    core.is_org_member(organization_id)
+    -- Org members can view non-deleted invitations for their org
+    (is_deleted = false AND core.is_org_member(organization_id))
     OR
     -- Users can view invitations sent to their email
     (
-      email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      email = (SELECT email FROM core.users_meta WHERE id = auth.uid())
       AND status = 'pending'
       AND is_deleted = false
     )
@@ -52,7 +52,7 @@ CREATE POLICY invitations_update ON core.invitations
     core.is_org_member(organization_id)
     OR
     (
-      email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      email = (SELECT email FROM core.users_meta WHERE id = auth.uid())
       AND status = 'pending'
     )
   )
@@ -60,7 +60,7 @@ CREATE POLICY invitations_update ON core.invitations
     core.is_org_member(organization_id)
     OR
     (
-      email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      email = (SELECT email FROM core.users_meta WHERE id = auth.uid())
       AND status IN ('accepted', 'expired')  -- Can only mark as accepted or expired
     )
   );

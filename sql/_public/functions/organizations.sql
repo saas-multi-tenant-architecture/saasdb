@@ -215,18 +215,25 @@ BEGIN
     RAISE EXCEPTION 'Cannot transfer super_admin to yourself';
   END IF;
 
-  -- Perform atomic transfer in a SINGLE statement
-  -- This ensures RLS is checked once (when caller is still super_admin)
-  -- and both updates happen atomically
+  -- Perform transfer in two steps to avoid temporary dual-super_admin state
+  -- (which would violate the partial unique index idx_one_super_admin_per_org).
+  -- Step 1: Demote current super_admin first.
+  -- Step 2: Promote new super_admin.
+  -- RLS is satisfied because caller is still super_admin until this function returns.
   UPDATE core.memberships
-  SET is_super_admin = CASE
-        WHEN user_id = p_new_super_admin_user_id THEN true
-        WHEN user_id = v_current_user_id THEN false
-      END,
+  SET is_super_admin = false,
       updated_by = v_current_user_id,
       updated_at = now()
   WHERE organization_id = p_org_id
-    AND user_id IN (v_current_user_id, p_new_super_admin_user_id)
+    AND user_id = v_current_user_id
+    AND is_deleted = false;
+
+  UPDATE core.memberships
+  SET is_super_admin = true,
+      updated_by = v_current_user_id,
+      updated_at = now()
+  WHERE organization_id = p_org_id
+    AND user_id = p_new_super_admin_user_id
     AND is_deleted = false;
 
   PERFORM core.log_audit(

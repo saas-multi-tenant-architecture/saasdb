@@ -89,10 +89,13 @@ SELECT lives_ok(
 -- ========================================
 -- TEST: Removing from one org doesn't affect other
 -- ========================================
-UPDATE core.memberships
-SET is_deleted = true, deleted_at = now()
-WHERE user_id = test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
-  AND organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+-- Switch to Luigi (super_admin of Pizza Palace) to remove Carlos
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
+SELECT public.remove_member_from_organization(
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  test_helpers.get_test_user_id('carlos@test.bellaitalia.com')
+);
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
 
 -- Carlos can still see Bella Italia
 SELECT ok(
