@@ -5,7 +5,7 @@ description: How SMTA uses PostgreSQL Row-Level Security to enforce tenant bound
 
 ## How RLS Works in SMTA
 
-SMTA enables RLS on all `core` tables and writes policies that call `core.get_current_user_id()` to identify the authenticated user. If the user is not part of an organziation or unit, the policy returns `false` and the user sees no rows.
+SMTA enables RLS on all `core` tables and writes policies that call `core.get_current_user_id()` to identify the authenticated user. If the user is not part of an organization or unit, the policy returns `false` and the user sees no rows.
 
 ## The Membership Check
 
@@ -51,18 +51,31 @@ This means:
 
 ## Your App Schema
 
-SMTA's RLS extends naturally into your `app` schema. You write your own policies that follow the same pattern, using `core.is_org_member()` or the raw membership check:
+SMTA's RLS extends naturally into your `app` schema. Each table needs an `org_id` or `unit_id` column to associate rows with a tenant, but membership is validated automatically — application queries need no explicit membership checks.
+
+Use the same helper functions SMTA itself uses internally:
+
+| Helper | Checks | Use when |
+|---|---|---|
+| `core.is_org_member(org_id)` | User has an active membership in the org | Data belongs to the whole org |
+| `core.is_unit_member(unit_id)` | User is explicitly assigned to this unit | Data is private to that unit's staff |
+| `core.is_org_member_for_unit(unit_id)` | User is a member of the org that owns this unit | Org-wide visibility via a unit FK |
 
 ```sql
+-- Org-scoped: any org member can access
 alter table app.your_table enable row level security;
 
 create policy "org members" on app.your_table
-  for all using (
-    exists (
-      select 1 from core.memberships m
-      where m.organization_id = app.your_table.org_id
-        and m.user_id = core.get_current_user_id()
-        and m.is_deleted = false
-    )
-  );
+  for all using (core.is_org_member(org_id));
+
+
+-- Unit-scoped (narrow): only staff explicitly assigned to this unit
+alter table app.unit_table enable row level security;
+
+create policy "unit members" on app.unit_table
+  for all using (core.is_unit_member(unit_id));
+
+-- Unit-scoped (broad): any org member, resolved via the unit's parent org
+-- create policy "org members via unit" on app.unit_table
+--   for all using (core.is_org_member_for_unit(unit_id));
 ```

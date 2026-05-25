@@ -1,0 +1,119 @@
+---
+title: Meta Tables
+description: How SMTA separates structural tenant data from broadly-readable descriptive data using _meta tables.
+---
+
+SMTA separates two concerns that are easy to conflate: **who belongs to what** (structural data in `core.organizations`, `core.units`, `core.memberships`) and **what can members learn about each other** (descriptive data in the `_meta` tables). The `_meta` tables are intentionally more open within the tenant boundary — they power things like user directories and org profile pages without requiring unit-level membership to read them.
+
+## The Three Meta Tables
+
+| Table | Paired with | Purpose |
+|---|---|---|
+| `core.users_meta` | one user | Name, email, avatar, locale — the public-facing profile of each user |
+| `core.organizations_meta` | one org | Logo, address, timezone, locale — the org's own profile |
+| `core.unit_meta` | one unit | Notes and descriptive content for a unit |
+
+Each is a 1:1 extension of its parent, keyed by the same UUID. Keeping descriptive data separate from structural data means the access rules for each can differ without complicating the core membership tables.
+
+## User Directory: `core.users_meta`
+
+The most important property of `core.users_meta` is that its RLS policy is **org-scoped, not unit-scoped**. Any member of the same organization can read another member's profile — regardless of which units they belong to.
+
+```sql
+-- core.users_meta SELECT policy
+(SELECT core.get_current_user_id()) = id   -- your own profile
+OR core.shares_organization(id)             -- any co-worker in any shared org
+```
+
+`core.shares_organization(p_user_id)` returns `true` if the current user and the target user share at least one active organization membership. This handles multi-org users correctly:
+
+```
+Alice is in Org A and Org B
+Bob   is in Org A only
+Carol is in Org B only
+
+Alice can see Bob   ✓  (share Org A)
+Alice can see Carol ✓  (share Org B)
+Bob cannot see Carol ✗  (no shared org)
+```
+
+The UPDATE policy is narrower — users can only update their own row.
+
+**What this enables:** A pizza shop with two locations (units) can display a full employee directory to every staff member. Giuseppe at Main Street can look up Luigi's profile even if Luigi is not assigned to the Main Street unit. The directory is org-wide by design.
+
+## Org Profile: `core.organizations_meta`
+
+`core.organizations_meta` holds the organization's own branding and locale settings — logo, address, timezone, locale. Any org member can read it; only the super_admin can write it.
+
+```sql
+-- SELECT: any org member
+core.is_org_member(id) OR core.is_super_admin(id)
+
+-- UPDATE: super_admin only
+core.is_super_admin(id)
+```
+
+Typical use: display the org logo and timezone in a settings page or header. Members always have access regardless of which units they belong to.
+
+The public API surface for this table is `public.update_organization_meta()`, which enforces the super_admin check before writing.
+
+## Unit Notes: `core.unit_meta`
+
+`core.unit_meta` stores descriptive content for a unit — currently a free-form `notes` field. Its RLS policy allows any org member to read it, not just members explicitly assigned to that unit:
+
+```sql
+-- SELECT: unit members, or any org member via the unit's parent org
+core.is_unit_member(id)
+OR core.is_org_member_for_unit(id)
+OR core.is_org_super_admin_for_unit(id)
+```
+
+This means a manager can read the notes for every unit in their org without needing an explicit assignment to each one.
+
+## Compared to `core.memberships`
+
+The distinction to keep in mind:
+
+| | `core.memberships` / `core.unit_memberships` | `_meta` tables |
+|---|---|---|
+| Contains | Who belongs where, at what role | Descriptive profile data |
+| Read access | Own row, or fellow org members | Any org member (unit assignment irrelevant) |
+| Write access | Org admins via public functions | Owner (users_meta) or super_admin (org/unit meta) |
+| Privacy | Not directly exposed to app layer | Exposed via `public.*` functions |
+
+## Extending the Pattern in Your App
+
+If your app has entities that need a similar split — core relational data vs. broadly-readable profile data — you can follow the same pattern:
+
+```sql
+-- Core table: who owns this record
+create table app.locations (
+  id      uuid primary key default gen_random_uuid(),
+  unit_id uuid not null references core.units(id),
+  name    text not null
+);
+
+alter table app.locations enable row level security;
+
+create policy "unit members" on app.locations
+  for all using (core.is_unit_member(unit_id));
+
+
+-- Meta table: descriptive info any org member can read
+create table app.location_meta (
+  id          uuid primary key references app.locations(id) on delete cascade,
+  description text,
+  photo_url   text
+);
+
+alter table app.location_meta enable row level security;
+
+create policy "org members via unit" on app.location_meta
+  for select using (
+    core.is_org_member_for_unit(
+      (select unit_id from app.locations where id = app.location_meta.id)
+    )
+  );
+```
+
+The core table is unit-gated; the meta table is org-visible. The split keeps sensitive operational data private to unit members while making descriptive content available across the org.

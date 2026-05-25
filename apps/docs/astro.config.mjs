@@ -28,6 +28,7 @@ export default defineConfig({
             { label: 'Overview', slug: 'architecture/overview' },
             { label: 'Schema Boundaries', slug: 'architecture/schema-boundaries' },
             { label: 'Tenant Isolation & RLS', slug: 'architecture/tenant-isolation' },
+            { label: 'Meta Tables', slug: 'architecture/meta-tables' },
             { label: 'Adapter Pattern', slug: 'architecture/adapter-pattern' },
           ],
         },

@@ -44,29 +44,40 @@ If the function exists and returns without error, SMTA is deployed.
 
 ## 5. Add Your App Schema
 
-Create your `app` schema tables on top of SMTA. SMTA's RLS policies gate visibility by org/unit membership — your tables reference `core.organizations` or `core.units` as needed.
+Create your `app` schema tables on top of SMTA. Each table needs an `org_id` or `unit_id` column to associate rows with a tenant — but membership validation is handled automatically by RLS. Your application queries need no explicit membership checks; Postgres enforces isolation before returning any rows.
 
 ```sql
 create schema if not exists app;
 
+-- Org-scoped table: any member of the org can access
 create table app.projects (
-  id uuid primary key default gen_random_uuid(),
-  org_id uuid not null references core.organizations(id),
-  name text not null,
+  id         uuid primary key default gen_random_uuid(),
+  org_id     uuid not null references core.organizations(id),
+  name       text not null,
   created_at timestamptz default now()
 );
 
--- Enable RLS
 alter table app.projects enable row level security;
 
--- Only members of the org can see the project
 create policy "org members" on app.projects
-  for all using (
-    exists (
-      select 1 from core.memberships m
-      where m.organization_id = app.projects.org_id
-        and m.user_id = core.get_current_user_id()
-        and m.is_deleted = false
-    )
-  );
+  for all using (core.is_org_member(org_id));
+
+
+-- Unit-scoped table: only members assigned to that unit can access
+create table app.shift_schedules (
+  id        uuid primary key default gen_random_uuid(),
+  unit_id   uuid not null references core.units(id),
+  starts_at timestamptz not null,
+  ends_at   timestamptz not null
+);
+
+alter table app.shift_schedules enable row level security;
+
+-- Option A — only staff explicitly assigned to this unit
+create policy "unit members" on app.shift_schedules
+  for all using (core.is_unit_member(unit_id));
+
+-- Option B — anyone in the parent org (e.g. managers across locations)
+-- create policy "org members via unit" on app.shift_schedules
+--   for all using (core.is_org_member_for_unit(unit_id));
 ```
