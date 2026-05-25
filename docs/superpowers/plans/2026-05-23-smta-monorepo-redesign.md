@@ -829,7 +829,7 @@ packages:
   "name": "@smta/core",
   "version": "0.1.0",
   "private": true,
-  "description": "SMTA core PostgreSQL schema — tables, RLS, audit, RBAC",
+  "description": "SMTA core PostgreSQL schema — tables, RLS, audit",
   "scripts": {
     "build": "node ../../combine_files.js"
   }

@@ -41,7 +41,7 @@ smta/
 ├── pnpm-workspace.yaml
 ├── turbo.json
 ├── packages/
-│   ├── core/      # Pure PostgreSQL: tables, triggers, RBAC, audit, RLS (no auth.uid() assumptions)
+│   ├── core/      # Pure PostgreSQL: tables, triggers, roles, audit, RLS (no auth.uid() assumptions)
 │   ├── supabase/  # Supabase adapter: auth.uid(), Vault, PostgREST config, platform schema
 │   ├── payload/   # Payload CMS adapter: session injection, media, custom endpoints
 │   ├── billing/   # BillingProvider interface + Stripe + Lemon Squeezy implementations

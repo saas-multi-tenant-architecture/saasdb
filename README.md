@@ -20,7 +20,7 @@ The following table diagram illustrates the layered design:
 
 ### Membership Has Its Privileges
 
-In short, **SMTA** asks your authenticated users: "Are you a member of this tenant/organization/unit?" — a yes/no gate on row visibility that is plain and simple. Then within that answer, your application (using CASL or another RBAC tool) can ask, "Given that you have access, what are you allowed to do?" — action authorization based on the user's role.
+In short, **SMTA** asks your authenticated users: "Are you a member of this tenant/organization/unit?" — a yes/no gate on row visibility that is plain and simple. Then within that answer, your application (using CASL) can ask, "Given that you have access, what are you allowed to do?" — action authorization based on the user's role.
 
 ### Extensible Connections
 
@@ -43,7 +43,7 @@ To further help speed development, **SMTA** offers extensible connections to com
 ## Features
 
 - Tenant isolation via PostgreSQL RLS
-- Integration of database roles with RBAC library [CASL](https://casl.js.org/)
+- Integration of database roles with access control library [CASL](https://casl.js.org/)
 - Soft deletion to prevent data loss and enable recovery
 - No-code auditing to track changes and actions at the database level
 - Payment processor integration for billing (Stripe or Lemon Squeezy)

@@ -309,7 +309,7 @@ SMTA occupies the middle layer. You bring the application on top and pick the pl
 
 SMTA's core question is: *"Are you a member of this organization or unit?"* — a yes/no gate on row visibility enforced at the database level via Row-Level Security (RLS).
 
-Once that gate is answered, your application layer (using CASL or another RBAC tool) asks the follow-up: *"Given that you have access, what are you allowed to do?"*
+Once that gate is answered, your application layer (using CASL) asks the follow-up: *"Given that you have access, what are you allowed to do?"*
 
 ## What SMTA Provides
 
