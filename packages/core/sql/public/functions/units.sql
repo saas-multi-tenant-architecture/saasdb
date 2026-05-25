@@ -75,6 +75,27 @@ END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
+-- FUNCTION: public.get_user_unit_permissions()
+-- ========================================
+-- Returns the current user's role name and CASL rules for a given unit.
+-- Used to build a unit-scoped CASL Ability in the application layer.
+CREATE OR REPLACE FUNCTION public.get_user_unit_permissions(p_unit_id UUID)
+RETURNS TABLE (
+  role_name  TEXT,
+  casl_rules JSONB
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT r.name AS role_name, r.casl_rules
+  FROM core.unit_memberships um
+  JOIN core.roles r ON r.id = um.role_id
+  WHERE um.user_id = core.get_current_user_id()
+    AND um.unit_id = p_unit_id
+    AND um.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
 -- FUNCTION: public.create_unit()
 -- ========================================
 -- Create a new unit within an organization

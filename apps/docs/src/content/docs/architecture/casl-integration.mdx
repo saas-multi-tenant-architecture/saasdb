@@ -1,0 +1,299 @@
+---
+title: CASL Integration
+description: How to build fine-grained application permissions on top of SMTA's role system using CASL.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Integration with the [CASL](https://casl.js.org) library helps to build fine-grained application permissions on top of SMTA's role system. CASL is "an isomorphic authorization JavaScript library which restricts what resources a given client is allowed to access."
+
+As noted, SMTA's access control has two layers that answer two different questions:
+
+| Layer | Question | Enforced by |
+|---|---|---|
+| PostgreSQL RLS | "Is this user a member of this org or unit?" | `core.is_org_member()` / `core.is_unit_member()` |
+| CASL (app layer) | "Given they have access, what are they allowed to do?" | `@casl/ability` in your TypeScript |
+
+RLS is a binary gate — the user either sees a row or does not. CASL is what you use once past that gate to control which actions (create, read, update, delete) are available on what subjects (Organization, Schedule, Inventory, etc.). Both layers read from the same source: `core.roles.casl_rules`.
+
+## The `casl_rules` Column
+
+`core.roles` stores each role's permissions as a JSONB array in the `casl_rules` column. Each element is a CASL rule object:
+
+```typescript
+// Rule shape
+{
+  action:     string | string[];   // 'read' | 'create' | 'update' | 'delete' | 'manage'
+  subject:    string;              // your domain type name or 'all'
+  conditions?: Record<string, unknown>; // optional field-level constraints
+  inverted?:  boolean;             // true = this is a "cannot" rule
+}
+```
+
+`"manage"` is CASL's wildcard action — it expands to all CRUD operations. `"all"` is the wildcard subject.
+
+<Aside type="note">
+The SMTA tests use the idea of a fake SaaS that helps manage pizza restaurants (PizzaTech). This theme is carried over into the examples below.
+</Aside>
+
+Pizza Palace uses three standard roles. Here is the SQL that seeds them (matching the test fixtures in `tests/fixtures/01_roles.sql`):
+
+```sql
+-- super_admin: full access to everything
+INSERT INTO core.roles (name, description, casl_rules) VALUES (
+  'super_admin',
+  'Organization owner with full administrative access',
+  '[{"action": "manage", "subject": "all"}]'
+);
+
+-- manager: full control over unit operations
+INSERT INTO core.roles (name, description, casl_rules) VALUES (
+  'manager',
+  'Location manager with administrative access to assigned units',
+  '[
+    {"action": "read",   "subject": "Organization"},
+    {"action": "manage", "subject": "Unit"},
+    {"action": "manage", "subject": "UnitMember"},
+    {"action": "read",   "subject": "AuditLog"},
+    {"action": "manage", "subject": "Schedule"},
+    {"action": "manage", "subject": "Inventory"}
+  ]'
+);
+
+-- team: read access plus self-service schedule updates
+INSERT INTO core.roles (name, description, casl_rules) VALUES (
+  'team',
+  'Team member with read access and limited write access',
+  '[
+    {"action": "read",   "subject": "Organization"},
+    {"action": "read",   "subject": "Unit"},
+    {"action": "read",   "subject": "Schedule"},
+    {"action": "update", "subject": "Schedule", "conditions": {"assignee_id": "${user.id}"}},
+    {"action": "read",   "subject": "Inventory"}
+  ]'
+);
+```
+
+The `${user.id}` placeholder in the `team` role's conditions is resolved at runtime — it is not a SQL expression. Your application substitutes the authenticated user's UUID before passing the rules to CASL.
+
+## SQL: Fetching the Current User's Rules
+
+`authenticated` users have `SELECT` access on `core.roles` (no RLS is applied to the role catalog). SMTA ships two public functions that join the user's membership to their role and return the `casl_rules` JSONB ready for use in your application.
+
+**`public.get_user_permissions(p_org_id)`** — org-scoped rules, defined in `packages/core/sql/public/functions/organizations.sql`:
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_permissions(p_org_id UUID)
+RETURNS TABLE (
+  role_name  TEXT,
+  casl_rules JSONB
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT r.name AS role_name, r.casl_rules
+  FROM core.memberships m
+  JOIN core.roles r ON r.id = m.role_id
+  WHERE m.user_id = core.get_current_user_id()
+    AND m.organization_id = p_org_id
+    AND m.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+```
+
+**`public.get_user_unit_permissions(p_unit_id)`** — unit-scoped rules, defined in `packages/core/sql/public/functions/units.sql`:
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_unit_permissions(p_unit_id UUID)
+RETURNS TABLE (
+  role_name  TEXT,
+  casl_rules JSONB
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT r.name AS role_name, r.casl_rules
+  FROM core.unit_memberships um
+  JOIN core.roles r ON r.id = um.role_id
+  WHERE um.user_id = core.get_current_user_id()
+    AND um.unit_id = p_unit_id
+    AND um.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+```
+
+Both run as `SECURITY INVOKER`, so RLS on `core.memberships` and `core.unit_memberships` applies — users can only see their own membership rows. The join to `core.roles` is always readable by authenticated users.
+
+## TypeScript: Defining Subjects and Building an Ability
+
+Install the CASL package:
+
+```bash
+npm install @casl/ability
+```
+
+Define your subject types and a `buildAbility` function that accepts the raw `casl_rules` JSONB from the database:
+
+```typescript
+// lib/ability.ts
+import { createMongoAbility, MongoAbility, RawRuleOf } from '@casl/ability';
+
+// Enumerate every domain type your app exposes to CASL.
+// These should match the "subject" strings stored in core.roles.casl_rules.
+type AppSubjects =
+  | 'Organization'
+  | 'Unit'
+  | 'UnitMember'
+  | 'AuditLog'
+  | 'Schedule'
+  | 'Inventory'
+  | 'all';
+
+type AppActions = 'manage' | 'create' | 'read' | 'update' | 'delete';
+
+export type AppAbility = MongoAbility<[AppActions, AppSubjects]>;
+
+/**
+ * Builds a CASL Ability from rules fetched from core.roles.casl_rules.
+ *
+ * Replaces the "${user.id}" placeholder used in conditional rules
+ * (e.g., the team role's "update Schedule where assignee_id === own id")
+ * with the actual authenticated user's UUID before handing the rules to CASL.
+ */
+export function buildAbility(
+  caslRules: RawRuleOf<AppAbility>[],
+  userId: string
+): AppAbility {
+  const rules = caslRules.map((rule) => {
+    if (!rule.conditions) return rule;
+
+    const conditions = Object.fromEntries(
+      Object.entries(rule.conditions).map(([key, value]) => [
+        key,
+        value === '${user.id}' ? userId : value,
+      ])
+    );
+
+    return { ...rule, conditions };
+  });
+
+  return createMongoAbility<AppAbility>(rules);
+}
+```
+
+## TypeScript: Using the Ability
+
+Here is a complete example using Supabase (the same pattern applies to Payload CMS — swap `supabase.rpc()` for your database client). The scenario: a staff member at Pizza Palace's Main Street location attempts to update a schedule entry.
+
+```typescript
+// handlers/updateSchedule.ts
+import { createClient } from '@supabase/supabase-js';
+import { subject } from '@casl/ability';
+import { buildAbility, AppAbility } from '../lib/ability';
+
+const PIZZA_PALACE_ORG_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+interface ScheduleUpdate {
+  start_time: string;
+  end_time: string;
+  assignee_id: string;
+}
+
+export async function updateScheduleEntry(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  scheduleEntryId: string,
+  updates: ScheduleUpdate
+): Promise<void> {
+  // 1. Fetch this user's CASL rules for Pizza Palace.
+  const { data, error } = await supabase.rpc('get_user_permissions', {
+    p_org_id: PIZZA_PALACE_ORG_ID,
+  });
+
+  if (error || !data?.length) {
+    throw new Error('Could not load permissions');
+  }
+
+  // 2. Build the ability, substituting ${user.id} → actual userId in conditions.
+  const ability = buildAbility(data[0].casl_rules, userId);
+
+  // 3. Fast path: reject users with no 'update Schedule' rule at all.
+  //    - Luigi (super_admin):  manage all → passes
+  //    - A manager:            manage Schedule → passes
+  //    - Giuseppe (team):      update Schedule (with conditions) → passes this check;
+  //                            the condition is evaluated in step 4.
+  if (ability.cannot('update', 'Schedule')) {
+    throw new Error('Forbidden: you cannot update schedules');
+  }
+
+  // 4. For roles with conditions, load the existing record and evaluate against it.
+  //    CASL's subject() helper attaches the type name so conditions are matched correctly.
+  const { data: existingEntry, error: fetchError } = await supabase
+    .from('schedules')       // your app.schedules table
+    .select('assignee_id')
+    .eq('id', scheduleEntryId)
+    .single();
+
+  if (fetchError || !existingEntry) {
+    throw new Error('Schedule entry not found');
+  }
+
+  const scheduleSubject = subject('Schedule', {
+    ...existingEntry,
+    ...updates,
+  });
+
+  if (ability.cannot('update', scheduleSubject)) {
+    // The team role's condition was: assignee_id === userId.
+    // This fails when Giuseppe tries to update someone else's entry.
+    throw new Error('Forbidden: you can only update your own schedule entries');
+  }
+
+  // 5. Execute the mutation. PostgreSQL RLS still applies — it is the final safety net.
+  const { error: updateError } = await supabase
+    .from('schedules')
+    .update(updates)
+    .eq('id', scheduleEntryId);
+
+  if (updateError) throw updateError;
+}
+```
+
+## Luigi vs. Giuseppe
+
+With Pizza Palace's role definitions, the ability checks for each user look like this:
+
+| User | Role | `can('read', 'Schedule')` | `can('update', 'Schedule')` | `can('manage', 'Inventory')` |
+|---|---|:---:|:---:|:---:|
+| Luigi | `super_admin` | ✓ | ✓ (all entries) | ✓ |
+| Giuseppe | `team` | ✓ | ✓ own entries only | ✗ |
+
+Luigi's `manage all` rule expands to every action on every subject. Giuseppe's `team` rules include `update Schedule` but only where `assignee_id` matches his own UUID — everywhere else it is a `✗`.
+
+No role names are hardcoded in the TypeScript — the ability is built entirely from the `casl_rules` JSONB returned by the database. If Luigi promotes Giuseppe to `manager`, the next request fetches the new rules and Giuseppe's ability reflects the promotion automatically.
+
+## Unit-Scoped CASL Rules
+
+A user can hold different roles at different units within the same organization. In Bella Italia Restaurant Group, Alex holds the `team` role at the Downtown unit but the `manager` role at the Mall unit. When your application is operating in the context of a specific unit — for example, on a unit settings page or an inventory screen for one location — build a per-unit ability using `get_user_unit_permissions`:
+
+```typescript
+// Build Alex's ability for the Mall unit
+const { data } = await supabase.rpc('get_user_unit_permissions', {
+  p_unit_id: MALL_UNIT_ID,
+});
+const mallAbility = buildAbility(data[0].casl_rules, userId);
+
+mallAbility.can('manage', 'Inventory'); // true — Alex is manager at Mall
+
+// Build Alex's ability for the Downtown unit
+const { data: dtData } = await supabase.rpc('get_user_unit_permissions', {
+  p_unit_id: DOWNTOWN_UNIT_ID,
+});
+const downtownAbility = buildAbility(dtData[0].casl_rules, userId);
+
+downtownAbility.can('manage', 'Inventory'); // false — Alex is team at Downtown
+```
+
+The rule: use `get_user_permissions` (org-level) for actions scoped to the whole organization, and `get_user_unit_permissions` (unit-level) for actions scoped to a specific location. RLS continues to enforce the underlying tenant boundary — CASL only governs what is permissible within the rows the user already has access to see.
+
+<Aside type="tip">
+Keep your `AppSubjects` type in sync with the subject strings stored in `core.roles.casl_rules`. A mismatch (e.g., `'schedule'` in the DB vs. `'Schedule'` in TypeScript) will silently fail: CASL will not match the rule and `ability.can()` will return `false` for valid operations. Use a shared constants file or Zod schema to enforce consistency.
+</Aside>

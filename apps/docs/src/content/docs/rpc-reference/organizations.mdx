@@ -107,6 +107,30 @@ const { data: role, error } = await supabase.rpc('get_user_role', {
 
 ---
 
+### `get_user_permissions(p_org_id)`
+
+Returns the current user's role name and CASL rules for the specified organization. Use this to build a CASL `Ability` in the application layer. See [CASL Integration](/architecture/casl-integration/) for a full example.
+
+**Signature**
+```sql
+public.get_user_permissions(p_org_id UUID)
+RETURNS TABLE (
+  role_name  TEXT,
+  casl_rules JSONB
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_user_permissions', {
+  p_org_id: 'org-uuid'
+});
+// data[0].role_name  === 'manager'
+// data[0].casl_rules === [{ action: 'manage', subject: 'Schedule' }, ...]
+```
+
+---
+
 ## Creating Organizations
 
 ### `create_organization(p_name, p_description?)`

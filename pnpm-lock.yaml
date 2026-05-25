@@ -20,6 +20,9 @@ importers:
       astro:
         specifier: ^6.3.7
         version: 6.3.7(@types/node@25.9.1)(rollup@4.60.4)
+      starlight-theme-nord:
+        specifier: ^0.1.4
+        version: 0.1.4(@astrojs/starlight@0.39.2(astro@6.3.7(@types/node@25.9.1)(rollup@4.60.4))(typescript@5.9.3))
 
   packages/billing:
     dependencies:
@@ -1721,6 +1724,12 @@ packages:
   split2@4.2.0:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
+
+  starlight-theme-nord@0.1.4:
+    resolution: {integrity: sha512-oU3I3ZyTM6byNFTBihKwD1bbv3EUGNPM7YBSPTNjIt7le+DuFKAF6AEje0pMkFHkgn5hLjXZP739eKrqsHsJOA==}
+    engines: {node: ^18.17.1 || ^20.3.0 || >=21.0.0}
+    peerDependencies:
+      '@astrojs/starlight': '>=0.38'
 
   stream-replace-string@2.0.0:
     resolution: {integrity: sha512-TlnjJ1C0QrmxRNrON00JvaFFlNh5TTG00APw23j74ET7gkQpTASi6/L2fuiav8pzK715HXtUeClpBTw2NPSn6w==}
@@ -4186,6 +4195,10 @@ snapshots:
   space-separated-tokens@2.0.2: {}
 
   split2@4.2.0: {}
+
+  starlight-theme-nord@0.1.4(@astrojs/starlight@0.39.2(astro@6.3.7(@types/node@25.9.1)(rollup@4.60.4))(typescript@5.9.3)):
+    dependencies:
+      '@astrojs/starlight': 0.39.2(astro@6.3.7(@types/node@25.9.1)(rollup@4.60.4))(typescript@5.9.3)
 
   stream-replace-string@2.0.0: {}
 

@@ -110,6 +110,30 @@ const { data, error } = await supabase.rpc('list_unit_members', {
 
 ---
 
+### `get_user_unit_permissions(p_unit_id)`
+
+Returns the current user's role name and CASL rules for the specified unit. Use this to build a unit-scoped CASL `Ability` when a user may hold different roles at different units. See [CASL Integration](/architecture/casl-integration/) for a full example.
+
+**Signature**
+```sql
+public.get_user_unit_permissions(p_unit_id UUID)
+RETURNS TABLE (
+  role_name  TEXT,
+  casl_rules JSONB
+)
+```
+
+**Usage**
+```ts
+const { data, error } = await supabase.rpc('get_user_unit_permissions', {
+  p_unit_id: 'unit-uuid'
+});
+// data[0].role_name  === 'team'
+// data[0].casl_rules === [{ action: 'read', subject: 'Schedule' }, ...]
+```
+
+---
+
 ## Creating Units
 
 ### `create_unit(p_org_id, p_name, p_description?)`

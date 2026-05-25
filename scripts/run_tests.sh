@@ -131,6 +131,7 @@ pg_prove -v \
   tests/functions/02_unit_functions.sql \
   tests/functions/03_membership_functions.sql \
   tests/functions/04_user_functions.sql \
+  tests/functions/05_permissions_functions.sql \
   tests/invitations/01_create_invitation.sql \
   tests/invitations/02_accept_invitation.sql \
   tests/invitations/03_manage_invitations.sql \

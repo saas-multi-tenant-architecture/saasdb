@@ -12,7 +12,13 @@ hero:
       link: https://github.com/saaS-multi-tenant-architecture/saasdb
       icon: external
       variant: minimal
+      attrs:
+        target: _blank
+        rel: noopener noreferrer
 ---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
 
 ## What is SMTA?
 
@@ -28,3 +34,21 @@ It provides the tenant isolation, membership management, auditing, and billing i
 - **Adapter model** — integrate with Supabase or Payload CMS authentication
 - **Billing integration** for Stripe and Lemon Squeezy
 - **Plain SQL** — no extensions, no magic, just PostgreSQL
+
+---
+# Quick Links
+<CardGrid>
+  <Card title="Architecture" icon="star">
+     Learn about the [SMTA architecture](/architecture/overview)...
+  </Card>
+  <Card title="Public RPC Reference" icon="document">
+     [RPC Reference](rpc-reference/organizations/) for accessing ```public.*``` functions.
+  </Card>
+  <Card title="Billing Integration" icon="seti:shell">
+     [Payment Processor](/billing/overview) Integrations...
+  </Card>
+  <Card title="Supabase Adapter" icon="seti:db">
+     Use SMTA within your [Supabase project](/adapters/supabase/)
+  </Card>
+
+</CardGrid>

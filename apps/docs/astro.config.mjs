@@ -1,16 +1,18 @@
 import { defineConfig } from 'astro/config'
 import starlight from '@astrojs/starlight'
+import starlightThemeNord from 'starlight-theme-nord'
 
 export default defineConfig({
   output: 'static',
   site: 'https://smta.dev',
+  plugins: [starlightThemeNord()],
   integrations: [
     starlight({
       title: 'SMTA',
       description: 'SaaS Multi-Tenant Architecture — PostgreSQL multi-tenancy for your SaaS',
       social: [
         // Update href to your GitHub repo URL before deploying
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/saas-multi-tenant-architecture/saasdb' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/saas-multi-tenant-architecture/saasdb', target: '_blank', rel: 'noopener noreferrer' },
       ],
       sidebar: [
         {
@@ -30,6 +32,7 @@ export default defineConfig({
             { label: 'Tenant Isolation & RLS', slug: 'architecture/tenant-isolation' },
             { label: 'Meta Tables', slug: 'architecture/meta-tables' },
             { label: 'Adapter Pattern', slug: 'architecture/adapter-pattern' },
+            { label: 'CASL Integration', slug: 'architecture/casl-integration' },
           ],
         },
         {

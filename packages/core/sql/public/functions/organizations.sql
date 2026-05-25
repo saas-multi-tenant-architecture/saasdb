@@ -92,6 +92,27 @@ END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- ========================================
+-- FUNCTION: public.get_user_permissions()
+-- ========================================
+-- Returns the current user's role name and CASL rules for a given organization.
+-- Used to build a CASL Ability in the application layer.
+CREATE OR REPLACE FUNCTION public.get_user_permissions(p_org_id UUID)
+RETURNS TABLE (
+  role_name  TEXT,
+  casl_rules JSONB
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT r.name AS role_name, r.casl_rules
+  FROM core.memberships m
+  JOIN core.roles r ON r.id = m.role_id
+  WHERE m.user_id = core.get_current_user_id()
+    AND m.organization_id = p_org_id
+    AND m.is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- ========================================
 -- FUNCTION: public.create_organization()
 -- ========================================
 -- Create a new organization and assign creator as super_admin
