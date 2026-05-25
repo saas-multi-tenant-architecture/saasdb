@@ -24,7 +24,7 @@ npm run build:payload
 # → output/SMTA-payload-<timestamp>.sql  (57 SQL files combined)
 ```
 
-Both scripts deploy the full SMTA feature set. The only difference is the auth implementation and, for Supabase, the restoration of `auth.users` foreign keys.
+Both scripts deploy the full SMTA feature set. The only difference is the auth implementation and, for Supabase, the use of `auth.users` foreign keys.
 
 ## Apply to Your Database
 
@@ -40,6 +40,7 @@ For Supabase, you can paste the contents directly into the Supabase SQL Editor.
 
 SMTA creates the following schemas in your database:
 
+- `app` — your application tables (placeholder for your domain tables)
 - `core` — identity, access, memberships, roles, audit
 - `platform` — SaaS-wide management, billing, overrides (service role only)
 - `utils` — shared utility functions

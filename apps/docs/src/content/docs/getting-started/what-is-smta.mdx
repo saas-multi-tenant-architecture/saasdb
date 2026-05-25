@@ -3,11 +3,11 @@ title: What is SMTA?
 description: An introduction to SaaS Multi-Tenant Architecture and what it provides.
 ---
 
-**SMTA** (SaaS Multi-Tenant Architecture) is a PostgreSQL framework that handles the tenant infrastructure common to every SaaS application: organizations, sub-units, memberships, roles, auditing, and billing. It sits between your platform (Supabase or Payload CMS) and your application tables.
+**SMTA** (SaaS Multi-Tenant Architecture) is a PostgreSQL database design that handles the tenant infrastructure common to every SaaS application: organizations, sub-units, memberships, roles, auditing, and billing. It sits between your platform (Supabase or Payload CMS) and your application tables.
 
 ## The Three Layers
 
-| Layer | Your Responsibility |
+| Layer | Description |
 |---|---|
 | **Application Layer** | Your domain tables (`app` schema): projects, posts, documents, etc. Accessed via your DAL (CASL, Drizzle, Payload collections) |
 | **SMTA Layer** | Tenant infrastructure: orgs, units, memberships, roles, audit, billing. Accessed via `public.*` SQL functions |
@@ -21,12 +21,14 @@ SMTA's core question is: *"Are you a member of this organization or unit?"* — 
 
 Once that gate is answered, your application layer (using CASL or another RBAC tool) asks the follow-up: *"Given that you have access, what are you allowed to do?"*
 
+This division is intended to declutter your RLS policies to keep your database scalable, while at the same time giving you full, granular user access control via your application.
+
 ## What SMTA Provides
 
 - **Organizations** — top-level tenants with members and roles
 - **Units** — sub-groups within an organization (teams, departments, projects)
 - **Memberships** — links users to orgs and units with assigned roles
-- **Roles** — named roles scoped per organization
+- **Roles** — named roles scoped per organization, integrated with CASL
 - **Invitations** — invite users to join an organization by email
 - **Audit logs** — automatic change tracking at the database level
 - **Soft deletion** — records are flagged deleted, not physically removed

@@ -29,7 +29,7 @@ The Supabase deployment includes three adapter-specific files on top of `@smta/c
 |---|---|
 | `auth_supabase_impl.sql` | Implements `core.get_current_user_id()` using Supabase's JWT (`auth.uid()`) |
 | `secrets_supabase_impl.sql` | Implements `core.store_secret_impl()` and `core.delete_secret_impl()` using Supabase Vault |
-| `constraints.sql` | Restores foreign keys from SMTA tables to `auth.users` |
+| `constraints.sql` | Implements foreign keys from SMTA tables to `auth.users` |
 
 ## 4. Verify
 

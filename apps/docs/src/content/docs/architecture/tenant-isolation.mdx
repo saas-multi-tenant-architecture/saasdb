@@ -5,9 +5,7 @@ description: How SMTA uses PostgreSQL Row-Level Security to enforce tenant bound
 
 ## How RLS Works in SMTA
 
-PostgreSQL Row-Level Security (RLS) attaches policies directly to tables. When a query hits a table with RLS enabled, PostgreSQL evaluates the policy for every row before returning it. Rows that fail the policy are silently excluded — the query returns fewer rows, not an error.
-
-SMTA enables RLS on all `core` tables and writes policies that call `core.get_current_user_id()` to identify the authenticated user.
+SMTA enables RLS on all `core` tables and writes policies that call `core.get_current_user_id()` to identify the authenticated user. If the user is not part of an organziation or unit, the policy returns `false` and the user sees no rows.
 
 ## The Membership Check
 
@@ -33,7 +31,9 @@ Because RLS policies reference the function by name rather than by body, switchi
 
 ## Platform Lockdown
 
-The `platform` schema is locked down by an additional RLS layer that restricts access to the database service role. End users and application code running under the authenticated role cannot read or write `platform` tables at all.
+The `platform` schema is where SMTA stores data related to the SaaS business itself. This is a highly sensitive area in that it allows administrators to manage all tenants. 
+
+This schema is locked down by an additional RLS layer that restricts access to the database service role. End users and application code running under the authenticated role cannot read or write `platform` tables at all.
 
 ## Soft Deletion and RLS
 
@@ -47,6 +47,7 @@ This means:
 - Deleted organizations and memberships are invisible to queries
 - Data is recoverable by a service-role admin query
 - Audit logs are never soft-deleted — they are append-only
+
 
 ## Your App Schema
 
