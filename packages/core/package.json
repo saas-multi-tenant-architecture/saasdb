@@ -1,6 +1,9 @@
 {
   "name": "@smta/core",
+  "description": "SMTA core PostgreSQL schema — tenant isolation via RLS, tables, and functions",
   "version": "0.1.0",
-  "private": true,
-  "description": "SMTA core PostgreSQL schema — tenant isolation via RLS, tables, and functions"
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": ["sql", "sql-scripts.json"]
 }
