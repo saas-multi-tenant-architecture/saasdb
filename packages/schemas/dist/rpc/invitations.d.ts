@@ -6,24 +6,24 @@ export declare const invitationStatusSchema: z.ZodEnum<{
     cancelled: "cancelled";
 }>;
 export declare const createInvitationInputSchema: z.ZodObject<{
-    email: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
-    organization_id: z.ZodString;
-    role_id: z.ZodString;
-    unit_id: z.ZodOptional<z.ZodString>;
+    email: z.ZodPipe<z.ZodEmail, z.ZodTransform<string, string>>;
+    organization_id: z.ZodUUID;
+    role_id: z.ZodUUID;
+    unit_id: z.ZodOptional<z.ZodUUID>;
     metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, z.core.$strip>;
 export declare const invitationResponseSchema: z.ZodObject<{
-    id: z.ZodString;
+    id: z.ZodUUID;
     token: z.ZodString;
-    email: z.ZodString;
+    email: z.ZodEmail;
     expires_at: z.ZodCoercedDate<unknown>;
 }, z.core.$strip>;
 export declare const acceptInvitationInputSchema: z.ZodObject<{
     token: z.ZodString;
 }, z.core.$strip>;
 export declare const invitationDetailsSchema: z.ZodObject<{
-    id: z.ZodString;
-    email: z.ZodString;
+    id: z.ZodUUID;
+    email: z.ZodEmail;
     organization_name: z.ZodString;
     unit_name: z.ZodNullable<z.ZodString>;
     role_name: z.ZodString;
@@ -37,12 +37,12 @@ export declare const invitationDetailsSchema: z.ZodObject<{
     }>;
 }, z.core.$strip>;
 export declare const invitationListItemSchema: z.ZodObject<{
-    id: z.ZodString;
-    email: z.ZodString;
-    organization_id: z.ZodString;
-    unit_id: z.ZodNullable<z.ZodString>;
+    id: z.ZodUUID;
+    email: z.ZodEmail;
+    organization_id: z.ZodUUID;
+    unit_id: z.ZodNullable<z.ZodUUID>;
     role_name: z.ZodString;
-    invited_by_email: z.ZodString;
+    invited_by_email: z.ZodEmail;
     status: z.ZodEnum<{
         pending: "pending";
         accepted: "accepted";
