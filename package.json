@@ -1,20 +1,32 @@
 {
-  "name": "saasdb",
-  "version": "1.0.0",
-  "description": "",
+  "name": "@saas-multi-tenant-architecture/saasdb",
+  "version": "0.1.0",
+  "description": "SaaS Multi-Tenant Architecture for PostgreSQL",
   "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "./scripts/run_tests.sh",
     "build:supabase": "node ./scripts/combine_files.js --adapter supabase",
     "build:payload": "node ./scripts/combine_files.js --adapter payload",
     "build": "npm run build:supabase && npm run build:payload",
-    "build:docs": "pnpm --filter @smta/docs build"
+    "build:docs": "pnpm --filter @smta/docs build",
+    "release": "changeset publish"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "SaaS",
+    "Multi-Tenant",
+    "PostgreSQL",
+    "Tenant Isolation",
+    "Row Level Security"
+  ],
+  "author": "@saas-multi-tenant-architecture",
+  "repository": "https://github.com/saas-multi-tenant-architecture/saasdb",
+  "license": "MIT",
   "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6",
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "turbo": "^2.9.14"
   }
 }
