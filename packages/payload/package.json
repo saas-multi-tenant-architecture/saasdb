@@ -1,6 +1,6 @@
 {
   "name": "@smta/payload",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SMTA Payload CMS adapter — auth context injection middleware",
   "license": "MIT",
   "homepage": "https://smta.dev",
@@ -14,7 +14,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": ["dist", "sql", "sql-scripts.json"],
+  "files": [
+    "dist",
+    "sql",
+    "sql-scripts.json"
+  ],
   "scripts": {
     "build": "tsc --build",
     "lint": "tsc --noEmit"
