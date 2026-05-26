@@ -1,27 +1,73 @@
-# @smta/payload — Payload CMS Adapter
+# @smta/payload
 
-## Auth Injection Mechanism (Task 6.1 Research)
+**[Documentation](https://smta.dev)** · **[GitHub](https://github.com/saas-multi-tenant-architecture/saasdb)**
 
-**Finding:** `@payloadcms/db-postgres` (v3.x) does NOT expose a `beforeQuery` hook or `onConnect` callback. It accepts a standard `pg.Pool` configuration via the `pool` option, then creates the pool internally and wraps it with Drizzle ORM.
+The Payload CMS adapter for [SMTA (SaaS Multi-Tenant Architecture)](https://smta.dev). Provides the SQL auth implementation for Payload deployments and a TypeScript middleware to inject the current user's ID into the PostgreSQL session before each request.
 
-There is no built-in mechanism to run SQL before each query.
+## What's in this package
 
-**Recommended approach:** Payload's `beforeOperation` collection/global hooks. These fire before each database operation and receive `req` which includes the authenticated user. Within a `beforeOperation` hook, call `SET LOCAL app.current_user_id = '...'` using the Payload DB execute helper. Since Payload wraps most operations in transactions, `SET LOCAL` (transaction-scoped) is the right choice.
+**SQL** (deployed via `@smta/cli`):
 
-```typescript
-// In your collection config:
-beforeOperation: [
-  async ({ req }) => {
-    if (req.user?.id) {
-      await req.payload.db.pool.query(
-        `SELECT set_config('app.current_user_id', $1, true)`,
-        [req.user.id]
-      );
-    }
-  }
-]
+| File | Purpose |
+|------|---------|
+| `auth_payload_impl.sql` | Implements `core.get_current_user_id()` using the `app.current_user_id` PostgreSQL session variable |
+
+**TypeScript middleware**:
+
+- `injectUserContext(db, userId)` — sets `app.current_user_id` for the current transaction
+- `clearUserContext(db)` — clears the session variable
+
+## Deploy the SQL
+
+```bash
+npx @smta/cli --adapter payload
 ```
 
-**Fallback:** For operations outside a transaction, use `SET SESSION` (connection-scoped). This is less safe in a pooled environment — clear the value after use.
+Apply the generated script to your Payload project's PostgreSQL database. See the [Payload Quick Start](https://smta.dev/getting-started/quickstart-payload/) for full instructions.
 
-See `src/middleware/inject-user-context.ts` for the reusable helper.
+## Install the TypeScript middleware
+
+```bash
+npm install @smta/payload
+```
+
+## Usage
+
+Call `injectUserContext` inside a Payload `beforeOperation` hook so SMTA's RLS policies can identify the current user on every query:
+
+```typescript
+import { injectUserContext } from '@smta/payload'
+
+// In your Payload collection's hooks
+const MyCollection: CollectionConfig = {
+  slug: 'my-collection',
+  hooks: {
+    beforeOperation: [
+      async ({ req }) => {
+        if (req.user?.id) {
+          await injectUserContext(req.payload.db.drizzle, req.user.id)
+        }
+      },
+    ],
+  },
+}
+```
+
+`injectUserContext` uses `SET LOCAL` so the session variable is scoped to the current transaction — it is automatically cleared when the transaction ends.
+
+For more on how SMTA's RLS policies use this value, see the [Adapter Pattern docs](https://smta.dev/architecture/adapter-pattern/).
+
+## Part of the SMTA package family
+
+| Package | Purpose |
+|---------|---------|
+| [`@smta/core`](https://www.npmjs.com/package/@smta/core) | Adapter-agnostic SQL schema |
+| [`@smta/supabase`](https://www.npmjs.com/package/@smta/supabase) | Supabase adapter SQL |
+| **`@smta/payload`** | This package — Payload CMS adapter SQL + middleware |
+| [`@smta/billing`](https://www.npmjs.com/package/@smta/billing) | BillingProvider interface (Stripe, Lemon Squeezy) |
+| [`@smta/schemas`](https://www.npmjs.com/package/@smta/schemas) | Zod v4 schemas for all `public.*` RPC contracts |
+| [`@smta/cli`](https://www.npmjs.com/package/@smta/cli) | Deployment CLI |
+
+## License
+
+MIT
