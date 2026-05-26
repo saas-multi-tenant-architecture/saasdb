@@ -2,6 +2,7 @@
   "name": "@smta/schemas",
   "version": "0.1.0",
   "description": "Zod schemas for SMTA public.* RPC function contracts",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "publishConfig": {

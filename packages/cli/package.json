@@ -13,7 +13,9 @@
     "deploy.js"
   ],
   "dependencies": {
-    "@smta/core": "workspace:*",
+    "@smta/core": "workspace:*"
+  },
+  "optionalDependencies": {
     "@smta/supabase": "workspace:*",
     "@smta/payload": "workspace:*"
   },

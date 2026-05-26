@@ -51,6 +51,7 @@ importers:
       '@smta/core':
         specifier: workspace:*
         version: link:../core
+    optionalDependencies:
       '@smta/payload':
         specifier: workspace:*
         version: link:../payload
