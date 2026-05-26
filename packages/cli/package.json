@@ -2,16 +2,25 @@
   "name": "@smta/cli",
   "version": "0.1.0",
   "description": "SMTA deployment CLI — combines and outputs a versioned SQL deployment script",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "bin": {
     "smta": "./deploy.js"
   },
   "files": [
     "deploy.js"
   ],
-  "peerDependencies": {
-    "@smta/core": "*",
-    "@smta/supabase": "*",
-    "@smta/payload": "*"
+  "dependencies": {
+    "@smta/core": "workspace:*",
+    "@smta/supabase": "workspace:*",
+    "@smta/payload": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vbuser2004/saasdb.git",
+    "directory": "packages/cli"
   },
   "publishConfig": {
     "access": "public"
