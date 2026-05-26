@@ -19,6 +19,7 @@
     "@smta/supabase": "workspace:*",
     "@smta/payload": "workspace:*"
   },
+  "homepage": "https://smta.dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/saas-multi-tenant-architecture/saasdb.git",

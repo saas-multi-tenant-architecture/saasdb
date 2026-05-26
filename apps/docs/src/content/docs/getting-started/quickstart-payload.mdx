@@ -10,13 +10,15 @@ A Payload CMS v3 project connected to a PostgreSQL database.
 ## 2. Generate and Apply the SQL
 
 ```bash
-npm run build:payload
+npx @smta/cli --adapter payload
 ```
+
+This writes `SMTA-payload-<timestamp>.sql` to your current directory.
 
 Apply the generated script to your Payload project's database:
 
 ```bash
-psql "$DATABASE_URL" -f output/SMTA-payload-<timestamp>.sql
+psql "$DATABASE_URL" -f SMTA-payload-<timestamp>.sql
 ```
 
 ## 3. What the Payload Adapter Provides

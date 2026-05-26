@@ -10,15 +10,17 @@ If you don't have one, create a project at [supabase.com](https://supabase.com).
 ## 2. Generate and Apply the SQL
 
 ```bash
-npm run build:supabase
+npx @smta/cli --adapter supabase
 ```
 
-Open your Supabase project → **SQL Editor** → paste the contents of `output/SMTA-supabase-<timestamp>.sql` and run it.
+This writes `SMTA-supabase-<timestamp>.sql` to your current directory.
+
+Open your Supabase project → **SQL Editor** → paste the contents of the generated file and run it.
 
 Alternatively, apply via `psql`:
 
 ```bash
-psql "$DATABASE_URL" -f output/SMTA-supabase-<timestamp>.sql
+psql "$DATABASE_URL" -f SMTA-supabase-<timestamp>.sql
 ```
 
 ## 3. What the Supabase Adapter Provides

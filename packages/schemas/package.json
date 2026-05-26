@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "description": "Zod schemas for SMTA public.* RPC function contracts",
   "license": "MIT",
+  "homepage": "https://smta.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-multi-tenant-architecture/saasdb.git",
+    "directory": "packages/schemas"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "publishConfig": {

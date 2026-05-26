@@ -3,6 +3,12 @@
   "description": "SMTA core PostgreSQL schema — tenant isolation via RLS, tables, and functions",
   "version": "0.1.0",
   "license": "MIT",
+  "homepage": "https://smta.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-multi-tenant-architecture/saasdb.git",
+    "directory": "packages/core"
+  },
   "publishConfig": {
     "access": "public"
   },
