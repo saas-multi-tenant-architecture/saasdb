@@ -43,6 +43,18 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
+  packages/cli:
+    dependencies:
+      '@smta/core':
+        specifier: workspace:*
+        version: link:../core
+      '@smta/payload':
+        specifier: workspace:*
+        version: link:../payload
+      '@smta/supabase':
+        specifier: workspace:*
+        version: link:../supabase
+
   packages/core: {}
 
   packages/payload:

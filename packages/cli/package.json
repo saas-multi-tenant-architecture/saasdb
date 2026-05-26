@@ -1,13 +1,19 @@
 {
   "name": "@smta/cli",
-  "description": "SMTA deployment CLI",
   "version": "0.1.0",
+  "description": "SMTA deployment CLI — combines and outputs a versioned SQL deployment script",
+  "bin": {
+    "smta": "./deploy.js"
+  },
+  "files": [
+    "deploy.js"
+  ],
+  "peerDependencies": {
+    "@smta/core": "*",
+    "@smta/supabase": "*",
+    "@smta/payload": "*"
+  },
   "publishConfig": {
     "access": "public"
-  },
-  "dependencies": {
-    "@smta/core": "workspace:*",
-    "@smta/supabase": "workspace:*",
-    "@smta/payload": "workspace:*"
   }
 }
