@@ -1,0 +1,13 @@
+{
+  "name": "@smta/cli",
+  "description": "SMTA deployment CLI",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@smta/core": "workspace:*",
+    "@smta/supabase": "workspace:*",
+    "@smta/payload": "workspace:*"
+  }
+}
