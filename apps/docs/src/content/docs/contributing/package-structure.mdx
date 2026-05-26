@@ -3,7 +3,7 @@ title: Package Structure
 description: How the SMTA monorepo packages are organized.
 ---
 
-SMTA is structured as a [pnpm](https://pnpm.io/) workspace with [Turborepo](https://turbo.build/). Source is split across packages by concern so that application projects only adopt what they need.
+SMTA is structured as a [pnpm](https://pnpm.io/) workspace with [Turborepo](https://turbo.build/). Source is split across packages by concern so that application projects only adopt what they need. All packages are published to npm under the `@smta` scope and versioned together — installing `@smta/schemas@1.2.0` guarantees compatibility with a database deployed from `@smta/cli@1.2.0`.
 
 ## Repository Layout
 
@@ -11,15 +11,16 @@ SMTA is structured as a [pnpm](https://pnpm.io/) workspace with [Turborepo](http
 packages/
 ├── core/       @smta/core      — adapter-agnostic SQL (56 files)
 ├── supabase/   @smta/supabase  — Supabase-specific SQL and FK constraints
-├── payload/    @smta/payload   — Payload CMS adapter SQL
+├── payload/    @smta/payload   — Payload CMS adapter SQL + TypeScript middleware
 ├── billing/    @smta/billing   — TypeScript BillingProvider interface
-└── schemas/    @smta/schemas   — Zod v4 validation schemas
+├── schemas/    @smta/schemas   — Zod v4 validation schemas
+└── cli/        @smta/cli       — deployment CLI (npx @smta/cli)
 
 apps/
 └── docs/       @smta/docs      — this documentation site
 
 scripts/
-├── combine_files.js    — assembles combined SQL for deployment
+├── combine_files.js    — local dev equivalent of @smta/cli
 ├── run_tests.sh        — runs the full pgTap test suite
 └── 99_testing_grants.sql
 ```
@@ -55,7 +56,7 @@ Contains 3 SQL files plus FK constraint additions that complete the schema for S
 
 ### `@smta/payload`
 
-Contains 1 SQL file adapting SMTA for use with [Payload CMS](https://payloadcms.com/).
+Contains 1 SQL file adapting SMTA for use with [Payload CMS](https://payloadcms.com/), plus a TypeScript middleware package for injecting the auth session variable into Payload requests.
 
 ### `@smta/billing`
 
@@ -65,9 +66,20 @@ A TypeScript package exposing the `BillingProvider` interface. Application code 
 
 [Zod v4](https://zod.dev/) schemas for validating SMTA data at the application boundary. Import these in server actions, API routes, or form validation logic.
 
+### `@smta/cli`
+
+The deployment CLI. Resolves `@smta/core` and the chosen adapter package at runtime, reads their `sql-scripts.json` manifests, and concatenates the SQL files into a single deployment artifact written to the current directory.
+
+```bash
+npx @smta/cli --adapter supabase
+# → SMTA-supabase-<timestamp>.sql
+```
+
+`@smta/core` is a hard dependency. `@smta/supabase` and `@smta/payload` are optional dependencies — only the adapter you need gets installed.
+
 ## `sql-scripts.json` — Deployment Order
 
-Every SQL-containing package has a `sql-scripts.json` file that lists its SQL files in execution order. This file is what `scripts/combine_files.js` reads to assemble the final deployment SQL.
+Every SQL-containing package has a `sql-scripts.json` file that lists its SQL files in execution order. This file is what `@smta/cli` (and `scripts/combine_files.js` locally) reads to assemble the final deployment SQL.
 
 Example structure:
 
@@ -85,9 +97,9 @@ Example structure:
 
 Order matters: a file that creates a table must appear before any file that adds RLS policies or triggers to that table.
 
-## `scripts/combine_files.js`
+## Versioning
 
-This script reads the `sql-scripts.json` from each package in dependency order and concatenates the SQL files into a single deployment artifact. Running `npm run build:supabase` or `npm run build:payload` invokes this script with the appropriate package list.
+All six packages are released together at the same version using [Changesets](https://github.com/changesets/changesets) in `fixed` mode. This ensures the SQL deployed and the TypeScript packages installed are always compatible. A GitHub Actions workflow opens a version PR when changesets are present and publishes to npm when that PR is merged.
 
 ## `apps/docs` — This Site
 
