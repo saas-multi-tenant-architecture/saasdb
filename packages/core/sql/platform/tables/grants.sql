@@ -1,7 +1,8 @@
 -- grants.sql
--- Purpose: Intentionally empty.
+-- Purpose: Reinforce the platform schema lockdown against authenticated/anon/PUBLIC,
+-- and grant service_role full access for server-side admin and migrations.
 --
--- Platform tables are locked down by init/schemas.sql:
+-- Platform tables are also locked down upstream by init/schemas.sql:
 --   REVOKE ALL ON SCHEMA platform FROM authenticated, anon, public;
 --   REVOKE ALL ON ALL TABLES IN SCHEMA platform FROM authenticated, anon, public;
 --

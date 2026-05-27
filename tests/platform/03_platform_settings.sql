@@ -9,6 +9,8 @@ SELECT plan(10);
 -- (get_setting/list_settings/set_setting/delete_setting), but direct SELECTs on
 -- platform.platform_settings require service_role because authenticated has no
 -- direct grants on platform tables.
+-- ORDER MATTERS: set_auth_user sets role=authenticated as a side effect,
+-- so set_service_role MUST come after it to override the role back to service_role.
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
 SELECT test_helpers.set_service_role();
 
