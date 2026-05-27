@@ -189,8 +189,10 @@ SELECT ok(
 -- ========================================
 -- TEST: platform_users updated_at trigger
 -- ========================================
--- Run platform updates as a platform super_admin
-SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+-- Direct UPDATEs on platform.* tables require service_role because
+-- authenticated has no direct grants on platform tables. This test verifies
+-- internal trigger behavior, not user-facing authorization.
+SELECT test_helpers.set_service_role();
 
 DO $$
 DECLARE

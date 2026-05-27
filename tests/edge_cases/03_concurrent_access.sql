@@ -114,7 +114,11 @@ SELECT throws_ok(
 -- ========================================
 -- TEST: Platform settings key uniqueness
 -- ========================================
-SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+-- Direct INSERTs on platform.* tables require service_role because
+-- authenticated has no direct grants on platform tables. These tests verify
+-- unique-constraint enforcement, not user-facing authorization. The
+-- set_auth_user call later in the file restores authenticated context.
+SELECT test_helpers.set_service_role();
 
 SELECT throws_ok(
   format($$INSERT INTO platform.platform_settings (key, value, created_by, updated_by)

@@ -5,8 +5,10 @@ BEGIN;
 
 SELECT plan(9);
 
--- Run platform reads as a platform user
-SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+-- All assertions in this file directly inspect platform.* state (verifying
+-- seeded role rows). Authenticated has no direct privileges on platform tables
+-- (see tests/security/01_platform_grants.sql), so use service_role.
+SELECT test_helpers.set_service_role();
 
 -- ========================================
 -- TEST: super_admin role exists

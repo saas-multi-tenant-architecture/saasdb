@@ -5,8 +5,12 @@ BEGIN;
 
 SELECT plan(11);
 
--- Run platform reads/writes as a platform super_admin
+-- Sarah's JWT identity drives SECURITY DEFINER functions
+-- (get_feature_flag/list_feature_flags/update_feature_flag/delete_feature_flag),
+-- but direct SELECTs on platform.platform_feature_flags require service_role
+-- because authenticated has no direct grants on platform tables.
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+SELECT test_helpers.set_service_role();
 
 -- ========================================
 -- TEST: Feature flags exist

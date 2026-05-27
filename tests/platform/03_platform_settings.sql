@@ -5,8 +5,12 @@ BEGIN;
 
 SELECT plan(10);
 
--- Run platform reads/writes as a platform super_admin
+-- Sarah's JWT identity drives SECURITY DEFINER functions
+-- (get_setting/list_settings/set_setting/delete_setting), but direct SELECTs on
+-- platform.platform_settings require service_role because authenticated has no
+-- direct grants on platform tables.
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+SELECT test_helpers.set_service_role();
 
 -- ========================================
 -- TEST: Settings exist

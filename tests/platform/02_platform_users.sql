@@ -5,8 +5,11 @@ BEGIN;
 
 SELECT plan(9);
 
--- Run platform reads as a platform user
+-- Sarah's JWT identity drives SECURITY DEFINER functions (create/update/delete),
+-- but direct SELECTs on platform.platform_users require service_role because
+-- authenticated has no direct grants on platform tables.
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+SELECT test_helpers.set_service_role();
 
 -- ========================================
 -- TEST: Platform users exist
@@ -42,7 +45,10 @@ SELECT is(
 -- ========================================
 -- TEST: create_platform_user function
 -- ========================================
+-- Reassert sarah's JWT + service_role for the subsequent function call and
+-- direct state inspection.
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('sarah@pizzatech-saas.com'));
+SELECT test_helpers.set_service_role();
 
 SELECT lives_ok(
   format(
