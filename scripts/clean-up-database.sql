@@ -51,11 +51,14 @@ DO $$
 DECLARE
   s text;
 BEGIN
-  FOREACH s IN ARRAY ARRAY['core','platform','utils'] LOOP
+  FOREACH s IN ARRAY ARRAY['core','platform','utils','app'] LOOP
     EXECUTE format('DROP SCHEMA IF EXISTS %I CASCADE', s);
     EXECUTE format('CREATE SCHEMA %I', s);
   END LOOP;
 END $$;
+
+-- 3a) Drop test-only schema (no recreate; tests/fixtures/00_test_helpers.sql rebuilds it)
+DROP SCHEMA IF EXISTS test_helpers CASCADE;
 
 -- 4) Drop ALL user-defined functions in public (safely skips extension-owned functions)
 DO $$
