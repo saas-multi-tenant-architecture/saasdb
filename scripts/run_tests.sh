@@ -115,6 +115,7 @@ pg_prove -v \
   tests/security/01_platform_grants.sql \
   tests/security/02_anon_function_execute.sql \
   tests/security/03_core_roles_rls.sql \
+  tests/security/04_graphql_exclusions.sql \
   tests/schema/02_core_tables.sql \
   tests/schema/03_platform_tables.sql \
   tests/schema/04_indexes.sql \
