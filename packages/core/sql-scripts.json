@@ -57,6 +57,7 @@
     "sql/platform/functions/settings.sql",
     "sql/platform/functions/billing.sql",
     "sql/platform/functions/products.sql",
-    "sql/public/functions/products.sql"
+    "sql/public/functions/products.sql",
+    "sql/public/grants.sql"
   ]
 }
