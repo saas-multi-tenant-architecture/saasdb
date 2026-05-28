@@ -26,6 +26,7 @@ ALTER TABLE core.memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.unit_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE core.organization_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE core.roles ENABLE ROW LEVEL SECURITY;
 
 -- ========================================
 -- POLICIES: users_meta
@@ -192,3 +193,14 @@ CREATE POLICY organization_files_update ON core.organization_files
   WITH CHECK (
     core.is_org_member(organization_id) OR core.is_super_admin(organization_id)
   );
+
+-- ========================================
+-- POLICIES: roles
+-- ========================================
+-- core.roles is shared reference data (role names + CASL rule definitions).
+-- Any authenticated user needs SELECT access to resolve their role and
+-- render UI based on CASL rules. There is no tenant scoping on this table.
+-- INSERT/UPDATE/DELETE are not permitted via RLS — role mutations must go
+-- through admin tooling/seed scripts.
+CREATE POLICY roles_select ON core.roles
+  FOR SELECT USING (is_deleted = false);
