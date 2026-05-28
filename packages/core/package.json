@@ -1,7 +1,7 @@
 {
   "name": "@smta/core",
   "description": "SMTA core PostgreSQL schema — tenant isolation via RLS, tables, and functions",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "homepage": "https://smta.dev",
   "repository": {
