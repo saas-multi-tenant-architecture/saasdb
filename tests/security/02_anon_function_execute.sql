@@ -4,7 +4,7 @@
 
 BEGIN;
 
-SELECT plan(16);
+SELECT plan(21);
 
 -- Admin functions: anon should NOT have EXECUTE
 SELECT ok(
@@ -62,6 +62,26 @@ SELECT ok(
 SELECT ok(
   has_function_privilege('service_role', 'public.delete_organization(uuid)', 'EXECUTE'),
   'service_role must execute delete_organization'
+);
+SELECT ok(
+  has_function_privilege('service_role', 'public.delete_unit(uuid)', 'EXECUTE'),
+  'service_role must execute delete_unit'
+);
+SELECT ok(
+  has_function_privilege('service_role', 'public.add_member_to_organization(uuid, uuid, uuid)', 'EXECUTE'),
+  'service_role must execute add_member_to_organization'
+);
+SELECT ok(
+  has_function_privilege('service_role', 'public.add_member_to_unit(uuid, uuid, uuid)', 'EXECUTE'),
+  'service_role must execute add_member_to_unit'
+);
+SELECT ok(
+  has_function_privilege('service_role', 'public.remove_member_from_organization(uuid, uuid)', 'EXECUTE'),
+  'service_role must execute remove_member_from_organization'
+);
+SELECT ok(
+  has_function_privilege('service_role', 'public.remove_member_from_unit(uuid, uuid)', 'EXECUTE'),
+  'service_role must execute remove_member_from_unit'
 );
 
 -- Intentionally-public endpoints remain callable by both anon and authenticated

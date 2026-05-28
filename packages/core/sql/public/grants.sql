@@ -15,6 +15,10 @@
 -- ========================================
 -- ADMIN FUNCTIONS: require authentication
 -- ========================================
+-- Note: REVOKE FROM PUBLIC alone does not remove explicit per-role ACL entries.
+-- These functions had anon=X/postgres entries on initial deploy, so we revoke
+-- from both PUBLIC and anon explicitly to ensure the revoke is complete.
+--
 -- delete_organization
 REVOKE EXECUTE ON FUNCTION public.delete_organization(uuid) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION public.delete_organization(uuid) TO authenticated, service_role;
