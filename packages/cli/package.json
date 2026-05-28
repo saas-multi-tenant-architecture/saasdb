@@ -1,6 +1,6 @@
 {
   "name": "@smta/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "SMTA deployment CLI — combines and outputs a versioned SQL deployment script",
   "license": "MIT",
   "engines": {
