@@ -23,18 +23,23 @@ SELECT ok(
   'core.roles must have at least one SELECT policy'
 );
 
--- authenticated can SELECT (the policy actually allows reads)
+-- NOTE: test_helpers.set_auth_user sets JWT claims (auth.uid, etc.) only.
+-- The session role remains postgres (superuser, BYPASSRLS). Assertions below
+-- confirm data exists and the policy predicate does not block superuser reads,
+-- but do not exercise the policy under the authenticated role itself.
+-- True authenticated-role testing requires SET LOCAL ROLE authenticated, which
+-- needs a non-superuser test connection — out of scope for this suite.
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
 SELECT ok(
   (SELECT count(*) FROM core.roles WHERE is_deleted = false) > 0,
-  'authenticated user can SELECT non-deleted rows from core.roles'
+  'non-deleted roles are visible when RLS policy is active'
 );
 
 -- A specific role lookup works (mirrors what list_organization_members does)
 SELECT ok(
   EXISTS (SELECT 1 FROM core.roles WHERE name = 'super_admin' AND is_deleted = false),
-  'authenticated user can find super_admin role by name'
+  'super_admin role is visible via the roles_select policy predicate'
 );
 
 SELECT * FROM finish();
