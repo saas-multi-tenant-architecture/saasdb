@@ -16,7 +16,7 @@ Use the SMTA CLI to generate a combined SQL script for your chosen adapter:
 
 ```bash
 # For Supabase
-npx @smta/cli --adapter supabase
+npx @smta/cli --adapter supabase # [--enable-graphql] Optional flag to keep GraphQL enabled
 # → SMTA-supabase-<timestamp>.sql  (59 SQL files combined)
 
 # For Payload CMS
@@ -25,6 +25,14 @@ npx @smta/cli --adapter payload
 ```
 
 The script is written to your current directory. Both scripts deploy the full SMTA feature set — the only difference is the auth implementation and, for Supabase, the use of `auth.users` foreign keys.
+
+## pg-graphql Extension Disabled
+This script will disable the [pg_graphql](https://supabase.github.io/pg_graphql/) extension to prevent core.* tables from being exposed in the auto-generated GraphQL schema. SMTA's intended API surface is the public.* RPC functions so exposing raw tables via GraphQL is inconsistent with that design.
+
+You can prevent this extension from being disabled by adding the ```--enable-graphql``` flag to the command. 
+
+Adding this flag will expose core.* tables directly in the GraphQL schema. RLS policies still apply to GraphQL queries, but consumers will be able to query these tables directly rather than going through the public.* function layer, and the table structure (column names, relationships) will be visible in the GraphQL schema.
+
 
 ## Apply to Your Database
 

@@ -21,7 +21,16 @@ GRANT SELECT ON core.roles TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON core.organization_files TO authenticated;
 
 -- ========================================
+-- SERVICE ROLE PERMISSIONS
+-- ========================================
+-- service_role has full DML on core tables for migrations, seed scripts, and
+-- admin backend operations. postgres inherits these via role membership.
+-- RLS does not apply to service_role (rolbypassrls = true).
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA core TO service_role;
+
+-- ========================================
 -- SEQUENCE PERMISSIONS
 -- ========================================
 -- Grant sequence usage for inserts (needed for auto-generated IDs)
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA core TO authenticated;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA core TO service_role;

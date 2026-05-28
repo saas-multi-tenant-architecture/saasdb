@@ -3,17 +3,29 @@ title: Quick Start — Supabase
 description: Get SMTA running with a Supabase project.
 ---
 
+import { Aside } from '@astrojs/starlight/components';
+
 ## 1. Create a Supabase Project
 
 If you don't have one, create a project at [supabase.com](https://supabase.com). Note your project's database connection string and service role key.
 
 ## 2. Generate and Apply the SQL
 
+
 ```bash
-npx @smta/cli --adapter supabase
+npx @smta/cli --adapter supabase # [--enable-graphql] Optional flag to keep GraphQL enabled
 ```
 
 This writes `SMTA-supabase-<timestamp>.sql` to your current directory.
+
+<Aside type="caution">
+This script disables the [pg_graphql](https://supabase.github.io/pg_graphql/) extension within Supabase. This prevents core.* tables from being exposed in the auto-generated GraphQL schema, keeping all data access within the public.* RPC function layer.
+
+You can keep GraphQL enabled by using the `--enable-graphql` flag. 
+
+*RLS policies will still apply to GraphQL queries*, but the table structure of core.* will be visible and queryable directly rather than through the RPC functions.
+
+</Aside>
 
 Open your Supabase project → **SQL Editor** → paste the contents of the generated file and run it.
 

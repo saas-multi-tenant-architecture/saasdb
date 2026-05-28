@@ -95,6 +95,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, auth, public;
 CREATE OR REPLACE FUNCTION test_helpers.cleanup_test_data()
 RETURNS VOID AS $$
 BEGIN
+  -- Demote super_admin memberships first — the protect_super_admin trigger blocks
+  -- direct DELETE on is_super_admin=true rows. The trigger allows the flag to be
+  -- cleared to false; after that DELETE proceeds without triggering the guard.
+  UPDATE core.memberships SET is_super_admin = false WHERE is_super_admin = true AND is_deleted = false;
   -- Delete in reverse dependency order
   DELETE FROM core.unit_memberships;
   DELETE FROM core.unit_meta;

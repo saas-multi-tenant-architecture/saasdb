@@ -28,6 +28,7 @@ async function readPackageScripts(packageDir) {
 async function deploy() {
   const adapterIdx = process.argv.indexOf('--adapter')
   const adapterName = adapterIdx !== -1 ? process.argv[adapterIdx + 1] : 'supabase'
+  const enableGraphql = process.argv.includes('--enable-graphql')
 
   if (adapterIdx !== -1 && !adapterName) {
     console.error('--adapter requires a value.')
@@ -44,7 +45,12 @@ async function deploy() {
 
   const corePaths = await readPackageScripts(coreDir)
   const adapterPaths = await readPackageScripts(adapterDir)
-  const allPaths = [...corePaths, ...adapterPaths]
+  let allPaths = [...corePaths, ...adapterPaths]
+
+  if (enableGraphql) {
+    allPaths = allPaths.filter(p => !p.endsWith(path.join('graphql', 'disable_extension.sql')))
+    console.log('--enable-graphql: pg_graphql extension will not be dropped.')
+  }
 
   if (allPaths.length === 0) {
     console.error('No SQL scripts found in manifests.')

@@ -59,6 +59,6 @@
     "sql/platform/functions/products.sql",
     "sql/public/functions/products.sql",
     "sql/public/grants.sql",
-    "sql/graphql/exclusions.sql"
+    "sql/graphql/disable_extension.sql"
   ]
 }

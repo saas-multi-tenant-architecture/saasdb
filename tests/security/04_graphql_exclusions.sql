@@ -1,65 +1,18 @@
 -- 04_graphql_exclusions.sql
--- Purpose: Verify all 11 core.* tables carry the pg_graphql exclusion comment
--- so they do not appear in the generated GraphQL schema.
+-- Purpose: Verify the pg_graphql extension is disabled.
+--
+-- SMTA drops pg_graphql because Supabase enables it by default and it
+-- auto-exposes core.* tables to the authenticated role via a generated
+-- GraphQL schema (Supabase lint 0027). All access goes through public.*
+-- RPC functions; no GraphQL surface is needed or supported.
 
 BEGIN;
 
-SELECT plan(11);
+SELECT plan(1);
 
-SELECT is(
-  obj_description('core.audit_logs'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.audit_logs is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.invitations'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.invitations is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.memberships'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.memberships is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.organization_files'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.organization_files is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.organizations'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.organizations is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.organizations_meta'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.organizations_meta is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.roles'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.roles is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.unit_memberships'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.unit_memberships is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.unit_meta'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.unit_meta is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.units'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.units is excluded from pg_graphql'
-);
-SELECT is(
-  obj_description('core.users_meta'::regclass, 'pg_class'),
-  '@graphql({"expose": false})',
-  'core.users_meta is excluded from pg_graphql'
+SELECT ok(
+  NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_graphql'),
+  'pg_graphql extension is not installed'
 );
 
 SELECT * FROM finish();
