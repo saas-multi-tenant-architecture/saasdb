@@ -1,6 +1,6 @@
 {
   "name": "@smta/supabase",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "SMTA Supabase adapter — auth.uid(), Vault, PostgREST config, platform schema",
   "license": "MIT",
   "homepage": "https://smta.dev",
