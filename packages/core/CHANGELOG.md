@@ -1,5 +1,11 @@
 # @smta/core
 
+## 0.4.0
+
+### Minor Changes
+
+- 66f9226: Linter Review Fixes
+
 ## 0.3.0
 
 ### Minor Changes
