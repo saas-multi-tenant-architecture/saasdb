@@ -20,3 +20,4 @@ CREATE TABLE platform.platform_action_logs (
 -- INDEXES
 -- ========================================
 CREATE INDEX ON platform.platform_action_logs (platform_user_id);
+CREATE INDEX ON platform.platform_action_logs (auth_user_id);

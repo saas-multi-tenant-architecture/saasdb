@@ -48,6 +48,8 @@ CREATE INDEX idx_invitations_email ON core.invitations(email) WHERE status = 'pe
 CREATE INDEX idx_invitations_status ON core.invitations(status);
 CREATE INDEX idx_invitations_invited_by ON core.invitations(invited_by);
 CREATE INDEX idx_invitations_expires_at ON core.invitations(expires_at) WHERE status = 'pending';
+CREATE INDEX idx_invitations_role_id ON core.invitations(role_id);
+CREATE INDEX idx_invitations_accepted_by ON core.invitations(accepted_by) WHERE accepted_by IS NOT NULL;
 
 -- ========================================
 -- TRIGGERS

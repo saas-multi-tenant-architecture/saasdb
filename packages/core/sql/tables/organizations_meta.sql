@@ -20,6 +20,11 @@ CREATE TABLE core.organizations_meta (
 );
 
 -- ========================================
+-- INDEXES
+-- ========================================
+CREATE INDEX ON core.organizations_meta (logo_file_id) WHERE logo_file_id IS NOT NULL;
+
+-- ========================================
 -- TRIGGERS
 -- ========================================
 CREATE TRIGGER trg_organizations_meta_updated

@@ -29,8 +29,6 @@ CREATE INDEX idx_billing_subscriptions_organization_id ON platform.billing_subsc
 CREATE INDEX idx_billing_subscriptions_status ON platform.billing_subscriptions (status);
 
 -- ========================================
--- RLS LOCKDOWN
+-- RLS
 -- ========================================
 ALTER TABLE platform.billing_subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_billing_subscriptions ON platform.billing_subscriptions
-  FOR ALL TO public USING (false);

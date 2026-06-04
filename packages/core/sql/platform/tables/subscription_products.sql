@@ -27,9 +27,6 @@ CREATE TABLE platform.subscription_products (
 );
 
 -- ========================================
--- RLS LOCKDOWN
+-- RLS
 -- ========================================
 ALTER TABLE platform.subscription_products ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY deny_all_subscription_products ON platform.subscription_products
-  FOR ALL TO public USING (false);

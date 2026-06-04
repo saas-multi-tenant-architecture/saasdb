@@ -62,9 +62,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- RLS LOCKDOWN: Enable RLS and deny all for platform tables
 -- ========================================
 ALTER TABLE platform.platform_users ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_users ON platform.platform_users
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_users_select ON platform.platform_users
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -79,9 +76,6 @@ CREATE POLICY platform_users_update ON platform.platform_users
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.platform_roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_roles ON platform.platform_roles
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_roles_select ON platform.platform_roles
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -96,9 +90,6 @@ CREATE POLICY platform_roles_update ON platform.platform_roles
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.platform_action_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_action_logs ON platform.platform_action_logs
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_action_logs_select ON platform.platform_action_logs
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -108,9 +99,6 @@ CREATE POLICY platform_action_logs_insert ON platform.platform_action_logs
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.platform_organizations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_organizations ON platform.platform_organizations
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_organizations_select ON platform.platform_organizations
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -125,9 +113,6 @@ CREATE POLICY platform_organizations_update ON platform.platform_organizations
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.platform_subscription_overrides ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_subscription_overrides ON platform.platform_subscription_overrides
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_subscription_overrides_select ON platform.platform_subscription_overrides
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -142,9 +127,6 @@ CREATE POLICY platform_subscription_overrides_update ON platform.platform_subscr
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.platform_feature_flags ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_feature_flags ON platform.platform_feature_flags
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_feature_flags_select ON platform.platform_feature_flags
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -159,9 +141,6 @@ CREATE POLICY platform_feature_flags_update ON platform.platform_feature_flags
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.platform_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_settings ON platform.platform_settings
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_settings_select ON platform.platform_settings
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -176,9 +155,6 @@ CREATE POLICY platform_settings_update ON platform.platform_settings
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.platform_system_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_platform_system_events ON platform.platform_system_events
-  FOR ALL TO public USING (false);
-
 CREATE POLICY platform_system_events_select ON platform.platform_system_events
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());
@@ -188,9 +164,6 @@ CREATE POLICY platform_system_events_insert ON platform.platform_system_events
   WITH CHECK (platform.is_platform_super_admin());
 
 ALTER TABLE platform.tenant_secrets ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_tenant_secrets ON platform.tenant_secrets
-  FOR ALL TO public USING (false);
-
 CREATE POLICY tenant_secrets_select ON platform.tenant_secrets
   FOR SELECT TO authenticated
   USING (platform.is_platform_user());

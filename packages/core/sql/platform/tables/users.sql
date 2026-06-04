@@ -24,6 +24,7 @@ CREATE TABLE platform.platform_users (
 -- INDEXES
 -- ========================================
 CREATE INDEX ON platform.platform_users (supabase_user_id);
+CREATE INDEX ON platform.platform_users (role_id);
 
 -- ========================================
 -- TRIGGERS

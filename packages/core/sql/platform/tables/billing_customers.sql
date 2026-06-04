@@ -19,11 +19,9 @@ CREATE TABLE platform.billing_customers (
 );
 
 -- ========================================
--- RLS LOCKDOWN
+-- RLS
 -- ========================================
 ALTER TABLE platform.billing_customers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY deny_all_billing_customers ON platform.billing_customers
-  FOR ALL TO public USING (false);
 
 -- ========================================
 -- NOTES
