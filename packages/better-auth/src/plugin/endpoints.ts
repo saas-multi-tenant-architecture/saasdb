@@ -91,7 +91,7 @@ export function createSMTAHandlers(pool: Pool) {
       );
     },
 
-    async setActiveOrg(pool: Pool, sessionId: string, orgId: string | null) {
+    async setActiveOrg(sessionId: string, orgId: string | null) {
       return handleSetActiveOrg(pool, sessionId, orgId);
     },
   };

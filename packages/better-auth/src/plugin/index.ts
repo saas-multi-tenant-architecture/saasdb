@@ -119,7 +119,7 @@ export function smtaPlugin(options: SMTAPluginOptions): BetterAuthPlugin {
         { method: 'POST', body: z.object({ orgId: z.string().nullable() }), use: [sessionMiddleware] },
         async (ctx) => {
           const session = ctx.context.session;
-          await handlers.setActiveOrg(options.pool, session.session.id, ctx.body.orgId);
+          await handlers.setActiveOrg(session.session.id, ctx.body.orgId);
           return ctx.json({ success: true });
         }
       ),
