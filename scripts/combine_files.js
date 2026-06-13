@@ -1,7 +1,7 @@
 const fs = require('node:fs/promises')
 const path = require('node:path')
 
-const ADAPTERS = ['supabase', 'payload']
+const ADAPTERS = ['supabase', 'payload', 'better-auth']
 const ROOT = path.join(__dirname, '..')
 
 async function readPackageScripts(packageDir) {
