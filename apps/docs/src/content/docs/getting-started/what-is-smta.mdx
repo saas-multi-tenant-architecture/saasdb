@@ -5,7 +5,7 @@ description: An introduction to SaaS Multi-Tenant Architecture and what it provi
 
 import { Aside } from '@astrojs/starlight/components';
 
-**SMTA** (SaaS Multi-Tenant Architecture) is a PostgreSQL database design that handles the tenant infrastructure common to every SaaS application: organizations, sub-units, memberships, roles, auditing, and billing. It sits between your platform (Supabase or Payload CMS) and your application tables.
+**SMTA** (SaaS Multi-Tenant Architecture) is a PostgreSQL database design that handles the tenant infrastructure common to every SaaS application: organizations, sub-units, memberships, roles, auditing, and billing. It sits between your auth platform (Supabase, Payload CMS, or better-auth) and your application tables.
 
 ## The Three Layers
 
@@ -13,7 +13,7 @@ import { Aside } from '@astrojs/starlight/components';
 |---|---|
 | **Application Layer** | Your domain tables (`app` schema): projects, posts, documents, etc. Accessed via your DAL (CASL, Drizzle, Payload collections) |
 | **SMTA Layer** | Tenant infrastructure: orgs, units, memberships, roles, audit, billing. Accessed via `public.*` SQL functions |
-| **Platform Layer** | Authentication: Supabase JWT or Payload CMS session |
+| **Platform Layer** | Authentication: Supabase JWT, Payload CMS session, or better-auth session |
 
 SMTA occupies the middle layer. You bring the application on top and pick the platform below.
 
@@ -44,6 +44,6 @@ Use of a fine-grained, access control system like CASL is optional. SMTA can be 
 
 ## What SMTA Does Not Provide
 
-- Authentication — delegated to your adapter (Supabase or Payload)
+- Authentication — delegated to your adapter (Supabase, Payload, or better-auth)
 - Application business logic — that lives in your `app` schema
-- A backend API — `public.*` functions are exposed via PostgREST (Supabase) or your Payload API layer
+- A backend API — `public.*` functions are exposed via PostgREST (Supabase), your Payload API layer, or better-auth plugin endpoints

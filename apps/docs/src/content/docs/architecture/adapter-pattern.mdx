@@ -5,7 +5,7 @@ description: How SMTA separates adapter-agnostic core SQL from platform-specific
 
 ## The Problem
 
-SMTA's RLS policies need to know who the current user is. But "who is the current user" is answered differently by Supabase (JWT) and Payload CMS (session variable). Without an abstraction, the core SQL would be littered with Supabase-specific calls.
+SMTA's RLS policies need to know who the current user is. But "who is the current user" is answered differently by each platform — Supabase reads from a JWT claim, while Payload CMS and better-auth both use a PostgreSQL session variable set per-request. Without an abstraction, the core SQL would be littered with platform-specific calls.
 
 ## The Solution: Function Stubs
 
@@ -75,6 +75,20 @@ $$;
 
 The secret stubs remain as exception-raising guards for Payload — calling `store_secret_impl()` or `delete_secret_impl()` without an implementation will raise a database exception. Implement your own vault adapter if you need per-tenant secrets under Payload.
 
+**better-auth adapter** (`@smta/better-auth`) replaces only the auth stub — identical pattern to Payload:
+
+```sql
+-- auth_better_auth_impl.sql
+CREATE OR REPLACE FUNCTION core.get_current_user_id()
+RETURNS UUID AS $$
+  SELECT NULLIF(current_setting('app.current_user_id', true), '')::UUID;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
+```
+
+It also adds a trigger on better-auth's `user` table to auto-create `core.users_meta` rows on signup — the equivalent of Supabase's `auth.users` foreign key constraint, implemented in application code rather than a platform API.
+
+The secret stubs remain as exception-raising guards for better-auth, same as Payload.
+
 ## Deployment Order
 
 The combined SQL scripts always deploy in this order:
@@ -93,3 +107,4 @@ This ordering is safe because PostgreSQL resolves function calls by name at runt
 | `@smta/core` | All adapter-agnostic SQL (56 files) |
 | `@smta/supabase` | Auth + secrets impl + auth.users FK constraints (3 files) |
 | `@smta/payload` | Auth impl only (1 file) |
+| `@smta/better-auth` | Auth impl + new-user trigger (2 files) |
