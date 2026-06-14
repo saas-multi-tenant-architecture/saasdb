@@ -104,6 +104,8 @@ Tests are organized into the following categories (executed in this order):
 6. **`tests/functions/`** - Public RPC functions
 7. **`tests/rls/`** - Row Level Security policies
 8. **`tests/edge_cases/`** - Complex scenarios and edge cases
+9. **`tests/adapters/`** - Adapter-specific integration tests (run with fixture data, not cleaned up between tests)
+   - `01_better_auth_adapter.sql` - 8 tests verifying RLS enforcement and user sync for the better-auth adapter
 
 ## Test Execution Flow
 

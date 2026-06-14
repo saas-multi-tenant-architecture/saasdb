@@ -16,7 +16,7 @@ The following table diagram illustrates the layered design:
 |--|--|
 | Application Layer | Your domain tables (`app` schema): projects, posts, documents, etc. → Accessed via DAL (CASL, Drizzle, Payload collections, Supabase client) |
 | **SMTA Layer** | Tenant infrastructure: orgs, units, memberships, roles, audit, billing, and SaaS-management → Accessed via `public.*` SQL functions |
-| Platform Layer | Authentication adapter: Supabase or PayloadCMS |
+| Platform Layer | Authentication adapter: Supabase, PayloadCMS, or better-auth |
 
 ### Membership Has Its Privileges
 
@@ -28,6 +28,7 @@ To further help speed development, **SMTA** offers extensible connections to com
 
 - **Supabase** — The `@smta/supabase` adapter wires SMTA's auth interface to Supabase's JWT claims and Vault secrets, and exposes `public.*` functions via PostgREST. SMTA amplifies what Supabase already does well.
 - **PayloadCMS** — The `@smta/payload` adapter wires SMTA's auth interface to Payload's session context via a PostgreSQL session variable, allowing SMTA to run alongside Payload's CMS without interfering with it.
+- **better-auth** — The `@smta/better-auth` adapter wires SMTA's auth interface to better-auth's session context and adds SMTA tenant management as `auth.api.smta*` plugin endpoints. Includes a new-user trigger that auto-creates SMTA user records on signup.
 - **Billing** — The `@smta/billing` TypeScript package provides a `BillingProvider` interface with implementations for [Stripe](https://stripe.com/) and [Lemon Squeezy](https://www.lemonsqueezy.com/).
 
 
@@ -37,7 +38,7 @@ To further help speed development, **SMTA** offers extensible connections to com
 - PostgreSQL RLS (Row-Level Security) for tenant isolation
 - Soft deletion, auditing, and payment processor billing integration
 - Clear schema boundaries via SQL functions
-- Adapter-agnostic core — same full feature set under Supabase or PayloadCMS
+- Adapter-agnostic core — same full feature set under Supabase, PayloadCMS, or better-auth
 
 
 ## Features
@@ -68,11 +69,12 @@ SMTA is organized as a pnpm monorepo. Each package has its own `sql-scripts.json
 
 ```
 packages/
-├── core/          @smta/core      — adapter-agnostic SMTA schema (SQL)
-├── supabase/      @smta/supabase  — Supabase auth/secrets adapter (SQL)
-├── payload/       @smta/payload   — PayloadCMS auth adapter (SQL + TypeScript)
-├── billing/       @smta/billing   — BillingProvider interface + Stripe + Lemon Squeezy (TypeScript)
-└── schemas/       @smta/schemas   — Zod v4 schemas for public.* RPC contracts (TypeScript)
+├── core/          @smta/core          — adapter-agnostic SMTA schema (SQL)
+├── supabase/      @smta/supabase      — Supabase auth/secrets adapter (SQL)
+├── payload/       @smta/payload       — PayloadCMS auth adapter (SQL + TypeScript)
+├── better-auth/   @smta/better-auth   — better-auth adapter + plugin (SQL + TypeScript)
+├── billing/       @smta/billing       — BillingProvider interface + Stripe + Lemon Squeezy (TypeScript)
+└── schemas/       @smta/schemas       — Zod v4 schemas for public.* RPC contracts (TypeScript)
 
 scripts/
 ├── combine_files.js   — assembles a combined SQL deployment script from packages
@@ -87,6 +89,7 @@ scripts/
 | `@smta/core` | Core + platform schema, billing tables, RLS, public functions, triggers (56 SQL files) |
 | `@smta/supabase` | JWT auth impl, Vault secrets impl, `auth.users` FK constraints (3 SQL files) |
 | `@smta/payload` | Session-variable auth impl (1 SQL file) + TypeScript middleware |
+| `@smta/better-auth` | Session-variable auth impl + new-user trigger (2 SQL files) + better-auth plugin |
 | `@smta/billing` | `BillingProvider` interface, `StripeProvider`, `LemonSqueezyProvider` |
 | `@smta/schemas` | Zod v4 schemas for all `public.*` RPC function inputs/outputs |
 
@@ -97,20 +100,23 @@ Generate a combined SQL deployment script for your chosen adapter:
 
 ```bash
 # Supabase deployment (59 files)
-npm run build:supabase   # → output/SMTA-supabase-<timestamp>.sql
+npx @smta/cli --adapter supabase   # → SMTA-supabase-<timestamp>.sql
 
 # Payload deployment (57 files)
-npm run build:payload    # → output/SMTA-payload-<timestamp>.sql
+npx @smta/cli --adapter payload    # → SMTA-payload-<timestamp>.sql
+
+# better-auth deployment (60 files)
+npx @smta/cli --adapter better-auth  # → SMTA-better-auth-<timestamp>.sql
 ```
 
-Both outputs deploy the full SMTA feature set. The only difference is the auth implementation and, for Supabase, the restoration of `auth.users` foreign keys.
+All outputs deploy the full SMTA feature set. The only difference is the auth implementation and, for Supabase, the restoration of `auth.users` foreign keys.
 
 Apply the generated script to your PostgreSQL database, then add your `app` schema tables on top.
 
 
 ## Testing
 
-SMTA uses [pgTap](https://pgtap.org/) for database-level testing (35 test files, 449 tests).
+SMTA uses [pgTap](https://pgtap.org/) for database-level testing (41 test files, 506 tests).
 
 ```bash
 npm test
