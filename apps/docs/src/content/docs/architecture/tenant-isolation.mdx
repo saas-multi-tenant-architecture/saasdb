@@ -26,6 +26,7 @@ This function is the keystone of SMTA's RLS system. Every policy ultimately reli
 
 - **Supabase adapter:** calls `auth.uid()`, which reads the user ID from the validated Supabase JWT
 - **Payload adapter:** reads the `app.current_user_id` PostgreSQL session variable, which your middleware sets at the start of each request
+- **better-auth adapter:** same session-variable approach as Payload — `withSMTA()` sets `app.current_user_id` via `SET LOCAL` at the start of each request
 
 Because RLS policies reference the function by name rather than by body, switching adapters requires only replacing the function implementation — the policies themselves don't change.
 
