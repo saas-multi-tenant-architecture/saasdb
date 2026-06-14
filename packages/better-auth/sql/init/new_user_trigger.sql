@@ -35,7 +35,8 @@ SET search_path = core
 AS $$
 BEGIN
   INSERT INTO core.users_meta (id, email)
-  VALUES (NEW.id::UUID, NEW.email);
+  VALUES (NEW.id::UUID, NEW.email)
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$;

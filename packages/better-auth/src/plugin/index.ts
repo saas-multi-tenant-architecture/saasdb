@@ -3,13 +3,14 @@
 
 import type { BetterAuthPlugin } from 'better-auth';
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
-import { z } from 'better-auth';
+import { z } from 'zod';
 import type { Pool } from 'pg';
 import { smtaSessionSchema, type SMTASessionFields } from './session';
 import { createSMTAHandlers } from './endpoints';
 
 export interface SMTAPluginOptions {
   pool: Pool;
+  sessionTable?: string;
 }
 
 export function smtaPlugin(options: SMTAPluginOptions): BetterAuthPlugin {
@@ -21,7 +22,9 @@ export function smtaPlugin(options: SMTAPluginOptions): BetterAuthPlugin {
     schema: smtaSessionSchema,
 
     $Infer: {} as {
-      activeOrgId: SMTASessionFields['activeOrgId'];
+      Session: {
+        activeOrgId: SMTASessionFields['activeOrgId'];
+      };
     },
 
     endpoints: {
@@ -119,7 +122,7 @@ export function smtaPlugin(options: SMTAPluginOptions): BetterAuthPlugin {
         { method: 'POST', body: z.object({ orgId: z.string().nullable() }), use: [sessionMiddleware] },
         async (ctx) => {
           const session = ctx.context.session;
-          await handlers.setActiveOrg(session.session.id, ctx.body.orgId);
+          await handlers.setActiveOrg(session.session.id, ctx.body.orgId, options.sessionTable);
           return ctx.json({ success: true });
         }
       ),

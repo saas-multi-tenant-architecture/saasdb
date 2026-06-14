@@ -12,5 +12,5 @@ export declare function createSMTAHandlers(pool: Pool): {
     listInvitations(userId: string, orgId: string): Promise<unknown>;
     listOrgMembers(userId: string, orgId: string): Promise<unknown>;
     getUserPermissions(userId: string, orgId: string): Promise<unknown>;
-    setActiveOrg(sessionId: string, orgId: string | null): Promise<void>;
+    setActiveOrg(sessionId: string, orgId: string | null, sessionTable?: string): Promise<void>;
 };

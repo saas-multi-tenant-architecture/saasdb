@@ -15,7 +15,7 @@ exports.smtaSessionSchema = {
         fields: {
             activeOrgId: {
                 type: 'string',
-                nullable: true,
+                required: false,
                 defaultValue: null,
             },
         },
@@ -24,10 +24,14 @@ exports.smtaSessionSchema = {
 // Handler for the smtaSetActiveOrg endpoint.
 // Updates activeOrgId in the session record.
 // pool is passed in from the plugin factory closure.
-async function handleSetActiveOrg(pool, sessionId, orgId) {
+// NOTE: No membership verification — any authenticated user can set any orgId.
+// RLS in the database still enforces actual data access per org, so the security
+// impact is limited to the session field itself. A full fix would require a
+// public.set_active_org() function with RLS enforcement (out of current scope).
+async function handleSetActiveOrg(pool, sessionId, orgId, sessionTable = 'session') {
     const client = await pool.connect();
     try {
-        await client.query(`UPDATE session SET "activeOrgId" = $1 WHERE id = $2`, [orgId, sessionId]);
+        await client.query(`UPDATE "${sessionTable}" SET "activeOrgId" = $1 WHERE id = $2`, [orgId, sessionId]);
     }
     finally {
         client.release();

@@ -58,8 +58,8 @@ function createSMTAHandlers(pool) {
         async getUserPermissions(userId, orgId) {
             return (0, inject_user_context_1.withSMTA)(pool, userId, (client) => callPublicFn(client, 'public.get_user_permissions', [orgId]));
         },
-        async setActiveOrg(sessionId, orgId) {
-            return (0, session_1.handleSetActiveOrg)(pool, sessionId, orgId);
+        async setActiveOrg(sessionId, orgId, sessionTable) {
+            return (0, session_1.handleSetActiveOrg)(pool, sessionId, orgId, sessionTable);
         },
     };
 }

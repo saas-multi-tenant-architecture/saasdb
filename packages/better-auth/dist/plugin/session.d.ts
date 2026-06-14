@@ -7,10 +7,10 @@ export declare const smtaSessionSchema: {
         fields: {
             activeOrgId: {
                 type: "string";
-                nullable: boolean;
+                required: boolean;
                 defaultValue: null;
             };
         };
     };
 };
-export declare function handleSetActiveOrg(pool: Pool, sessionId: string, orgId: string | null): Promise<void>;
+export declare function handleSetActiveOrg(pool: Pool, sessionId: string, orgId: string | null, sessionTable?: string): Promise<void>;
