@@ -23,11 +23,47 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
 
 Unlike Supabase, better-auth does not set a database-level session variable automatically. The `smtaPlugin` handles this at the plugin level, and `withSMTA()` sets it per-request using `SET LOCAL` within a transaction.
 
+`withSMTA()` sets this session variable at the start of each request:
+
+```typescript
+import { withSMTA } from '@smta/better-auth'
+
+return withSMTA(pool, session?.user?.id, async (client) => {
+  // All queries inside this callback run with app.current_user_id set.
+  // SMTA's RLS policies enforce tenant isolation automatically.
+  const { rows } = await client.query('SELECT * FROM public.list_my_organizations()')
+  return Response.json(rows)
+})
+```
+
+`withSMTA()` uses `SET LOCAL` so the session variable is scoped to the transaction — it is automatically cleared when the transaction ends.
+
 ## New-User Trigger
 
 When a user completes sign-up via better-auth, a PostgreSQL trigger on the `user` table fires and inserts a corresponding row into `core.users_meta`. This eliminates the need to manually provision SMTA user records in application code.
 
 The trigger casts better-auth's `TEXT` id column to `UUID` — which requires `generateId` to produce UUIDs (see [Quick Start](/getting-started/quickstart-better-auth)).
+
+```sql
+CREATE OR REPLACE FUNCTION core.handle_new_better_auth_user()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = core AS $$
+BEGIN
+  INSERT INTO core.users_meta (id, email)
+  VALUES (NEW.id::UUID, NEW.email)
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+```
+
+This requires better-auth to generate UUID IDs. Configure `generateId` in your better-auth setup:
+
+```typescript
+export const auth = betterAuth({
+  generateId: () => crypto.randomUUID(),
+  plugins: [smtaPlugin({ pool })],
+})
+```
 
 ## TypeScript Package
 
@@ -39,6 +75,25 @@ The `@smta/better-auth` npm package provides two exports:
 ```typescript
 import { smtaPlugin, withSMTA } from '@smta/better-auth'
 ```
+
+## Plugin Endpoints
+
+`smtaPlugin()` extends the better-auth client with SMTA tenant management endpoints. All endpoints enforce RLS — users can only affect organizations they are members of, enforced at the database layer.
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `smtaCreateOrganization` | POST | Create a new organization |
+| `smtaListOrganizations` | GET | List organizations the user is a member of |
+| `smtaGetOrganization` | GET | Get a single organization by ID |
+| `smtaCreateInvitation` | POST | Invite a user to an organization |
+| `smtaAcceptInvitation` | POST | Accept an invitation by token |
+| `smtaGetInvitationDetails` | GET | Get invitation details (public — no auth required) |
+| `smtaListInvitations` | GET | List pending invitations for an organization |
+| `smtaListOrgMembers` | GET | List members of an organization |
+| `smtaGetUserPermissions` | GET | Get the current user's permissions within an org |
+| `smtaSetActiveOrg` | POST | Set the active organization in the session |
+
+`smtaPlugin()` also adds `activeOrgId` to the better-auth session schema — a nullable string that tracks which organization is currently in context for multi-org users. It is set by the client via `smtaSetActiveOrg` and cleared by passing `null`.
 
 ## Secrets
 
