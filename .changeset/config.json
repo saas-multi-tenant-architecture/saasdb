@@ -7,6 +7,7 @@
       "@smta/core",
       "@smta/supabase",
       "@smta/payload",
+      "@smta/better-auth",
       "@smta/billing",
       "@smta/schemas",
       "@smta/cli"
