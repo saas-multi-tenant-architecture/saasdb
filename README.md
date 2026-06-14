@@ -86,7 +86,7 @@ scripts/
 
 | Package | Contains |
 |---|---|
-| `@smta/core` | Core + platform schema, billing tables, RLS, public functions, triggers (56 SQL files) |
+| `@smta/core` | Core + platform schema, billing tables, RLS, public functions, triggers (58 SQL files) |
 | `@smta/supabase` | JWT auth impl, Vault secrets impl, `auth.users` FK constraints (3 SQL files) |
 | `@smta/payload` | Session-variable auth impl (1 SQL file) + TypeScript middleware |
 | `@smta/better-auth` | Session-variable auth impl + new-user trigger (2 SQL files) + better-auth plugin |

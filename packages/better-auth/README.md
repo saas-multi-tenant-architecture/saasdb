@@ -33,12 +33,11 @@ psql $DATABASE_URL -f output/SMTA-better-auth-<timestamp>.sql
 ## Deployment
 
 ```bash
-# Generate combined SQL deployment script
-npm run build:better-auth
-# → output/SMTA-better-auth-<timestamp>.sql
+npx @smta/cli --adapter better-auth
+# → SMTA-better-auth-<timestamp>.sql  (60 SQL files combined)
 ```
 
-The output script contains `@smta/core` (all 58 files) followed by the 2 better-auth adapter files.
+The output script contains `@smta/core` (58 files) followed by the 2 better-auth adapter files.
 
 ## Usage
 
