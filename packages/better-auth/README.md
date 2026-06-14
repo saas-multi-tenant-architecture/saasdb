@@ -80,20 +80,24 @@ Use better-auth's standard Next.js proxy pattern. See better-auth docs for the c
 
 ## Running the adapter tests
 
-The pgTap test file requires a database with the better-auth adapter deployed (not the Supabase adapter):
+The adapter test file (`tests/adapters/01_better_auth_adapter.sql`) is included in the main test suite and runs automatically with the fixture data already loaded:
 
 ```bash
-pg_prove -v "postgresql://<user>:<password>@<host>:<port>/<db>" \
-  tests/adapters/01_better_auth_adapter.sql
+pnpm test
 ```
 
-The test file also requires the standard SMTA fixture data (test users, Bella Italia org). Load fixtures first:
+This runs all 506 tests across 41 files, including the 8 adapter-specific tests.
+
+**Standalone** (for debugging against a specific database — requires fixtures loaded first):
 
 ```bash
 psql $DATABASE_URL -f tests/fixtures/00_test_helpers.sql
 psql $DATABASE_URL -f tests/fixtures/01_roles.sql
 psql $DATABASE_URL -f tests/fixtures/02_test_users.sql
 psql $DATABASE_URL -f tests/fixtures/03_bella_italia.sql
+
+docker exec -i supabase-db psql -U supabase_admin -d postgres \
+  < tests/adapters/01_better_auth_adapter.sql
 ```
 
 ## Better-auth version compatibility
