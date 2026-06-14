@@ -8,7 +8,7 @@ description: How to deploy SMTA to your PostgreSQL database.
 - A PostgreSQL database (version 14 or later)
 - `psql` or another SQL client to apply the script
 - Node.js 18+ (to run the deployment CLI)
-- A Supabase project **or** a Payload CMS project with a PostgreSQL connection
+- One of: a Supabase project, a Payload CMS project, or a better-auth project with a PostgreSQL connection
 
 ## Generate the Deployment Script
 
@@ -22,17 +22,13 @@ npx @smta/cli --adapter supabase # [--enable-graphql] Optional flag to keep Grap
 # For Payload CMS
 npx @smta/cli --adapter payload
 # → SMTA-payload-<timestamp>.sql  (57 SQL files combined)
+
+# For better-auth
+npx @smta/cli --adapter better-auth
+# → SMTA-better-auth-<timestamp>.sql  (60 SQL files combined)
 ```
 
-The script is written to your current directory. Both scripts deploy the full SMTA feature set — the only difference is the auth implementation and, for Supabase, the use of `auth.users` foreign keys.
-
-## pg-graphql Extension Disabled
-This script will disable the [pg_graphql](https://supabase.github.io/pg_graphql/) extension to prevent core.* tables from being exposed in the auto-generated GraphQL schema. SMTA's intended API surface is the public.* RPC functions so exposing raw tables via GraphQL is inconsistent with that design.
-
-You can prevent this extension from being disabled by adding the ```--enable-graphql``` flag to the command. 
-
-Adding this flag will expose core.* tables directly in the GraphQL schema. RLS policies still apply to GraphQL queries, but consumers will be able to query these tables directly rather than going through the public.* function layer, and the table structure (column names, relationships) will be visible in the GraphQL schema.
-
+The script is written to your current directory. All scripts deploy the full SMTA feature set — the only difference is the auth implementation and, for Supabase, the use of `auth.users` foreign keys.
 
 ## Apply to Your Database
 
@@ -74,3 +70,4 @@ Follow the Quick Start guide for your adapter:
 
 - [Quick Start: Supabase](/getting-started/quickstart-supabase/)
 - [Quick Start: Payload CMS](/getting-started/quickstart-payload/)
+- [Quick Start: better-auth](/getting-started/quickstart-better-auth/)
