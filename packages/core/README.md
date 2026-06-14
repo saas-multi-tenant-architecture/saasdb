@@ -38,6 +38,7 @@ See the [Installation guide](https://smta.dev/getting-started/installation/) for
 | **`@smta/core`** | This package — adapter-agnostic SQL schema |
 | [`@smta/supabase`](https://www.npmjs.com/package/@smta/supabase) | Supabase auth and Vault adapter SQL |
 | [`@smta/payload`](https://www.npmjs.com/package/@smta/payload) | Payload CMS adapter SQL + middleware |
+| [`@smta/better-auth`](https://www.npmjs.com/package/@smta/better-auth) | better-auth adapter SQL + plugin |
 | [`@smta/billing`](https://www.npmjs.com/package/@smta/billing) | BillingProvider interface (Stripe, Lemon Squeezy) |
 | [`@smta/schemas`](https://www.npmjs.com/package/@smta/schemas) | Zod v4 schemas for all `public.*` RPC contracts |
 | [`@smta/cli`](https://www.npmjs.com/package/@smta/cli) | Deployment CLI |

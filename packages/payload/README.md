@@ -64,6 +64,7 @@ For more on how SMTA's RLS policies use this value, see the [Adapter Pattern doc
 | [`@smta/core`](https://www.npmjs.com/package/@smta/core) | Adapter-agnostic SQL schema |
 | [`@smta/supabase`](https://www.npmjs.com/package/@smta/supabase) | Supabase adapter SQL |
 | **`@smta/payload`** | This package — Payload CMS adapter SQL + middleware |
+| [`@smta/better-auth`](https://www.npmjs.com/package/@smta/better-auth) | better-auth adapter SQL + plugin |
 | [`@smta/billing`](https://www.npmjs.com/package/@smta/billing) | BillingProvider interface (Stripe, Lemon Squeezy) |
 | [`@smta/schemas`](https://www.npmjs.com/package/@smta/schemas) | Zod v4 schemas for all `public.*` RPC contracts |
 | [`@smta/cli`](https://www.npmjs.com/package/@smta/cli) | Deployment CLI |
