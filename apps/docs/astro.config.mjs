@@ -22,6 +22,7 @@ export default defineConfig({
             { label: 'Installation', slug: 'getting-started/installation' },
             { label: 'Quick Start: Supabase', slug: 'getting-started/quickstart-supabase' },
             { label: 'Quick Start: Payload', slug: 'getting-started/quickstart-payload' },
+            { label: 'Quick Start: better-auth', slug: 'getting-started/quickstart-better-auth' },
           ],
         },
         {
@@ -40,6 +41,7 @@ export default defineConfig({
           items: [
             { label: 'Supabase', slug: 'adapters/supabase' },
             { label: 'Payload CMS', slug: 'adapters/payload' },
+            { label: 'Better Auth', slug: 'adapters/better-auth' },
           ],
         },
         {
