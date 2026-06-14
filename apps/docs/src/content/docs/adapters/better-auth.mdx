@@ -21,7 +21,7 @@ RETURNS UUID AS $$
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
 ```
 
-Unlike Supabase, better-auth does not set a database-level session variable automatically. The `smtaPlugin` handles this at the plugin level, and `withSMTA()` sets it per-request using `SET LOCAL` within a transaction.
+Unlike Supabase, better-auth does not set a database-level session variable automatically. The `smtaPlugin` provides the `withSMTA()` helper, which sets it per-request using `SET LOCAL` within a transaction.
 
 `withSMTA()` sets this session variable at the start of each request:
 
@@ -40,7 +40,7 @@ return withSMTA(pool, session?.user?.id, async (client) => {
 
 ## New-User Trigger
 
-When a user completes sign-up via better-auth, a PostgreSQL trigger on the `user` table fires and inserts a corresponding row into `core.users_meta`. This eliminates the need to manually provision SMTA user records in application code.
+When a new user is created via better-auth, a PostgreSQL trigger on the `user` table fires and inserts a corresponding row into `core.users_meta`. This eliminates the need to manually provision SMTA user records in application code.
 
 The trigger casts better-auth's `TEXT` id column to `UUID` — which requires `generateId` to produce UUIDs (see [Quick Start](/getting-started/quickstart-better-auth)).
 
@@ -56,7 +56,7 @@ END;
 $$;
 ```
 
-This requires better-auth to generate UUID IDs. Configure `generateId` in your better-auth setup:
+This requires better-auth to generate UUID IDs. Configure `generateId` in your better-auth initialization using the `betterAuth()` function:
 
 ```typescript
 export const auth = betterAuth({
@@ -69,7 +69,7 @@ export const auth = betterAuth({
 
 The `@smta/better-auth` npm package provides two exports:
 
-- **`smtaPlugin`** — a better-auth plugin that registers SMTA endpoint handlers for organization and unit management
+- **`smtaPlugin`** — a better-auth plugin that registers SMTA endpoint handlers for organization management
 - **`withSMTA()`** — a helper that sets `app.current_user_id` within a transaction and runs your query function
 
 ```typescript
