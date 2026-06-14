@@ -1,0 +1,225 @@
+---
+title: Structuring Your App Schema
+description: How to decide which tenant column to put on app.* tables, how to handle FK child tables, and how to keep tenant references from drifting.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+SMTA's RLS policies enforce tenant isolation automatically once your `app.*` tables have a column pointing at the right tenant. This page covers which column that should be, when you need more than one, how FK-related child tables should be handled, and how to prevent tenant references from drifting.
+
+For the mechanics of how RLS and the helper functions work, see [Tenant Isolation & RLS](/architecture/tenant-isolation/).
+
+---
+
+## The tenant hierarchy
+
+SMTA's hierarchy is **Organization → Unit → Member**. Tenancy is enforced by *membership*, not by who last wrote a row. The important consequence:
+
+**Never use `user_id` as the tenant isolation column.** A user can belong to multiple organizations and multiple units, and roles are scoped per organization rather than globally. Stamping rows with the acting user would break the model entirely — a user who moves to a different org would either lose access to their old rows or retain access they shouldn't have. `user_id` belongs on a table only as *application data* (an "assigned to" or "created by" field), never as the isolation boundary.
+
+The isolation key is always either `org_id` (the top-level tenant) or `unit_id` (a sub-group within an org). Which one to use is the central design question for every `app.*` table.
+
+---
+
+## Choosing the tenant column
+
+The question to ask for each table: **Who should see a row — anyone in the org, or only members of a specific unit?**
+
+| Data belongs to... | Column | RLS helper |
+|---|---|---|
+| The whole organization | `org_id` (not null) | `core.is_org_member(org_id)` |
+| One specific unit only | `unit_id` (not null) | `core.is_unit_member(unit_id)` |
+| The org by default, a unit when restricted | Both (see below) | Combined policy |
+
+### Org-scoped: `org_id` only
+
+Use this when any member of the organization should be able to see the row, regardless of which unit they belong to.
+
+```sql
+alter table app.template enable row level security;
+
+create policy "org members" on app.template
+  for all using (core.is_org_member(org_id));
+```
+
+### Unit-scoped: `unit_id` only
+
+Use this when the data is inherently the property of one unit and org-wide visibility doesn't make sense. Good candidates: per-unit configuration, per-unit rosters, operational records that only exist in a unit's context.
+
+The test: would a `null` unit_id be *incoherent* (not just unusual)? If "belonging to no unit" is a meaningless state for the row, the table is unit-only.
+
+```sql
+alter table app.unit_settings enable row level security;
+
+create policy "unit members" on app.unit_settings
+  for all using (core.is_unit_member(unit_id));
+```
+
+<Aside type="note">
+You can always recover `org_id` from a unit via `core.is_org_member_for_unit(unit_id)` if you ever need org-level validation on a unit-only table. You don't need to store `org_id` just to retain that option.
+</Aside>
+
+### Dual-mode: `org_id` + nullable `unit_id`
+
+Use this when a row can be either **org-wide** (visible to all org members) or **unit-restricted** (visible only to a specific unit's members), and which mode applies is a property of the row itself.
+
+`org_id` is always present and is the true owner. `unit_id` is an access modifier: `null` means org-wide, non-null means restricted to that unit.
+
+```sql
+alter table app.template
+  add column org_id  uuid not null references core.organization(id),
+  add column unit_id uuid references core.unit(id);
+
+alter table app.template enable row level security;
+
+create policy "template visibility" on app.template
+  for all using (
+    (unit_id is null     and core.is_org_member(org_id))
+    or
+    (unit_id is not null and core.is_unit_member(unit_id))
+  );
+```
+
+This is the one case where having both columns is justified rather than redundant — they carry *different* information (ownership vs. restriction), not the same information twice.
+
+<Aside type="caution">
+When `unit_id` is set, it must belong to the same org as `org_id`. See [Preventing drift](#preventing-drift) below for how to enforce this at the database level.
+</Aside>
+
+---
+
+## FK child tables
+
+A child table that references a parent via foreign key does not automatically inherit tenant isolation. You have two options.
+
+### Option A: Resolve through the parent (join-based)
+
+The child's RLS policy joins up to the parent and checks the parent's tenant column. The child carries no tenant column of its own.
+
+```sql
+-- Parent: app.checklist has org_id
+-- Child: app.checklist_item references app.checklist
+
+alter table app.checklist_item enable row level security;
+
+create policy "checklist item visibility" on app.checklist_item
+  for all using (
+    exists (
+      select 1 from app.checklist c
+      where c.id = checklist_item.checklist_id
+        and core.is_org_member(c.org_id)
+    )
+  );
+```
+
+**Tradeoffs:** Nothing to keep in sync — the child's access always reflects the parent's current tenant. The cost is a subquery that runs per row on every read, which can be significant on high-volume tables.
+
+### Option B: Denormalize the tenant column onto the child
+
+Carry `org_id` (and/or `unit_id`) down from the parent to the child. Each row in the child table has the tenant column directly, so the RLS check is a simple local comparison with no join.
+
+```sql
+alter table app.checklist_item
+  add column org_id uuid not null references core.organization(id);
+
+alter table app.checklist_item enable row level security;
+
+create policy "checklist item visibility" on app.checklist_item
+  for all using (core.is_org_member(org_id));
+```
+
+**Tradeoffs:** Fast RLS evaluation. The risk is drift: if the child's `org_id` ever disagrees with its parent's `org_id`, rows become visible to the wrong tenant or invisible to the right one. You must enforce the invariant — see [Preventing drift](#preventing-drift) below.
+
+### Which to choose
+
+| Scenario | Recommendation |
+|---|---|
+| Low-volume table, simple policy | Join-based (Option A) — nothing to maintain |
+| High-volume table, heavy read path (e.g. reporting, exports) | Denormalize (Option B) — avoid per-row join cost |
+| Table that already has a tenant column for other reasons | Denormalize — you have it anyway, use it in the policy |
+
+A reasonable default is to start with Option A and move to Option B for specific tables when profiling shows the join is a bottleneck.
+
+---
+
+## Preventing drift
+
+Whenever a child table carries a denormalized `org_id`, you need to ensure the child's `org_id` always matches its parent's. Application code is not reliable enough for this — a migration, a seed script, or an admin tool can bypass it.
+
+### Composite foreign key
+
+A composite FK on the child enforces at the database level that the `(unit_id, org_id)` pair must exist as a row in the parent. PostgreSQL's default `MATCH SIMPLE` behavior skips the check when *any* column in the FK is null — which is exactly what you want for the dual-mode nullable `unit_id` case.
+
+```sql
+-- First, ensure the target table has a unique constraint on the composite key
+alter table core.unit
+  add constraint unit_id_org_uq unique (id, org_id);
+
+-- Then reference it from the child
+alter table app.template
+  add constraint template_unit_same_org
+  foreign key (unit_id, org_id)
+  references core.unit (id, org_id);
+```
+
+When `unit_id` is `null` on a template row, the composite FK is skipped automatically (MATCH SIMPLE) — the row is org-wide and there's no unit to validate. When `unit_id` is set, the database verifies that the unit belongs to the same org as `org_id`. Drift is structurally impossible.
+
+### Trigger-based enforcement
+
+If you'd rather not add a unique constraint to `core.unit`, use a trigger instead:
+
+```sql
+create or replace function app.check_unit_org_match()
+returns trigger language plpgsql as $$
+begin
+  if new.unit_id is not null then
+    if not exists (
+      select 1 from core.unit
+      where id = new.unit_id and org_id = new.org_id
+    ) then
+      raise exception 'unit % does not belong to org %', new.unit_id, new.org_id;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger template_unit_org_check
+  before insert or update on app.template
+  for each row execute function app.check_unit_org_match();
+```
+
+This provides the same guarantee procedurally — useful when you can't or don't want to modify `core.*` table constraints.
+
+---
+
+## The "everyone unit" approach
+
+Some teams prefer to standardize on units entirely: create a default all-members unit per organization, add every user to it on join, and put `unit_id` (non-nullable) on every `app.*` table. Org-wide visibility is then expressed as membership in the all-members unit rather than a separate column.
+
+**The appeal:** one column per table, one RLS helper everywhere, no nullable case, no combined OR-policy.
+
+**The cost:** the invariant "every org member belongs to the all-members unit" must be maintained continuously. If a user is added to the org via any path that doesn't also add them to the all-members unit, they silently lose access to everything that should be org-wide — no error, just missing rows.
+
+To make it reliable:
+
+- Create the all-members unit **automatically in the same transaction** as org creation, so no org can exist without one.
+- Enforce the dual-membership rule in a **database trigger**, not application code. A trigger on `core.org_membership` inserts and deletes ensures the invariant holds even when membership is created by an admin tool or migration.
+- Mark the unit as non-deletable while the org is live (an `is_default` boolean and a guard trigger).
+
+<Aside type="note">
+The everyone-unit approach works well when most of your data is unit-scoped and org-wide access is the exception. If the reverse is true — most data is org-wide and unit restriction is rare — you pay the membership-maintenance tax on the common case to simplify the uncommon one, which is backwards. The nullable `unit_id` design avoids that by expressing the common case (org-wide) as the absence of a column value rather than as a membership record.
+</Aside>
+
+---
+
+## Quick reference
+
+| Situation | Column(s) | Policy pattern |
+|---|---|---|
+| Data visible to the whole org | `org_id not null` | `core.is_org_member(org_id)` |
+| Data confined to one unit | `unit_id not null` | `core.is_unit_member(unit_id)` |
+| Data that can be org-wide or unit-restricted | `org_id not null`, `unit_id` nullable | Combined OR policy (see above) |
+| FK child, low-volume | FK to parent only | Subquery join in policy |
+| FK child, high-volume | Carry `org_id` from parent | `core.is_org_member(org_id)` + enforce with composite FK or trigger |
+| Never use as isolation key | `user_id` | — |

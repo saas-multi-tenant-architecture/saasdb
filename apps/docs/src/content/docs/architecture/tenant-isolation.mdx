@@ -79,3 +79,5 @@ create policy "unit members" on app.unit_table
 -- create policy "org members via unit" on app.unit_table
 --   for all using (core.is_org_member_for_unit(unit_id));
 ```
+
+For a detailed walkthrough of how to decide which column to use, how to handle FK child tables, and how to prevent tenant references from drifting, see [Structuring Your App Schema](/architecture/app-schema-tenancy/).
