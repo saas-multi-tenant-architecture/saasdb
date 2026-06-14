@@ -1,5 +1,16 @@
 # @smta/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- df83bbf: Updated Better-Auth Implementation
+
+### Patch Changes
+
+- Updated dependencies [df83bbf]
+  - @smta/core@0.5.0
+
 ## 0.4.0
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @smta/billing
 
+## 0.5.0
+
+### Minor Changes
+
+- df83bbf: Updated Better-Auth Implementation
+
 ## 0.4.0
 
 ## 0.3.0
