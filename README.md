@@ -4,7 +4,7 @@
 
 *SaaS Multi-Tenant Architecture*, aka **SMTA**, is an open-source project designed to quickly bootstrap your SaaS and rapidly create a structurally sound and secure multi-tenant database, integrated with tools used in many SaaS applications today.
 
-The architecture is designed to be modular, scalable, and extensible to customize it to your needs, combine with backend solutions like [Supabase](https://supabase.com/) or [PayloadCMS](https://payloadcms.com/), and reduce the complexity of multi-tenancy so that you can focus on building your MVP.
+The architecture is designed to be modular, scalable, and extensible to customize it to your needs, combine with backend solutions like [Supabase](https://supabase.com/), [PayloadCMS](https://payloadcms.com/), or authentication frameworks like [Better Auth](https://betterauth.dev/), to reduce the complexity of multi-tenancy so that you can focus on building your MVP.
 
 **SMTA** offers a layered approach to tenant isolation that reduces the risk of data leakage at the database level, leaving you free to develop your application knowing that the question of "Are you allowed to be here?" is already answered.
 
