@@ -151,6 +151,7 @@ pg_prove -v \
   tests/edge_cases/02_cascading_deletes.sql \
   tests/edge_cases/03_concurrent_access.sql \
   tests/edge_cases/04_role_scenarios.sql \
+  tests/adapters/01_better_auth_adapter.sql \
   2>&1 | tee -a "$LOG_FILE"
 
 TEST_EXIT_CODE=${PIPESTATUS[0]}

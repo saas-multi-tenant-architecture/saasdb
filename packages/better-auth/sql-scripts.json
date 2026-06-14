@@ -1,0 +1,8 @@
+{
+  "version": "1.0",
+  "description": "better-auth adapter SQL — session-variable auth implementation and new-user trigger",
+  "scripts": [
+    "sql/init/auth_better_auth_impl.sql",
+    "sql/init/new_user_trigger.sql"
+  ]
+}

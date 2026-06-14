@@ -1,0 +1,35 @@
+{
+  "name": "@smta/better-auth",
+  "version": "0.1.0",
+  "description": "SMTA better-auth adapter — session-variable auth implementation and better-auth plugin",
+  "license": "MIT",
+  "homepage": "https://smta.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saas-multi-tenant-architecture/saasdb.git",
+    "directory": "packages/better-auth"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "sql",
+    "sql-scripts.json"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "lint": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "better-auth": ">=1.0.0",
+    "pg": ">=8.0.0",
+    "zod": ">=3.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
