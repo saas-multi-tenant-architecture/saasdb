@@ -1,0 +1,125 @@
+---
+title: Quick Start — better-auth
+description: Get SMTA running with a better-auth project.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## 1. Prerequisites
+
+- A [better-auth](https://www.better-auth.com/) v1.x project connected to a PostgreSQL database
+- `generateId` configured to produce UUIDs — SMTA's primary keys are UUID and the new-user trigger casts better-auth's `TEXT` id to `UUID`:
+
+```typescript
+export const auth = betterAuth({
+  generateId: () => crypto.randomUUID(),
+  // ...
+})
+```
+
+<Aside type="caution">
+Run better-auth's database migration **before** applying the SMTA SQL. The new-user trigger targets better-auth's `user` table, which must exist before the trigger can attach to it.
+
+```bash
+npx better-auth migrate
+```
+</Aside>
+
+## 2. Generate and Apply the SQL
+
+```bash
+npx @smta/cli --adapter better-auth
+# → SMTA-better-auth-<timestamp>.sql  (60 SQL files combined)
+```
+
+Apply the generated script to your database:
+
+```bash
+psql "$DATABASE_URL" -f SMTA-better-auth-<timestamp>.sql
+```
+
+## 3. What the Adapter Provides
+
+The better-auth deployment includes two adapter-specific files on top of `@smta/core`:
+
+| File | Purpose |
+|---|---|
+| `auth_better_auth_impl.sql` | Implements `core.get_current_user_id()` using the `app.current_user_id` PostgreSQL session variable |
+| `new_user_trigger.sql` | Auto-creates `core.users_meta` rows when a user signs up via better-auth |
+
+## 4. Register the Plugin
+
+Install the TypeScript package:
+
+```bash
+npm install @smta/better-auth pg
+```
+
+Register `smtaPlugin` in your better-auth config:
+
+```typescript
+import { betterAuth } from 'better-auth'
+import { smtaPlugin } from '@smta/better-auth'
+import { pool } from '@/lib/db' // your pg Pool instance
+
+export const auth = betterAuth({
+  generateId: () => crypto.randomUUID(),
+  plugins: [smtaPlugin({ pool })],
+})
+```
+
+Use `withSMTA()` in Next.js Route Handlers or Server Actions to set the user context before querying SMTA functions:
+
+```typescript
+import { auth } from '@/lib/auth'
+import { withSMTA } from '@smta/better-auth'
+import { pool } from '@/lib/db'
+
+export async function GET(request: Request) {
+  const session = await auth.api.getSession({ headers: request.headers })
+
+  return withSMTA(pool, session?.user?.id, async (client) => {
+    const { rows } = await client.query(
+      'SELECT * FROM public.list_my_organizations()'
+    )
+    return Response.json(rows)
+  })
+}
+```
+
+`withSMTA()` sets `app.current_user_id` using `SET LOCAL`, scoping it to the transaction. SMTA's RLS policies read this value on every query.
+
+## 5. Verify
+
+In `psql` or your SQL client:
+
+```sql
+-- Set the session variable to a known user ID
+SET app.current_user_id = 'your-user-uuid-here';
+
+-- Should return an empty array (no orgs yet for this user)
+SELECT public.list_my_organizations();
+```
+
+If the function returns without error, SMTA is deployed and the auth wiring is in place.
+
+## 6. Add Your App Schema
+
+Create your `app` schema tables referencing `core.organizations` or `core.units`, enable RLS, and write policies that call `core.get_current_user_id()`.
+
+```sql
+CREATE SCHEMA IF NOT EXISTS app;
+
+-- Org-scoped table: any member of the org can access
+CREATE TABLE app.projects (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id     UUID NOT NULL REFERENCES core.organizations(id),
+  name       TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE app.projects ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org members" ON app.projects
+  FOR ALL USING (core.is_org_member(org_id));
+```

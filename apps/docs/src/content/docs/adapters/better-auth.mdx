@@ -1,0 +1,52 @@
+---
+title: Better Auth Adapter
+description: What the @smta/better-auth adapter provides and how to configure it.
+---
+
+The `@smta/better-auth` adapter wires SMTA's auth interface to better-auth's session context via a PostgreSQL session variable and provides a new-user trigger that auto-creates SMTA user records when a user signs up.
+
+## What It Contains
+
+| File | Purpose |
+|---|---|
+| `auth_better_auth_impl.sql` | Implements `core.get_current_user_id()` via the `app.current_user_id` session variable |
+| `new_user_trigger.sql` | Auto-creates `core.users_meta` rows when a user signs up via better-auth |
+
+## Auth Implementation
+
+```sql
+CREATE OR REPLACE FUNCTION core.get_current_user_id()
+RETURNS UUID AS $$
+  SELECT NULLIF(current_setting('app.current_user_id', true), '')::UUID;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
+```
+
+Unlike Supabase, better-auth does not set a database-level session variable automatically. The `smtaPlugin` handles this at the plugin level, and `withSMTA()` sets it per-request using `SET LOCAL` within a transaction.
+
+## New-User Trigger
+
+When a user completes sign-up via better-auth, a PostgreSQL trigger on the `user` table fires and inserts a corresponding row into `core.users_meta`. This eliminates the need to manually provision SMTA user records in application code.
+
+The trigger casts better-auth's `TEXT` id column to `UUID` — which requires `generateId` to produce UUIDs (see [Quick Start](/getting-started/quickstart-better-auth)).
+
+## TypeScript Package
+
+The `@smta/better-auth` npm package provides two exports:
+
+- **`smtaPlugin`** — a better-auth plugin that registers SMTA endpoint handlers for organization and unit management
+- **`withSMTA()`** — a helper that sets `app.current_user_id` within a transaction and runs your query function
+
+```typescript
+import { smtaPlugin, withSMTA } from '@smta/better-auth'
+```
+
+## Secrets
+
+The better-auth adapter does not implement `core.store_secret_impl()` or `core.delete_secret_impl()`. These remain as exception-raising stubs. If you need per-tenant secret storage, implement the stubs using your preferred secret manager.
+
+## Deployment
+
+```bash
+npx @smta/cli --adapter better-auth
+# → SMTA-better-auth-<timestamp>.sql  (60 SQL files combined)
+```
