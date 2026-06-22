@@ -1,6 +1,6 @@
 {
   "name": "@smta/cli",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "SMTA deployment CLI — combines and outputs a versioned SQL deployment script",
   "license": "MIT",
   "engines": {
@@ -17,7 +17,8 @@
   },
   "optionalDependencies": {
     "@smta/supabase": "workspace:*",
-    "@smta/payload": "workspace:*"
+    "@smta/payload": "workspace:*",
+    "@smta/better-auth": "workspace:*"
   },
   "homepage": "https://smta.dev",
   "repository": {

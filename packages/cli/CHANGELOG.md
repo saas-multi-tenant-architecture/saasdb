@@ -1,5 +1,12 @@
 # @smta/cli
 
+## 0.5.1
+
+### Patch Changes
+
+- Register the `better-auth` adapter in the CLI. `--adapter better-auth` was documented but rejected as an unknown adapter, and `@smta/better-auth` was missing from the CLI's `optionalDependencies` so it could not be resolved when installed from npm. Added it to the adapter allowlist and declared the optional dependency.
+  - @smta/core@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes

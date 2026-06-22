@@ -1,6 +1,6 @@
 {
   "name": "@smta/payload",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "SMTA Payload CMS adapter — auth context injection middleware",
   "license": "MIT",
   "homepage": "https://smta.dev",

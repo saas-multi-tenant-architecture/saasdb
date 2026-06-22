@@ -71,6 +71,9 @@ importers:
         specifier: workspace:*
         version: link:../core
     optionalDependencies:
+      '@smta/better-auth':
+        specifier: workspace:*
+        version: link:../better-auth
       '@smta/payload':
         specifier: workspace:*
         version: link:../payload

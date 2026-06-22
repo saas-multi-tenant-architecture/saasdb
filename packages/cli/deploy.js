@@ -4,7 +4,7 @@
 const fs = require('node:fs/promises')
 const path = require('node:path')
 
-const ADAPTERS = ['supabase', 'payload']
+const ADAPTERS = ['supabase', 'payload', 'better-auth']
 
 function resolvePackageDir(packageName) {
   const manifestPath = require.resolve(`${packageName}/package.json`)
