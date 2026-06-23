@@ -58,7 +58,7 @@ DECLARE
   v_exists BOOLEAN;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   SELECT EXISTS (
     SELECT 1 FROM platform.platform_settings WHERE key = p_key AND is_deleted = false
@@ -96,7 +96,7 @@ DECLARE
   v_actor_id UUID;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   UPDATE platform.platform_settings
   SET is_deleted = true,

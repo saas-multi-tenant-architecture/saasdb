@@ -100,8 +100,8 @@ BEGIN
     p_amount,
     p_is_active,
     p_metadata,
-    auth.uid(),
-    auth.uid()
+    core.get_current_user_id(),
+    core.get_current_user_id()
   ) RETURNING * INTO v_row;
 
   PERFORM platform.log_platform_action('create', 'platform.subscription_products', v_row.id,

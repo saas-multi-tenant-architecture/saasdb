@@ -20,7 +20,7 @@
 --   SELECT public.create_secret('organization', 'org-uuid', 'SMTP Password', 'secret123');
 --
 --   -- Create user API key
---   SELECT public.create_secret('user', auth.uid(), 'OpenAI API Key', 'sk-...');
+--   SELECT public.create_secret('user', core.get_current_user_id(), 'OpenAI API Key', 'sk-...');
 CREATE OR REPLACE FUNCTION public.create_secret(
   p_scope TEXT,
   p_id UUID,
@@ -74,7 +74,7 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 --   SELECT * FROM public.list_secrets('organization', 'org-uuid');
 --
 --   -- List my user secrets
---   SELECT * FROM public.list_secrets('user', auth.uid());
+--   SELECT * FROM public.list_secrets('user', core.get_current_user_id());
 CREATE OR REPLACE FUNCTION public.list_secrets(
   p_scope TEXT DEFAULT NULL,
   p_id UUID DEFAULT NULL

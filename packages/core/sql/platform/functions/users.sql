@@ -18,7 +18,7 @@ DECLARE
   v_actor_id UUID;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   IF p_supabase_user_id IS NULL THEN
     RAISE EXCEPTION 'supabase_user_id is required';
@@ -96,7 +96,7 @@ DECLARE
   v_new_role TEXT;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   -- Get current role for audit
   SELECT pr.name INTO v_old_role
@@ -162,7 +162,7 @@ DECLARE
   v_user_role TEXT;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   -- Get user details for audit trail before soft-delete
   SELECT pu.email, pr.name INTO v_user_email, v_user_role

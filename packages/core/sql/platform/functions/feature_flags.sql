@@ -16,7 +16,7 @@ DECLARE
   v_actor_id UUID;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   INSERT INTO platform.platform_feature_flags (key, value, organization_id, description, created_by, updated_by)
   VALUES (p_key, p_value, p_organization_id, p_description, v_actor_id, v_actor_id)
@@ -103,7 +103,7 @@ DECLARE
   v_actor_id UUID;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   UPDATE platform.platform_feature_flags
   SET value = COALESCE(p_value, value),
@@ -131,7 +131,7 @@ DECLARE
   v_key TEXT;
 BEGIN
   PERFORM platform.ensure_platform_admin();
-  v_actor_id := auth.uid();
+  v_actor_id := core.get_current_user_id();
 
   -- Get key for audit
   SELECT key INTO v_key FROM platform.platform_feature_flags WHERE id = p_id AND is_deleted = false;

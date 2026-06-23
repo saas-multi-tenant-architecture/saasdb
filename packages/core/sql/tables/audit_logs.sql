@@ -6,7 +6,7 @@
 -- ========================================
 CREATE TABLE core.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  actor_id UUID, -- auth.uid()
+  actor_id UUID, -- core.get_current_user_id()
   organization_id UUID REFERENCES core.organizations(id),
   target_table TEXT NOT NULL,
   target_id UUID,
