@@ -22,9 +22,16 @@ async function combineFiles() {
   const coreDir = path.join(ROOT, 'packages', 'core')
   const adapterDir = path.join(ROOT, 'packages', adapterName)
 
+  const enableGraphql = process.argv.includes('--enable-graphql')
+
   const corePaths = await readPackageScripts(coreDir)
   const adapterPaths = await readPackageScripts(adapterDir)
-  const allPaths = [...corePaths, ...adapterPaths]
+  let allPaths = [...corePaths, ...adapterPaths]
+
+  if (enableGraphql) {
+    allPaths = allPaths.filter(p => !p.endsWith('disable_graphql.sql'))
+    console.log('--enable-graphql: pg_graphql extension will not be dropped.')
+  }
 
   const parts = await Promise.all(allPaths.map(f => fs.readFile(f, 'utf8')))
   const combined = parts.join('\n\n-- =============== NEW FILE =================\n\n')

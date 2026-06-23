@@ -6,6 +6,7 @@
     "sql/init/auth_supabase_impl.sql",
     "sql/init/secrets_supabase_impl.sql",
     "sql/constraints.sql",
-    "sql/new_user_trigger.sql"
+    "sql/new_user_trigger.sql",
+    "sql/disable_graphql.sql"
   ]
 }

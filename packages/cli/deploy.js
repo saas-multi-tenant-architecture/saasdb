@@ -48,7 +48,7 @@ async function deploy() {
   let allPaths = [...corePaths, ...adapterPaths]
 
   if (enableGraphql) {
-    allPaths = allPaths.filter(p => !p.endsWith(path.join('graphql', 'disable_extension.sql')))
+    allPaths = allPaths.filter(p => !p.endsWith('disable_graphql.sql'))
     console.log('--enable-graphql: pg_graphql extension will not be dropped.')
   }
 

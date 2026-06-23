@@ -17,3 +17,8 @@ BEGIN
   DELETE FROM vault.secrets WHERE id = p_secret_ref::UUID;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, vault, public;
+
+CREATE OR REPLACE FUNCTION core.read_secret_impl(p_secret_ref TEXT)
+RETURNS TEXT AS $$
+  SELECT decrypted_secret FROM vault.decrypted_secrets WHERE id = p_secret_ref::UUID;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, vault, public;
