@@ -9,7 +9,7 @@ CREATE TABLE platform.tenant_secrets (
 
   scope TEXT NOT NULL CHECK (scope IN ('organization', 'user')),
   organization_id UUID REFERENCES core.organizations(id),
-  user_id UUID REFERENCES auth.users(id),
+  user_id UUID, -- FK to the adapter's user identity is restored by the supabase adapter (constraints.sql).
 
   secret_name TEXT NOT NULL, -- e.g., 'smtp_password', 'api_key'
   vault_key_id UUID NOT NULL, -- Supabase Vault secret key reference

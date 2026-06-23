@@ -1,5 +1,6 @@
 -- new_user.sql
--- Purpose: Automatically create a users_meta row after new user signup via Supabase auth
+-- Purpose: Provide core.handle_new_user() — the function body that creates a users_meta row on new user signup.
+-- Each adapter supplies the trigger that fires it (supabase: on auth.users; better-auth: on "user").
 
 -- ========================================
 -- FUNCTION: core.handle_new_user()
@@ -18,17 +19,11 @@ END;
 $$;
 
 -- ========================================
--- TRIGGER
--- ========================================
-DROP TRIGGER IF EXISTS trg_on_auth_user_created ON auth.users;
-CREATE TRIGGER trg_on_auth_user_created
-AFTER INSERT ON auth.users
-FOR EACH ROW EXECUTE FUNCTION core.handle_new_user();
-
--- ========================================
 -- NOTES
 -- ========================================
--- This ensures a users_meta row is automatically created for every new signup
--- Includes the email field; other fields (names, avatar, etc.) can be updated later
--- Must be run with elevated privileges (service role)
--- This trigger is safe for all signup flows including OAuth
+-- This ensures a users_meta row is automatically created for every new signup.
+-- Includes the email field; other fields (names, avatar, etc.) can be updated later.
+-- Must be run with elevated privileges.
+-- The trigger that fires this function is supplied by each adapter:
+--   supabase adapter : AFTER INSERT ON auth.users
+--   better-auth adapter : AFTER INSERT ON "user"

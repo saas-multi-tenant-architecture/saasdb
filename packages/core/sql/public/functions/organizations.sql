@@ -163,7 +163,7 @@ DECLARE
   v_user_id UUID;
   v_org_id UUID;
 BEGIN
-  SELECT id INTO v_user_id FROM auth.users WHERE email = p_email;
+  SELECT id INTO v_user_id FROM core.users_meta WHERE email = p_email;
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'User not found';
   END IF;
