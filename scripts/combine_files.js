@@ -4,10 +4,21 @@ const path = require('node:path')
 const ADAPTERS = ['supabase', 'payload', 'better-auth']
 const ROOT = path.join(__dirname, '..')
 
-async function readPackageScripts(packageDir) {
+async function readPackageScripts(packageDir, variant) {
   const manifestPath = path.join(packageDir, 'sql-scripts.json')
   const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'))
-  return manifest.scripts.map(file => path.join(packageDir, file))
+  if (!Array.isArray(manifest.scripts)) {
+    throw new Error(`sql-scripts.json in ${packageDir} is missing a "scripts" array`)
+  }
+  return manifest.scripts
+    .map(entry => (typeof entry === 'string' ? { file: entry } : entry))
+    .filter(entry => !entry.variant || entry.variant === variant)
+    .map(entry => {
+      if (path.isAbsolute(entry.file) || entry.file.includes('..')) {
+        throw new Error(`Unsafe path in sql-scripts.json: "${entry.file}"`)
+      }
+      return path.join(packageDir, entry.file)
+    })
 }
 
 async function combineFiles() {
@@ -19,13 +30,27 @@ async function combineFiles() {
     process.exit(1)
   }
 
+  let betterAuthIds = null
+  if (adapterName === 'better-auth') {
+    const idsIdx = process.argv.indexOf('--better-auth-ids')
+    betterAuthIds = idsIdx !== -1 ? process.argv[idsIdx + 1] : null
+    if (!betterAuthIds || !['uuid', 'mapped'].includes(betterAuthIds)) {
+      console.error(
+        '--adapter better-auth requires --better-auth-ids <uuid|mapped>.\n' +
+        "  uuid   = Better-Auth configured to emit UUID ids (advanced.database.generateId). Fastest; no mapping table.\n" +
+        '  mapped = SMTA maps Better-Auth string ids to UUIDs via core.user_identities (no Better-Auth config).'
+      )
+      process.exit(1)
+    }
+  }
+
   const coreDir = path.join(ROOT, 'packages', 'core')
   const adapterDir = path.join(ROOT, 'packages', adapterName)
 
   const enableGraphql = process.argv.includes('--enable-graphql')
 
   const corePaths = await readPackageScripts(coreDir)
-  const adapterPaths = await readPackageScripts(adapterDir)
+  const adapterPaths = await readPackageScripts(adapterDir, betterAuthIds)
   let allPaths = [...corePaths, ...adapterPaths]
 
   if (enableGraphql) {
