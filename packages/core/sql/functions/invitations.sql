@@ -71,8 +71,8 @@ BEGIN
     RAISE EXCEPTION 'A pending invitation to this email already exists for this organization';
   END IF;
 
-  -- Validation: Check if user is already a member (use users_meta instead of auth.users —
-  -- auth.users is not accessible by the authenticated role via SECURITY INVOKER)
+  -- Validation: Check if user is already a member (use users_meta —
+  -- the adapter's user table is not directly accessible via SECURITY INVOKER)
   IF EXISTS (
     SELECT 1 FROM core.memberships m
     JOIN core.users_meta um ON um.id = m.user_id
@@ -150,7 +150,7 @@ DECLARE
 BEGIN
   v_caller_id := core.get_current_user_id();
 
-  -- Get caller's email (use users_meta — auth.users is not accessible to authenticated role via SECURITY INVOKER)
+  -- Get caller's email (use users_meta — the adapter's user table is not directly accessible via SECURITY INVOKER)
   SELECT email INTO v_caller_email
   FROM core.users_meta
   WHERE id = v_caller_id;

@@ -1,5 +1,5 @@
 -- users_meta.sql
--- Purpose: Metadata table for users (1:1 with auth.users)
+-- Purpose: Metadata table for users (1:1 with the adapter's user identity)
 
 -- ========================================
 -- TABLE: core.users_meta
@@ -31,5 +31,5 @@ FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 -- ========================================
 -- NOTES
 -- ========================================
--- 1:1 relationship with auth.users (same UUID as primary key)
+-- 1:1 relationship with the adapter's user identity (same UUID as primary key)
 -- Intended for profile data that can be accessed within tenant context
