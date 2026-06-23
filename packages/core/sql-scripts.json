@@ -58,7 +58,6 @@
     "sql/platform/functions/billing.sql",
     "sql/platform/functions/products.sql",
     "sql/public/functions/products.sql",
-    "sql/public/grants.sql",
-    "sql/graphql/disable_extension.sql"
+    "sql/public/grants.sql"
   ]
 }

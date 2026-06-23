@@ -16,3 +16,11 @@ BEGIN
   RAISE EXCEPTION 'core.delete_secret_impl() not implemented. Deploy an adapter.';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core;
+
+-- Called to retrieve a secret's plaintext by its reference ID.
+CREATE OR REPLACE FUNCTION core.read_secret_impl(p_secret_ref TEXT)
+RETURNS TEXT AS $$
+BEGIN
+  RAISE EXCEPTION 'core.read_secret_impl() not implemented. Deploy an adapter.';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core;
