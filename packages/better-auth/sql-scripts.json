@@ -1,8 +1,12 @@
 {
   "version": "1.0",
-  "description": "better-auth adapter SQL — session-variable auth implementation and new-user trigger",
+  "description": "better-auth adapter SQL — neutral-role wiring, auth impl (uuid|mapped), secrets, signup trigger",
   "scripts": [
-    "sql/init/auth_better_auth_impl.sql",
-    "sql/init/new_user_trigger.sql"
+    { "file": "sql/init/roles.sql" },
+    { "file": "sql/init/secrets_pgcrypto_impl.sql" },
+    { "variant": "uuid",   "file": "sql/init/auth_impl_uuid.sql" },
+    { "variant": "mapped", "file": "sql/init/auth_impl_mapped.sql" },
+    { "variant": "uuid",   "file": "sql/init/new_user_trigger_uuid.sql" },
+    { "variant": "mapped", "file": "sql/init/new_user_trigger_mapped.sql" }
   ]
 }
