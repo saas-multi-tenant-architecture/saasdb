@@ -21,3 +21,12 @@ ALTER TABLE core.invitations
 ALTER TABLE core.invitations
   ADD CONSTRAINT fk_invitations_accepted_by_auth_users
   FOREIGN KEY (accepted_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+-- Platform identity FKs (core dropped these for adapter-agnosticism).
+ALTER TABLE platform.platform_users
+  ADD CONSTRAINT fk_platform_users_auth_users
+  FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+ALTER TABLE platform.tenant_secrets
+  ADD CONSTRAINT fk_tenant_secrets_auth_users
+  FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
