@@ -2,6 +2,7 @@
   "version": "1.0",
   "description": "Supabase adapter SQL — auth/secrets implementations and auth.users FK constraints",
   "scripts": [
+    "sql/grants_role_mapping.sql",
     "sql/init/auth_supabase_impl.sql",
     "sql/init/secrets_supabase_impl.sql",
     "sql/constraints.sql"
