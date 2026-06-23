@@ -1,12 +1,12 @@
 -- users.sql
--- Purpose: Platform admin users table (linked to auth.users.id via FK)
+-- Purpose: Platform admin users table (user_id references the adapter's user identity).
 
 -- ========================================
 -- TABLE: platform.platform_users
 -- ========================================
 CREATE TABLE platform.platform_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  supabase_user_id UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID UNIQUE NOT NULL,
   email TEXT NOT NULL UNIQUE,
   role_id UUID NOT NULL REFERENCES platform.platform_roles(id),
   first_name TEXT,
@@ -23,7 +23,7 @@ CREATE TABLE platform.platform_users (
 -- ========================================
 -- INDEXES
 -- ========================================
-CREATE INDEX ON platform.platform_users (supabase_user_id);
+CREATE INDEX ON platform.platform_users (user_id);
 CREATE INDEX ON platform.platform_users (role_id);
 
 -- ========================================

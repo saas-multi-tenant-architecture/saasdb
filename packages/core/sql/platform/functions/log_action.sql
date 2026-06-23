@@ -21,8 +21,8 @@ BEGIN
     summary,
     metadata
   ) VALUES (
-    (SELECT id FROM platform.platform_users WHERE supabase_user_id = auth.uid()),
-    auth.uid(),
+    (SELECT id FROM platform.platform_users WHERE user_id = core.get_current_user_id()),
+    core.get_current_user_id(),
     p_action,
     p_target_table,
     p_target_id,
@@ -30,4 +30,4 @@ BEGIN
     p_metadata
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, core;

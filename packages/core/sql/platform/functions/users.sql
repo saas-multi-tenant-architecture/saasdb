@@ -5,11 +5,11 @@
 -- FUNCTION: platform.create_platform_user()
 -- ========================================
 -- Add a new platform user with a specific role
--- New signature: (supabase_user_id, email, role_id)
+-- New signature: (user_id, email, role_id)
 -- NOTE: A legacy wrapper with the old signature (uuid, text) is retained below.
 DROP FUNCTION IF EXISTS platform.create_platform_user(UUID, TEXT);
 CREATE OR REPLACE FUNCTION platform.create_platform_user(
-  p_supabase_user_id UUID,
+  p_user_id UUID,
   p_email TEXT,
   p_role_id UUID
 ) RETURNS UUID AS $$
@@ -20,37 +20,37 @@ BEGIN
   PERFORM platform.ensure_platform_admin();
   v_actor_id := core.get_current_user_id();
 
-  IF p_supabase_user_id IS NULL THEN
-    RAISE EXCEPTION 'supabase_user_id is required';
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'user_id is required';
   END IF;
 
   IF p_email IS NULL OR btrim(p_email) = '' THEN
     RAISE EXCEPTION 'email is required';
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = p_supabase_user_id) THEN
-    RAISE EXCEPTION 'User % not found', p_supabase_user_id;
+  IF NOT EXISTS (SELECT 1 FROM core.users_meta um WHERE um.id = p_user_id) THEN
+    RAISE EXCEPTION 'User % not found', p_user_id;
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM platform.platform_roles pr WHERE pr.id = p_role_id) THEN
     RAISE EXCEPTION 'Role % not found', p_role_id;
   END IF;
 
-  INSERT INTO platform.platform_users (supabase_user_id, email, role_id, created_by, updated_by)
-  VALUES (p_supabase_user_id, p_email, p_role_id, v_actor_id, v_actor_id)
+  INSERT INTO platform.platform_users (user_id, email, role_id, created_by, updated_by)
+  VALUES (p_user_id, p_email, p_role_id, v_actor_id, v_actor_id)
   RETURNING id INTO v_platform_user_id;
 
   PERFORM platform.log_platform_action('create', 'platform.platform_users', v_platform_user_id,
-    'create_platform_user', jsonb_build_object('role_id', p_role_id, 'supabase_user_id', p_supabase_user_id, 'email', p_email));
+    'create_platform_user', jsonb_build_object('role_id', p_role_id, 'user_id', p_user_id, 'email', p_email));
 
   RETURN v_platform_user_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, core;
 
 -- ========================================
 -- FUNCTION: platform.create_platform_user() (legacy)
 -- ========================================
--- Legacy signature: (supabase_user_id, role_name)
+-- Legacy signature: (user_id, role_name)
 CREATE OR REPLACE FUNCTION platform.create_platform_user(
   p_user_id UUID,
   p_role TEXT
@@ -70,9 +70,9 @@ BEGIN
     RAISE EXCEPTION 'Role % not found', p_role;
   END IF;
 
-  SELECT u.email INTO v_email
-  FROM auth.users u
-  WHERE u.id = p_user_id;
+  SELECT um.email INTO v_email
+  FROM core.users_meta um
+  WHERE um.id = p_user_id;
 
   IF v_email IS NULL THEN
     RAISE EXCEPTION 'User % not found', p_user_id;
@@ -80,7 +80,7 @@ BEGIN
 
   RETURN platform.create_platform_user(p_user_id, v_email, v_role_id);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, core;
 
 -- ========================================
 -- FUNCTION: platform.update_platform_user()
@@ -122,7 +122,7 @@ BEGIN
   PERFORM platform.log_platform_action('update', 'platform.platform_users', p_user_id,
     'update_platform_user', jsonb_build_object('old_role', v_old_role, 'new_role', v_new_role, 'new_role_id', p_role_id));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, core;
 
 -- ========================================
 -- FUNCTION: platform.update_platform_user_role() (legacy)
@@ -147,7 +147,7 @@ BEGIN
 
   PERFORM platform.update_platform_user(p_user_id, v_role_id);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, core;
 
 -- ========================================
 -- FUNCTION: platform.delete_platform_user()
@@ -187,4 +187,4 @@ BEGIN
   PERFORM platform.log_platform_action('delete', 'platform.platform_users', p_user_id,
     'delete_platform_user', jsonb_build_object('email', v_user_email, 'role', v_user_role));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, core;

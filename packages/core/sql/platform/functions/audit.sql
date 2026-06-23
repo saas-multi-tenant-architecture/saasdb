@@ -15,12 +15,12 @@ BEGIN
   SELECT pr.name INTO v_role
   FROM platform.platform_users pu
   JOIN platform.platform_roles pr ON pu.role_id = pr.id
-  WHERE pu.supabase_user_id = auth.uid()
+  WHERE pu.user_id = core.get_current_user_id()
     AND pu.is_deleted = false;
 
   RETURN v_role;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform, core;
 
 -- ========================================
 -- FUNCTION: platform.get_platform_action_log()
