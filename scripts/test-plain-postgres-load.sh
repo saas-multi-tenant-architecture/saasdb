@@ -18,15 +18,20 @@ if [ ! -f "$SQL_FILE" ]; then
 fi
 
 cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
-trap cleanup EXIT
 
 docker run -d --name "$CONTAINER" -e POSTGRES_PASSWORD=postgres postgres:18 >/dev/null
+trap cleanup EXIT
 
 # Wait for readiness (max ~30s)
+ready=false
 for i in $(seq 1 30); do
-  if docker exec "$CONTAINER" pg_isready -U postgres >/dev/null 2>&1; then break; fi
+  if docker exec "$CONTAINER" pg_isready -U postgres >/dev/null 2>&1; then ready=true; break; fi
   sleep 1
 done
+if [ "$ready" != true ]; then
+  echo "ERROR: postgres in $CONTAINER did not become ready within 30s" >&2
+  exit 3
+fi
 
 docker exec "$CONTAINER" psql -U postgres -c "CREATE DATABASE $DB" >/dev/null
 
