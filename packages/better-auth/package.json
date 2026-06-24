@@ -1,6 +1,6 @@
 {
   "name": "@smta/better-auth",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "SMTA better-auth adapter — session-variable auth implementation and better-auth plugin",
   "license": "MIT",
   "homepage": "https://smta.dev",
