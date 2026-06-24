@@ -5,6 +5,6 @@
 CREATE OR REPLACE FUNCTION core.get_current_user_id()
 RETURNS UUID AS $$
 BEGIN
-  RAISE EXCEPTION 'core.get_current_user_id() not implemented. Deploy an adapter (supabase or payload).';
+  RAISE EXCEPTION 'core.get_current_user_id() not implemented. Deploy an adapter.';
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = core;

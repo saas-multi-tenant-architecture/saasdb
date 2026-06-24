@@ -12,7 +12,7 @@
 --
 -- App users should never have direct privileges on platform.* tables.
 -- Earlier broad GRANTs in this file contradicted the schema-level lockdown and
--- exposed platform tables in the pg_graphql schema (Supabase lint 0027).
+-- exposed platform tables to GraphQL introspection (where pg_graphql is enabled).
 
 -- Defensive re-revoke in case any prior grants remain in a deployed environment.
 REVOKE ALL ON SCHEMA platform FROM app_user, PUBLIC;

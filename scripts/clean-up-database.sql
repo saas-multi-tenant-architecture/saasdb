@@ -30,12 +30,12 @@ DECLARE
   r record;
 BEGIN
   FOR r IN
-    SELECT vault_key_id
+    SELECT secret_ref
     FROM platform.tenant_secrets
-    WHERE vault_key_id IS NOT NULL
+    WHERE secret_ref IS NOT NULL
   LOOP
-    -- Delete from vault.secrets using the vault_key_id
-    DELETE FROM vault.secrets WHERE id = r.vault_key_id;
+    -- Delete from vault.secrets using the secret_ref (Supabase stores the vault UUID here)
+    DELETE FROM vault.secrets WHERE id = r.secret_ref::uuid;
   END LOOP;
 EXCEPTION
   WHEN undefined_table THEN

@@ -1,5 +1,7 @@
 -- tenant_secrets.sql
--- Purpose: Secure storage reference table for tenant secrets using Supabase Vault
+-- Purpose: Secure storage reference table for tenant secrets. The secret value
+-- itself lives in a pluggable provider (see core.store_secret_impl); this table
+-- only holds the opaque reference returned by that provider.
 
 -- ========================================
 -- TABLE: platform.tenant_secrets
@@ -12,7 +14,7 @@ CREATE TABLE platform.tenant_secrets (
   user_id UUID, -- FK to the adapter's user identity is restored by the supabase adapter (constraints.sql).
 
   secret_name TEXT NOT NULL, -- e.g., 'smtp_password', 'api_key'
-  vault_key_id UUID NOT NULL, -- Supabase Vault secret key reference
+  secret_ref TEXT NOT NULL, -- opaque reference returned by the secrets provider (core.store_secret_impl)
 
   is_active BOOLEAN DEFAULT TRUE,
 
@@ -49,6 +51,6 @@ FOR EACH ROW EXECUTE FUNCTION utils.update_timestamp();
 -- NOTES
 -- ========================================
 -- - The secret value is never stored in this table
--- - It is managed via Supabase Vault and referenced via vault_key_id
+-- - It is managed by the configured secrets provider and referenced via secret_ref
 -- - Only the service role should access or write this table directly
 -- - RLS policies are deferred until the dedicated security stage

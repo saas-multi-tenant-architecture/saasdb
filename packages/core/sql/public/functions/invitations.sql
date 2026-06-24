@@ -207,34 +207,21 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
 -- ========================================
 -- NOTES
 -- ========================================
--- These public functions are callable via Supabase RPC:
+-- These public functions are exposed as database RPCs (e.g. via PostgREST or any
+-- client that calls SQL functions):
 --
---   // Create invitation
---   const { data, error } = await supabase.rpc('create_invitation', {
---     p_email: 'user@example.com',
---     p_organization_id: orgId,
---     p_role_id: roleId
---   })
---   // Returns: { id, token, email, expires_at }
---   // Send email with link: https://app.com/invite?token={token}
+--   -- Create invitation -> returns { id, token, email, expires_at }
+--   SELECT public.create_invitation('user@example.com', '<org-uuid>', '<role-uuid>');
+--   -- Send email with link: https://app.com/invite?token={token}
 --
---   // Get invitation details (before auth)
---   const { data } = await supabase.rpc('get_invitation_details', {
---     p_token: tokenFromURL
---   })
---   // Shows: "You've been invited to join Acme Corp as Manager"
+--   -- Get invitation details (before auth)
+--   SELECT public.get_invitation_details('<token-from-url>');
 --
---   // Accept invitation (after auth)
---   const { data } = await supabase.rpc('accept_invitation', {
---     p_token: tokenFromURL
---   })
---   // User is now a member
+--   -- Accept invitation (after auth) -> user is now a member
+--   SELECT public.accept_invitation('<token-from-url>');
 --
---   // List invitations
---   const { data } = await supabase.rpc('list_invitations', {
---     p_organization_id: orgId,
---     p_status: 'pending'
---   })
+--   -- List invitations
+--   SELECT public.list_invitations('<org-uuid>', 'pending');
 --
 -- Security:
 --   - Authorization enforced in core.* functions

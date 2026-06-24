@@ -1,55 +1,12 @@
 -- 00b_plain_pg_shim.sql
--- Purpose: Provide, on vanilla Postgres, the environment pieces the pgTap suite
--- assumed from Supabase: a Better-Auth-style "user" table and an auth-user setter
--- that uses app.current_user_id only (no GoTrue 'role').
+-- Purpose: Override the Supabase-specific test_helpers.* functions with plain
+-- Postgres equivalents (auth-user setter using app.current_user_id only, no
+-- GoTrue 'role'; better-auth "user" table instead of auth.users; etc.).
 --
--- Also creates Supabase role aliases (authenticated, anon, service_role) so that
--- privilege-check tests (has_function_privilege / has_table_privilege) pass on
--- plain Postgres where those roles do not exist out of the box.
-
--- ========================================
--- BETTER-AUTH USER TABLE
--- ========================================
-CREATE TABLE IF NOT EXISTS "user" (
-  id TEXT PRIMARY KEY,
-  email TEXT NOT NULL,
-  name TEXT,
-  "createdAt" TIMESTAMPTZ DEFAULT now(),
-  "updatedAt" TIMESTAMPTZ DEFAULT now()
-);
-
--- ========================================
--- SUPABASE ROLE ALIASES
--- These roles don't exist on plain Postgres.  We create them and wire them to
--- the equivalent app_user / app_admin roles so that has_function_privilege()
--- and has_table_privilege() return the same answers the tests expect.
--- ========================================
-
--- authenticated = app_user (the normal authenticated-user runtime role)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-    CREATE ROLE authenticated NOLOGIN;
-  END IF;
-END $$;
-GRANT app_user TO authenticated;
-
--- anon = unprivileged public role (no grants needed; tests assert it has NO execute)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-    CREATE ROLE anon NOLOGIN;
-  END IF;
-END $$;
-
--- service_role = app_admin (admin / BYPASSRLS role)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
-    CREATE ROLE service_role NOLOGIN BYPASSRLS;
-  END IF;
-END $$;
-GRANT app_admin TO service_role;
+-- Prerequisites (the "user" table and the authenticated/anon/service_role role
+-- aliases) live in 00a_plain_pg_prereqs.sql, which must load BEFORE
+-- 00_test_helpers.sql. This file must load AFTER 00_test_helpers.sql because it
+-- grants on and replaces functions in the test_helpers schema that file creates.
 
 -- Grant EXECUTE on test_helpers functions to all three aliases so tests that
 -- call set_auth_user / get_test_user_id under these roles don't fail.
