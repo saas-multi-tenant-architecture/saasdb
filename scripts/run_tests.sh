@@ -69,9 +69,18 @@ echo -e "${YELLOW}=== Setting up test fixtures ===${NC}"
 echo "=== Setting up test fixtures ===" > "$LOG_FILE"
 
 # Use -q to suppress notices during fixture loading
+
+# On plain Postgres, the role aliases and "user" table must exist BEFORE
+# 00_test_helpers.sql loads (it grants on those roles). Load prereqs first.
+if [ "${SMTA_TARGET:-supabase}" = "plain" ]; then
+  psql "$DB_URL" -q -f tests/fixtures/00a_plain_pg_prereqs.sql 2>> "$LOG_FILE"
+  echo "✓ Loaded plain-postgres prerequisites"
+fi
+
 psql "$DB_URL" -q -f tests/fixtures/00_test_helpers.sql 2>> "$LOG_FILE"
 echo "✓ Loaded test helpers"
 
+# The shim replaces test_helpers.* functions, so it must load AFTER the helpers.
 if [ "${SMTA_TARGET:-supabase}" = "plain" ]; then
   psql "$DB_URL" -q -f tests/fixtures/00b_plain_pg_shim.sql 2>> "$LOG_FILE"
   echo "✓ Loaded plain-postgres shim"

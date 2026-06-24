@@ -1,7 +1,7 @@
 -- secrets_pgcrypto_impl.sql
 -- Purpose: Non-Supabase secrets provider. Encrypts secret values with pgcrypto
--- (pgp_sym_encrypt) into core.encrypted_secrets, keyed by a generated UUID so the
--- reference is castable to UUID (stored in platform.tenant_secrets.vault_key_id).
+-- (pgp_sym_encrypt) into core.encrypted_secrets, keyed by a generated UUID. That
+-- UUID is returned as TEXT and stored opaquely in platform.tenant_secrets.secret_ref.
 -- The symmetric key is read from the GUC app.secrets_key, set by the backend per
 -- session/connection. It is never hard-coded in SQL.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

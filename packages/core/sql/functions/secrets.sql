@@ -13,7 +13,7 @@ CREATE OR REPLACE FUNCTION core.create_tenant_secret(
   p_secret TEXT
 ) RETURNS UUID AS $$
 DECLARE
-  v_vault_key_id UUID;
+  v_secret_ref TEXT;
   v_secret_id UUID;
   v_caller_id UUID;
 BEGIN
@@ -45,7 +45,7 @@ BEGIN
   END IF;
 
   -- Create secret via provider implementation
-  v_vault_key_id := core.store_secret_impl(p_secret, p_name)::UUID;
+  v_secret_ref := core.store_secret_impl(p_secret, p_name);
 
   -- Store reference in tenant_secrets table
   INSERT INTO platform.tenant_secrets (
@@ -53,14 +53,14 @@ BEGIN
     organization_id,
     user_id,
     secret_name,
-    vault_key_id,
+    secret_ref,
     created_by
   ) VALUES (
     p_scope,
     CASE WHEN p_scope = 'organization' THEN p_id ELSE NULL END,
     CASE WHEN p_scope = 'user' THEN p_id ELSE NULL END,
     p_name,
-    v_vault_key_id,
+    v_secret_ref,
     v_caller_id
   ) RETURNING id INTO v_secret_id;
 
@@ -93,15 +93,15 @@ DECLARE
   v_scope TEXT;
   v_org_id UUID;
   v_user_id UUID;
-  v_vault_key_id UUID;
+  v_secret_ref TEXT;
   v_secret_name TEXT;
   v_caller_id UUID;
 BEGIN
   v_caller_id := core.get_current_user_id();
 
   -- Fetch the secret details first
-  SELECT scope, organization_id, user_id, vault_key_id, secret_name
-  INTO v_scope, v_org_id, v_user_id, v_vault_key_id, v_secret_name
+  SELECT scope, organization_id, user_id, secret_ref, secret_name
+  INTO v_scope, v_org_id, v_user_id, v_secret_ref, v_secret_name
   FROM platform.tenant_secrets
   WHERE id = p_secret_id
     AND is_deleted = false;
@@ -139,7 +139,7 @@ BEGIN
     AND is_deleted = false;
 
   -- Hard-delete from secrets provider (cannot be recovered)
-  PERFORM core.delete_secret_impl(v_vault_key_id::TEXT);
+  PERFORM core.delete_secret_impl(v_secret_ref);
 
   -- Log the action
   PERFORM core.log_audit(
@@ -150,7 +150,7 @@ BEGIN
     jsonb_build_object(
       'scope', v_scope,
       'secret_name', v_secret_name,
-      'vault_key_id', v_vault_key_id
+      'secret_ref', v_secret_ref
     )
   );
 END;

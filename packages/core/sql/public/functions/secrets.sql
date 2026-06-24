@@ -11,7 +11,7 @@
 --   p_scope: 'organization' or 'user'
 --   p_id: organization_id or user_id (depending on scope)
 --   p_name: Human-readable name for the secret (e.g., 'SMTP Password', 'API Key')
---   p_secret: The actual secret value (will be stored in Vault)
+--   p_secret: The actual secret value (stored via the configured secrets provider)
 --
 -- Returns: UUID of the created secret reference
 --
@@ -36,7 +36,7 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.delete_secret()
 -- ========================================
 -- Deletes a tenant secret
--- Soft-deletes the reference, hard-deletes from Vault (cannot be recovered)
+-- Soft-deletes the reference, hard-deletes from the secrets provider (cannot be recovered)
 --
 -- Parameters:
 --   p_secret_id: UUID of the secret to delete
@@ -96,17 +96,13 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- ========================================
 -- NOTES
 -- ========================================
--- These public functions are callable via Supabase RPC:
+-- These public functions are exposed as database RPCs (e.g. via PostgREST or any
+-- client that calls SQL functions):
 --
---   const { data, error } = await supabase.rpc('create_secret', {
---     p_scope: 'organization',
---     p_id: orgId,
---     p_name: 'SMTP Password',
---     p_secret: 'my-secret-password'
---   })
+--   SELECT public.create_secret('organization', '<org-uuid>', 'SMTP Password', 'my-secret-password');
 --
 -- Security:
 --   - All authorization checks happen in core.* functions
---   - Secrets are stored in Supabase Vault (encrypted at rest)
+--   - Secrets are stored via the configured secrets provider (encrypted at rest)
 --   - Secret values are NEVER returned to the client
 --   - Only metadata (id, name, timestamps) is accessible

@@ -1,12 +1,12 @@
 -- organization_files.sql
--- Purpose: References to organization-owned files stored in Supabase Storage
+-- Purpose: References to organization-owned files stored in external object storage
 
 -- ========================================
 -- TABLE: core.organization_files
 -- ========================================
 CREATE TABLE core.organization_files (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  -- URL or storage path to the file in Supabase bucket
+  -- URL or storage path to the file in the object-storage bucket
   file_url TEXT NOT NULL,
   -- MIME type (e.g. 'image/png', 'application/pdf')
   file_type TEXT NOT NULL,

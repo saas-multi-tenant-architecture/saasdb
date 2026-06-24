@@ -72,12 +72,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = platform;
 -- ========================================
 -- NOTES:
 -- ========================================
--- All platform functions should be run by Supabase Edge Functions
--- using the service role only. These tables are not exposed to clients.
--- Need the following Edge Functions:
+-- All platform functions should be run server-side (backend / serverless functions)
+-- using the admin role only. These tables are not exposed to clients.
+-- Need the following backend functions:
    -- create-checkout-session: Called when user clicks "Subscribe"
    -- handle-paymentprocessor-webhook: Called by Payment Processor on payment/subscription events
    -- billing-portal: Generates a link to the Payment Processor customer portal
--- Payment Processor Webhook Events are handled by a Supabase Edge Function and db function(s):
+-- Payment Processor Webhook Events are handled by a backend function and db function(s):
    -- Webhook will need to validate Payment Processor signature
    -- A list of webhook events will be created at a later date
