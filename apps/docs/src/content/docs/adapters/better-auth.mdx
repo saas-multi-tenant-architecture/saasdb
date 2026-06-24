@@ -5,14 +5,32 @@ description: What the @smta/better-auth adapter provides and how to configure it
 
 The `@smta/better-auth` adapter wires SMTA's auth interface to better-auth's session context via a PostgreSQL session variable and provides a new-user trigger that auto-creates SMTA user records when a user signs up.
 
+## ID Modes — `uuid` vs `mapped`
+
+better-auth user ids are `TEXT`, but SMTA's primary keys are `UUID`. You resolve this at install time with the **required** `--better-auth-ids` flag, which selects the SQL variant emitted:
+
+- **`uuid`** *(recommended)* — better-auth is configured to emit UUID ids (`advanced.database.generateId`, e.g. `generateId: () => crypto.randomUUID()`). `core.get_current_user_id()` casts `app.current_user_id` straight to `UUID`. Fastest; no mapping table.
+- **`mapped`** — better-auth keeps its default string ids. SMTA mints a UUID per user in `core.user_identities` and resolves `external_id → user_id` on each call. Requires **zero** better-auth configuration.
+
+```bash
+# pick one:
+npx @smta/cli --adapter better-auth --better-auth-ids uuid
+npx @smta/cli --adapter better-auth --better-auth-ids mapped
+```
+
 ## What It Contains
 
 | File | Purpose |
 |---|---|
-| `auth_better_auth_impl.sql` | Implements `core.get_current_user_id()` via the `app.current_user_id` session variable |
-| `new_user_trigger.sql` | Auto-creates `core.users_meta` rows when a user signs up via better-auth |
+| `roles.sql` | Optional role-membership wiring — grants `app_user`/`app_admin` to your login roles via the `smta.app_login_role` / `smta.admin_login_role` GUCs |
+| `auth_impl_uuid.sql` *(uuid mode)* | Implements `core.get_current_user_id()` by casting `app.current_user_id` straight to `UUID` |
+| `auth_impl_mapped.sql` *(mapped mode)* | Creates `core.user_identities` and resolves arbitrary string ids to minted UUIDs |
+| `new_user_trigger_uuid.sql` / `new_user_trigger_mapped.sql` | Auto-creates `core.users_meta` (and, in mapped mode, the `core.user_identities` mapping) when a user signs up |
+| `secrets_pgcrypto_impl.sql` | pgcrypto-backed secrets (store/read/delete) keyed off the `app.secrets_key` GUC |
 
 ## Auth Implementation
+
+**`uuid` mode** reads the UUID straight from the session variable:
 
 ```sql
 CREATE OR REPLACE FUNCTION core.get_current_user_id()
@@ -21,7 +39,22 @@ RETURNS UUID AS $$
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
 ```
 
-Unlike Supabase, better-auth does not set a database-level session variable automatically. The `smtaPlugin` provides the `withSMTA()` helper, which sets it per-request using `SET LOCAL` within a transaction.
+**`mapped` mode** resolves the better-auth string id through `core.user_identities`:
+
+```sql
+CREATE TABLE IF NOT EXISTS core.user_identities (
+  external_id TEXT PRIMARY KEY,
+  user_id     UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()
+);
+
+CREATE OR REPLACE FUNCTION core.get_current_user_id()
+RETURNS UUID AS $$
+  SELECT user_id FROM core.user_identities
+  WHERE external_id = NULLIF(current_setting('app.current_user_id', true), '');
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
+```
+
+In both modes the session variable is `app.current_user_id`. Unlike Supabase, better-auth does not set a database-level session variable automatically. The `smtaPlugin` provides the `withSMTA()` helper, which sets it per-request using `SET LOCAL` within a transaction.
 
 `withSMTA()` sets this session variable at the start of each request:
 
@@ -42,7 +75,7 @@ return withSMTA(pool, session?.user?.id, async (client) => {
 
 When a new user is created via better-auth, a PostgreSQL trigger on the `user` table fires and inserts a corresponding row into `core.users_meta`. This eliminates the need to manually provision SMTA user records in application code.
 
-The trigger casts better-auth's `TEXT` id column to `UUID` — which requires `generateId` to produce UUIDs (see [Quick Start](/getting-started/quickstart-better-auth)).
+In **`uuid` mode** the trigger casts better-auth's `TEXT` id to `UUID` (so better-auth must emit UUIDs — see [Quick Start](/getting-started/quickstart-better-auth)). In **`mapped` mode** the trigger instead mints a UUID into `core.user_identities` and writes `core.users_meta` with that UUID, so no better-auth configuration is needed.
 
 ```sql
 CREATE OR REPLACE FUNCTION core.handle_new_better_auth_user()
@@ -56,7 +89,7 @@ END;
 $$;
 ```
 
-This requires better-auth to generate UUID IDs. Configure `generateId` in your better-auth initialization using the `betterAuth()` function:
+The example above is the **`uuid`-mode** trigger; it requires better-auth to generate UUID ids. Configure `generateId` in your better-auth initialization:
 
 ```typescript
 export const auth = betterAuth({
@@ -64,6 +97,8 @@ export const auth = betterAuth({
   plugins: [smtaPlugin({ pool })],
 })
 ```
+
+In **`mapped` mode** you skip this — leave better-auth's id generation at its default.
 
 ## TypeScript Package
 
@@ -95,13 +130,38 @@ import { smtaPlugin, withSMTA } from '@smta/better-auth'
 
 `smtaPlugin()` also adds `activeOrgId` to the better-auth session schema — a nullable string that tracks which organization is currently in context for multi-org users. It is set by the client via `smtaSetActiveOrg` and cleared by passing `null`.
 
+## Connecting Roles & RLS
+
+SMTA's RLS is keyed on `core.get_current_user_id()`, not on the connected role — but the role still matters: your runtime backend must connect as a role that **inherits `app_user`** (which is *not* `BYPASSRLS`), or row-level security is silently bypassed. Run migrations and seeds as a role that inherits `app_admin` (`BYPASSRLS`).
+
+On plain Postgres there are no GoTrue roles to map, so `roles.sql` is a documented hook — either set the `smta.app_login_role` / `smta.admin_login_role` GUCs for the deploy session, or wire membership manually:
+
+```sql
+-- Option A: let roles.sql wire membership — set these in the deploy session
+SET smta.app_login_role   = 'my_app_login';
+SET smta.admin_login_role = 'my_admin_login';
+-- (then run the generated SQL in the same session)
+
+-- Option B: grant membership manually after deploy
+GRANT app_user  TO my_app_login;
+GRANT app_admin TO my_admin_login;
+```
+
 ## Secrets
 
-The better-auth adapter does not implement `core.store_secret_impl()` or `core.delete_secret_impl()`. These remain as exception-raising stubs. If you need per-tenant secret storage, implement the stubs using your preferred secret manager.
+The better-auth adapter ships a **pgcrypto-backed** secrets implementation (`secrets_pgcrypto_impl.sql`), so `core.store_secret_impl()`, `core.read_secret_impl()`, and `core.delete_secret_impl()` are fully implemented. Secret values are encrypted with `pgp_sym_encrypt` into `core.encrypted_secrets` and referenced by a generated UUID.
+
+The symmetric key is read from the `app.secrets_key` GUC, which your backend must set per session/connection — it is never hard-coded in SQL. If `app.secrets_key` is unset, storing or reading a secret raises an exception.
+
+```sql
+-- Set once per connection, before calling the secrets functions
+SELECT set_config('app.secrets_key', '<your-encryption-key>', false);
+```
 
 ## Deployment
 
 ```bash
-npx @smta/cli --adapter better-auth
-# → SMTA-better-auth-<timestamp>.sql  (60 SQL files combined)
+# --better-auth-ids is required: choose uuid or mapped (see ID Modes above)
+npx @smta/cli --adapter better-auth --better-auth-ids uuid
+# → SMTA-better-auth-<timestamp>.sql  (61 SQL files combined)
 ```
