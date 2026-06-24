@@ -1,7 +1,9 @@
 {
   "version": "1.0",
-  "description": "Payload CMS adapter SQL — session-variable auth implementation",
+  "description": "Payload CMS adapter SQL — neutral-role wiring, session-variable auth, pgcrypto secrets",
   "scripts": [
-    "sql/init/auth_payload_impl.sql"
+    "sql/init/roles.sql",
+    "sql/init/auth_payload_impl.sql",
+    "sql/init/secrets_pgcrypto_impl.sql"
   ]
 }
