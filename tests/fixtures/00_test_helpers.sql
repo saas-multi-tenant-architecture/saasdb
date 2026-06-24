@@ -312,7 +312,9 @@ CREATE OR REPLACE FUNCTION test_helpers.seed_platform_user(
   p_role_id UUID
 ) RETURNS VOID AS $$
 BEGIN
-  INSERT INTO platform.platform_users (id, supabase_user_id, email, role_id)
+  -- Column renamed core-wide to user_id (was supabase_user_id); the p_supabase_user_id
+  -- param name is retained for positional call-site + override-signature compatibility.
+  INSERT INTO platform.platform_users (id, user_id, email, role_id)
   VALUES (p_id, p_supabase_user_id, p_email, p_role_id)
   ON CONFLICT (id) DO NOTHING;
 END;

@@ -39,7 +39,7 @@ SELECT test_helpers.seed_platform_role(
 -- Platform Super Admin (Sarah - CTO)
 SELECT test_helpers.seed_platform_user(
   '20000000-0000-0000-0000-000000000001'::uuid,
-  test_helpers.get_test_user_id('sarah@pizzatech-saas.com'),  -- supabase_user_id
+  test_helpers.get_test_user_id('sarah@pizzatech-saas.com'),  -- user_id
   'sarah@pizzatech-saas.com',
   '10000000-0000-0000-0000-000000000001'::uuid   -- super_admin role
 );
@@ -47,7 +47,7 @@ SELECT test_helpers.seed_platform_user(
 -- Platform Viewer (Mike - Support Staff)
 SELECT test_helpers.seed_platform_user(
   '20000000-0000-0000-0000-000000000002'::uuid,
-  test_helpers.get_test_user_id('mike@pizzatech-saas.com'),  -- supabase_user_id
+  test_helpers.get_test_user_id('mike@pizzatech-saas.com'),  -- user_id
   'mike@pizzatech-saas.com',
   '10000000-0000-0000-0000-000000000003'::uuid   -- platform_viewer role
 );
