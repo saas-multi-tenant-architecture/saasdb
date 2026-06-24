@@ -572,7 +572,7 @@ BEGIN
     )
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core, auth;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
 
 -- ========================================
 -- FUNCTION: public.add_member_to_organization()
@@ -607,7 +607,7 @@ BEGIN
   PERFORM core.log_audit('insert', 'core.memberships', p_user_id, 'add_member_to_organization',
     jsonb_build_object('organization_id', p_org_id, 'role_id', p_role_id));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core, auth;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
 
 -- ========================================
 -- FUNCTION: public.update_member_role()
@@ -674,4 +674,4 @@ BEGIN
   PERFORM core.log_audit('delete', 'core.memberships', p_user_id, 'remove_member_from_organization',
     jsonb_build_object('organization_id', p_org_id));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core, auth;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;

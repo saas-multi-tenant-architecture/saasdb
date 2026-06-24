@@ -2,7 +2,7 @@
 -- Purpose: In a Better-Auth / plain-Postgres deployment there is no GoTrue role
 -- trio. The application backend connects as a single login role that must inherit
 -- app_user (RLS-subject). Migrations connect as a role inheriting app_admin.
--- This file is a documented hook: set app.app_login_role / app.admin_login_role
+-- This file is a documented hook: set smta.app_login_role / smta.admin_login_role
 -- GUCs at deploy time to auto-wire membership, else wire it manually post-deploy.
 DO $$
 DECLARE
