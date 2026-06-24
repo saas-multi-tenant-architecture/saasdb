@@ -17,6 +17,8 @@ import { Aside } from '@astrojs/starlight/components';
 
 SMTA occupies the middle layer. You bring the application on top and pick the platform below.
 
+`@smta/core` is adapter-agnostic and loads on **stock PostgreSQL 18** — no Supabase, GoTrue, or PostgREST required. Each adapter (Supabase, Payload, better-auth) layers its platform-specific wiring on top.
+
 ## What SMTA Asks
 
 SMTA's core question is: *"Are you a member of this organization or unit?"* — a yes/no gate on row visibility enforced at the database level via Row-Level Security (RLS).

@@ -17,18 +17,18 @@ Use the SMTA CLI to generate a combined SQL script for your chosen adapter:
 ```bash
 # For Supabase
 npx @smta/cli --adapter supabase # [--enable-graphql] Optional flag to keep GraphQL enabled
-# → SMTA-supabase-<timestamp>.sql  (59 SQL files combined)
+# → SMTA-supabase-<timestamp>.sql  (63 SQL files combined)
 
 # For Payload CMS
 npx @smta/cli --adapter payload
-# → SMTA-payload-<timestamp>.sql  (57 SQL files combined)
+# → SMTA-payload-<timestamp>.sql  (60 SQL files combined)
 
-# For better-auth
-npx @smta/cli --adapter better-auth
-# → SMTA-better-auth-<timestamp>.sql  (60 SQL files combined)
+# For better-auth — --better-auth-ids is REQUIRED (uuid | mapped); see the better-auth adapter page
+npx @smta/cli --adapter better-auth --better-auth-ids uuid
+# → SMTA-better-auth-<timestamp>.sql  (61 SQL files combined)
 ```
 
-The script is written to your current directory. All scripts deploy the full SMTA feature set — the only difference is the auth implementation and, for Supabase, the use of `auth.users` foreign keys.
+The script is written to your current directory. All scripts deploy the full SMTA feature set — the only difference is the auth implementation. `@smta/core` is adapter-agnostic and loads on stock **PostgreSQL 18**; the Supabase adapter additionally maps its GoTrue roles onto SMTA's neutral `app_user`/`app_admin` roles and restores its `auth.users` foreign keys.
 
 ## Apply to Your Database
 

@@ -34,7 +34,7 @@ Because RLS policies reference the function by name rather than by body, switchi
 
 The `platform` schema is where SMTA stores data related to the SaaS business itself. This is a highly sensitive area in that it allows administrators to manage all tenants. 
 
-This schema is locked down by an additional RLS layer that restricts access to the database service role. End users and application code running under the authenticated role cannot read or write `platform` tables at all.
+This schema is locked down by an additional RLS layer: `platform` tables are accessible only to `app_admin` (the `BYPASSRLS` migration/admin role). End users and application code connecting as `app_user` cannot read or write `platform` tables at all. (On Supabase, `app_admin`/`app_user` map onto `service_role`/`authenticated`.)
 
 ## Soft Deletion and RLS
 

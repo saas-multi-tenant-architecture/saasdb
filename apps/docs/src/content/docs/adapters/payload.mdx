@@ -9,7 +9,9 @@ The `@smta/payload` adapter wires SMTA's auth interface to Payload CMS's session
 
 | File | Purpose |
 |---|---|
+| `roles.sql` | Optional role-membership wiring — grants `app_user`/`app_admin` to your login roles via the `smta.app_login_role` / `smta.admin_login_role` GUCs |
 | `auth_payload_impl.sql` | Implements `core.get_current_user_id()` via the `app.current_user_id` session variable |
+| `secrets_pgcrypto_impl.sql` | pgcrypto-backed secrets (store/read/delete) keyed off the `app.secrets_key` GUC |
 
 ## Auth Implementation
 
@@ -39,7 +41,14 @@ export async function injectUserContext(db: DbExecutor, userId: string): Promise
 
 ## Secrets
 
-The Payload adapter does not implement `core.store_secret_impl()` or `core.delete_secret_impl()`. These remain as exception-raising stubs. Calling them without a secrets implementation will raise a database exception. If you need per-tenant secret storage under Payload, implement the stubs using your preferred secret manager (AWS Secrets Manager, HashiCorp Vault, etc.).
+The Payload adapter ships a **pgcrypto-backed** secrets implementation (`secrets_pgcrypto_impl.sql`), so `core.store_secret_impl()`, `core.read_secret_impl()`, and `core.delete_secret_impl()` are fully implemented. Secret values are encrypted with `pgp_sym_encrypt` into `core.encrypted_secrets` and referenced by a generated UUID.
+
+The symmetric key is read from the `app.secrets_key` GUC, which your backend must set per session/connection — it is never hard-coded in SQL. If `app.secrets_key` is unset, storing or reading a secret raises an exception.
+
+```sql
+-- Set once per connection, before calling the secrets functions
+SELECT set_config('app.secrets_key', '<your-encryption-key>', false);
+```
 
 ## Schema Compatibility
 
@@ -58,6 +67,6 @@ const { rows } = await db.execute(
 ## Deployment
 
 ```bash
-npm run build:payload
-# → output/SMTA-payload-<timestamp>.sql  (57 files)
+npm run build:payload   # or: npx @smta/cli --adapter payload
+# → output/SMTA-payload-<timestamp>.sql  (60 files)
 ```

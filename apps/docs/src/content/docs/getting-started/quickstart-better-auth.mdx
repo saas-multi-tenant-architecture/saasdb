@@ -8,14 +8,17 @@ import { Aside } from '@astrojs/starlight/components';
 ## 1. Prerequisites
 
 - A [better-auth](https://www.better-auth.com/) v1.x project connected to a PostgreSQL database
-- `generateId` configured to produce UUIDs — SMTA's primary keys are UUID and the new-user trigger casts better-auth's `TEXT` id to `UUID`:
+- A choice of **id mode**, passed to the CLI as `--better-auth-ids`:
+  - **`uuid`** *(recommended)* — configure better-auth to emit UUID ids. SMTA's primary keys are UUID and the uuid-mode trigger casts better-auth's `TEXT` id to `UUID`:
 
-```typescript
-export const auth = betterAuth({
-  generateId: () => crypto.randomUUID(),
-  // ...
-})
-```
+    ```typescript
+    export const auth = betterAuth({
+      generateId: () => crypto.randomUUID(),
+      // ...
+    })
+    ```
+
+  - **`mapped`** — keep better-auth's default string ids; SMTA mints a UUID per user and maps it. **No better-auth configuration required.**
 
 <Aside type="caution">
 Run better-auth's database migration **before** applying the SMTA SQL. The new-user trigger targets better-auth's `user` table, which must exist before the trigger can attach to it.
@@ -27,9 +30,11 @@ npx better-auth migrate
 
 ## 2. Generate and Apply the SQL
 
+`--better-auth-ids` is **required** — use `uuid` (recommended) or `mapped`:
+
 ```bash
-npx @smta/cli --adapter better-auth
-# → SMTA-better-auth-<timestamp>.sql  (60 SQL files combined)
+npx @smta/cli --adapter better-auth --better-auth-ids uuid
+# → SMTA-better-auth-<timestamp>.sql  (61 SQL files combined)
 ```
 
 Apply the generated script to your database:
@@ -40,12 +45,14 @@ psql "$DATABASE_URL" -f SMTA-better-auth-<timestamp>.sql
 
 ## 3. What the Adapter Provides
 
-The better-auth deployment includes two adapter-specific files on top of `@smta/core`:
+The better-auth deployment adds these adapter files on top of `@smta/core` (the auth-impl and trigger files depend on the id mode you chose):
 
 | File | Purpose |
 |---|---|
-| `auth_better_auth_impl.sql` | Implements `core.get_current_user_id()` using the `app.current_user_id` PostgreSQL session variable |
-| `new_user_trigger.sql` | Auto-creates `core.users_meta` rows when a user signs up via better-auth |
+| `roles.sql` | Optional role-membership wiring (`smta.app_login_role` / `smta.admin_login_role` GUCs) |
+| `auth_impl_uuid.sql` / `auth_impl_mapped.sql` | Implements `core.get_current_user_id()` (uuid: direct cast; mapped: `core.user_identities` lookup) |
+| `new_user_trigger_uuid.sql` / `new_user_trigger_mapped.sql` | Auto-creates `core.users_meta` (and the mapping row in mapped mode) on signup |
+| `secrets_pgcrypto_impl.sql` | pgcrypto secrets keyed off the `app.secrets_key` GUC |
 
 ## 4. Register the Plugin
 

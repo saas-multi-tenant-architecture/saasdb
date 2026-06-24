@@ -63,7 +63,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = core, vault, public;
 ```
 
-**Payload adapter** (`@smta/payload`) replaces only the auth stub:
+**Payload adapter** (`@smta/payload`) replaces the auth stub and the secret stubs:
 
 ```sql
 -- auth_payload_impl.sql
@@ -73,21 +73,19 @@ returns uuid language sql stable security definer as $$
 $$;
 ```
 
-The secret stubs remain as exception-raising guards for Payload — calling `store_secret_impl()` or `delete_secret_impl()` without an implementation will raise a database exception. Implement your own vault adapter if you need per-tenant secrets under Payload.
+Its `secrets_pgcrypto_impl.sql` replaces all three secret stubs with a pgcrypto-backed implementation (values encrypted into `core.encrypted_secrets`, keyed by the `app.secrets_key` GUC). See the [Payload adapter](/adapters/payload/#secrets) page.
 
-**better-auth adapter** (`@smta/better-auth`) replaces only the auth stub — identical pattern to Payload:
+**better-auth adapter** (`@smta/better-auth`) replaces the auth stub and the secret stubs, and ships in two id-mode variants selected by `--better-auth-ids` (`uuid` casts the session value to `UUID`; `mapped` resolves a string id through `core.user_identities`):
 
 ```sql
--- auth_better_auth_impl.sql
+-- auth_impl_uuid.sql (uuid mode)
 CREATE OR REPLACE FUNCTION core.get_current_user_id()
 RETURNS UUID AS $$
   SELECT NULLIF(current_setting('app.current_user_id', true), '')::UUID;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = core, public;
 ```
 
-It also adds a trigger on better-auth's `user` table to auto-create `core.users_meta` rows on signup — the equivalent of Supabase's `auth.users` foreign key constraint, implemented in application code rather than a platform API.
-
-The secret stubs remain as exception-raising guards for better-auth, same as Payload.
+It also adds a trigger on better-auth's `user` table to auto-create `core.users_meta` rows on signup — the equivalent of Supabase's `auth.users` foreign key, implemented via trigger rather than a platform API — and replaces the secret stubs with the same pgcrypto implementation Payload uses. See the [better-auth adapter](/adapters/better-auth/) page.
 
 ## Deployment Order
 
@@ -104,7 +102,7 @@ This ordering is safe because PostgreSQL resolves function calls by name at runt
 
 | Package | Contains |
 |---|---|
-| `@smta/core` | All adapter-agnostic SQL (58 files) |
-| `@smta/supabase` | Auth + secrets impl + auth.users FK constraints (3 files) |
-| `@smta/payload` | Auth impl only (1 file) |
-| `@smta/better-auth` | Auth impl + new-user trigger (2 files) |
+| `@smta/core` | All adapter-agnostic SQL — loads on stock PostgreSQL 18 (57 files) |
+| `@smta/supabase` | Role mapping + auth (Vault) + secrets + `auth.users` FK constraints + signup trigger + pg_graphql disable (6 files) |
+| `@smta/payload` | Role wiring + auth impl + pgcrypto secrets (3 files) |
+| `@smta/better-auth` | Role wiring + auth impl + new-user trigger + pgcrypto secrets, per id mode (4 files) |
