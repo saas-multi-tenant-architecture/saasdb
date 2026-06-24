@@ -28,7 +28,7 @@ SELECT is(
 SELECT is(
   (SELECT pr.name FROM platform.platform_users pu
    JOIN platform.platform_roles pr ON pr.id = pu.role_id
-   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('sarah@pizzatech-saas.com')),
+   WHERE pu.user_id = test_helpers.get_test_user_id('sarah@pizzatech-saas.com')),
   'super_admin',
   'Sarah should be super_admin'
 );
@@ -39,7 +39,7 @@ SELECT is(
 SELECT is(
   (SELECT pr.name FROM platform.platform_users pu
    JOIN platform.platform_roles pr ON pr.id = pu.role_id
-   WHERE pu.supabase_user_id = test_helpers.get_test_user_id('mike@pizzatech-saas.com')),
+   WHERE pu.user_id = test_helpers.get_test_user_id('mike@pizzatech-saas.com')),
   'platform_viewer',
   'Mike should be platform_viewer'
 );

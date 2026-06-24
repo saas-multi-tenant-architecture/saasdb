@@ -10,21 +10,22 @@ SELECT plan(16);
 -- ========================================
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
 
--- Store Maria's ID for use in inserts
+-- Create a new test user first so get_test_user_id() can look up the UUID.
+-- (On plain Postgres the UUID is random; on Supabase it is deterministic via
+-- uuid_generate_v5 — either way create_test_user is idempotent.)
+SELECT test_helpers.create_test_user('newmember@test.com', 'New', 'Member');
+
+-- Store Maria's ID and the new user's ID for use in the tests below.
 DO $$
 DECLARE
   v_maria_id UUID;
   v_new_user_id UUID;
 BEGIN
   v_maria_id := test_helpers.get_test_user_id('maria@test.bellaitalia.com');
-  -- Generate deterministic UUID for test user
-  v_new_user_id := extensions.uuid_generate_v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8'::uuid, 'newmember@test.com');
+  v_new_user_id := test_helpers.get_test_user_id('newmember@test.com');
   PERFORM set_config('test.maria_id', v_maria_id::text, true);
   PERFORM set_config('test.new_user_id', v_new_user_id::text, true);
 END $$;
-
--- Create a new test user (uses SECURITY DEFINER helper to bypass RLS on auth.users)
-SELECT test_helpers.create_test_user('newmember@test.com', 'New', 'Member');
 
 SELECT lives_ok(
   format(

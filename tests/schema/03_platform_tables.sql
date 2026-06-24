@@ -19,7 +19,7 @@ SELECT col_is_pk('platform', 'platform_roles', 'id', 'platform_roles.id should b
 -- ========================================
 SELECT has_table('platform', 'platform_users', 'Table platform.platform_users should exist');
 SELECT has_column('platform', 'platform_users', 'id', 'platform_users.id should exist');
-SELECT has_column('platform', 'platform_users', 'supabase_user_id', 'platform_users.supabase_user_id should exist');
+SELECT has_column('platform', 'platform_users', 'user_id', 'platform_users.user_id should exist');
 SELECT has_column('platform', 'platform_users', 'email', 'platform_users.email should exist');
 SELECT has_column('platform', 'platform_users', 'role_id', 'platform_users.role_id should exist');
 SELECT has_column('platform', 'platform_users', 'is_deleted', 'platform_users.is_deleted should exist');

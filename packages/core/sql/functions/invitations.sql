@@ -128,7 +128,7 @@ BEGIN
   RETURN QUERY
   SELECT v_invitation_id, v_token, lower(p_email), v_expires_at;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, extensions;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, public, extensions;
 
 -- ========================================
 -- FUNCTION: core.accept_invitation()
@@ -377,7 +377,7 @@ BEGIN
   RETURN QUERY
   SELECT p_invitation_id, v_new_token, v_invitation.email, v_new_expires_at;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, extensions;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, public, extensions;
 
 -- ========================================
 -- FUNCTION: core.list_organization_invitations()
