@@ -10,12 +10,46 @@ The Payload CMS adapter for [SMTA (SaaS Multi-Tenant Architecture)](https://smta
 
 | File | Purpose |
 |------|---------|
+| `roles.sql` | Deploy-time hook to wire login roles into `app_user` / `app_admin` |
 | `auth_payload_impl.sql` | Implements `core.get_current_user_id()` using the `app.current_user_id` PostgreSQL session variable |
+| `secrets_pgcrypto_impl.sql` | Implements `core.store_secret_impl()` / `core.read_secret_impl()` using pgcrypto |
 
 **TypeScript middleware**:
 
 - `injectUserContext(db, userId)` — sets `app.current_user_id` for the current transaction
 - `clearUserContext(db)` — clears the session variable
+
+## Role model
+
+SMTA core defines two adapter-agnostic PostgreSQL roles:
+
+| Role | Attributes | Purpose |
+|------|-----------|---------|
+| `app_user` | `NOLOGIN`, **NOT** `BYPASSRLS` | Runtime identity — RLS is enforced against it |
+| `app_admin` | `NOLOGIN`, `BYPASSRLS` | Migrations, seed, admin DML — bypasses RLS |
+
+RLS enforcement does **not** depend on which role is connected. It depends on `core.get_current_user_id()` reading the `app.current_user_id` GUC set by `injectUserContext()` on each request. This means: **Payload's database connection role must inherit `app_user` (NOT BYPASSRLS)**. If the connected role has `BYPASSRLS`, all RLS policies are skipped and tenants can read each other's data.
+
+The role used for running migrations should inherit `app_admin`.
+
+`roles.sql` provides a deploy-time hook: set the `smta.app_login_role` and `smta.admin_login_role` GUCs before applying the deployment script and the grants are wired automatically. If you omit these GUCs, run the grants manually after deploy:
+
+```sql
+GRANT app_user  TO your_payload_db_role;
+GRANT app_admin TO your_migration_role;
+```
+
+## Secrets
+
+The Payload adapter uses pgcrypto (`pgp_sym_encrypt`) to store secrets in `core.encrypted_secrets`. The symmetric key is **never hard-coded** — it is read from the `app.secrets_key` GUC.
+
+**The backend must set `app.secrets_key` on each session or connection before any secret store/read operation:**
+
+```sql
+SET app.secrets_key = 'your-encryption-key';
+```
+
+If `app.secrets_key` is not set, `core.store_secret_impl()` and `core.read_secret_impl()` raise an exception.
 
 ## Deploy the SQL
 
