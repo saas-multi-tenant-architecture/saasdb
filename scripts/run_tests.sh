@@ -72,6 +72,11 @@ echo "=== Setting up test fixtures ===" > "$LOG_FILE"
 psql "$DB_URL" -q -f tests/fixtures/00_test_helpers.sql 2>> "$LOG_FILE"
 echo "✓ Loaded test helpers"
 
+if [ "${SMTA_TARGET:-supabase}" = "plain" ]; then
+  psql "$DB_URL" -q -f tests/fixtures/00b_plain_pg_shim.sql 2>> "$LOG_FILE"
+  echo "✓ Loaded plain-postgres shim"
+fi
+
 psql "$DB_URL" -q -f tests/fixtures/01_roles.sql 2>> "$LOG_FILE"
 echo "✓ Loaded roles"
 
