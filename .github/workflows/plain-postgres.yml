@@ -1,0 +1,156 @@
+name: Plain PostgreSQL
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  # ── Job 1: Load gate ─────────────────────────────────────────────────────────
+  # Verifies every non-Supabase SQL output loads cleanly on vanilla postgres:18.
+  # test-plain-postgres-load.sh manages its own docker lifecycle per invocation.
+  load-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        run: npm ci || npm install
+
+      - name: Build adapter outputs
+        run: |
+          node ./scripts/combine_files.js --adapter better-auth --better-auth-ids uuid
+          cp "$(ls -t output/SMTA-better-auth-*.sql | head -1)" /tmp/ba-uuid.sql
+
+          node ./scripts/combine_files.js --adapter better-auth --better-auth-ids mapped
+          cp "$(ls -t output/SMTA-better-auth-*.sql | head -1)" /tmp/ba-mapped.sql
+
+          node ./scripts/combine_files.js --adapter payload
+          cp "$(ls -t output/SMTA-payload-*.sql | head -1)" /tmp/payload.sql
+
+      - name: Load gate — better-auth uuid
+        run: ./scripts/test-plain-postgres-load.sh /tmp/ba-uuid.sql smta-ci-ba-uuid
+
+      - name: Load gate — better-auth mapped
+        run: ./scripts/test-plain-postgres-load.sh /tmp/ba-mapped.sql smta-ci-ba-mapped
+
+      - name: Load gate — payload
+        run: ./scripts/test-plain-postgres-load.sh /tmp/payload.sql smta-ci-payload
+
+  # ── Job 2: Functional pgTap suite (better-auth uuid mode, vanilla PG) ────────
+  # Mirrors the EXACT docker-exec approach proven in Task 7.4.
+  # We manage the postgres:18 container directly (NOT via services:) so we can
+  # run docker exec inside it to install postgresql-18-pgtap.
+  functional:
+    runs-on: ubuntu-latest
+    env:
+      DB_CONTAINER: smta-func
+      DB_HOST: localhost
+      DB_PORT: '55432'
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        run: npm ci || npm install
+
+      # ── Install pg_prove and psql on the runner ──────────────────────────────
+      # libtap-parser-sourcehandler-pgtap-perl provides pg_prove.
+      # postgresql-client provides psql (used by run_tests.sh).
+      # We do NOT install postgresql-16-pgtap on the runner — pgTap must live
+      # inside the postgres:18 server container, not on the runner host.
+      - name: Install pg_prove and postgresql-client on runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libtap-parser-sourcehandler-pgtap-perl postgresql-client
+
+      # ── Start postgres:18 container, mapped to host port 55432 ───────────────
+      # Port mapping mirrors Task 7.4: docker run -p 55432:5432
+      - name: Start postgres:18 container
+        run: |
+          docker run -d \
+            --name "$DB_CONTAINER" \
+            -e POSTGRES_PASSWORD="$DB_PASSWORD" \
+            -p "${DB_PORT}:5432" \
+            postgres:18
+
+      # ── Install postgresql-18-pgtap INSIDE the container ─────────────────────
+      # Exact commands proven by Task 7.4. The postgres:18 Debian image already
+      # has the PGDG apt repo configured, so postgresql-18-pgtap is available.
+      - name: Install postgresql-18-pgtap inside container
+        run: |
+          docker exec "$DB_CONTAINER" apt-get update -qq
+          docker exec "$DB_CONTAINER" apt-get install -y postgresql-18-pgtap
+
+      # ── Wait for the server to accept connections ─────────────────────────────
+      # Task 7.4 used `sleep 5` then proceeded. Here we poll pg_isready (max 30s)
+      # to be robust against slow container starts without burning time on sleep.
+      - name: Wait for postgres to be ready
+        run: |
+          ready=false
+          for i in $(seq 1 30); do
+            if docker exec "$DB_CONTAINER" pg_isready -U postgres >/dev/null 2>&1; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            echo "ERROR: postgres did not become ready within 30s" >&2
+            exit 1
+          fi
+
+      # ── Create pgtap extension explicitly ────────────────────────────────────
+      # 00_test_helpers.sql runs CREATE EXTENSION IF NOT EXISTS pgtap, but that
+      # only works if the extension is already installed in the server. We make
+      # it explicit here so the fixture load does not fail if timing is off.
+      - name: Create pgtap extension
+        run: |
+          docker exec "$DB_CONTAINER" \
+            psql -U postgres -d "$DB_NAME" \
+            -c "CREATE EXTENSION IF NOT EXISTS pgtap"
+
+      # ── Build and deploy better-auth uuid schema ──────────────────────────────
+      # Mirrors Task 7.4's local deploy step. We stream the SQL into psql via
+      # docker exec -i (same as test-plain-postgres-load.sh does for load gate).
+      - name: Build and deploy better-auth (uuid) schema
+        env:
+          PGPASSWORD: ${{ env.DB_PASSWORD }}
+        run: |
+          node ./scripts/combine_files.js --adapter better-auth --better-auth-ids uuid
+          SQL_FILE="$(ls -t output/SMTA-better-auth-*.sql | head -1)"
+          echo "Deploying $SQL_FILE ..."
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+            -v ON_ERROR_STOP=1 -f "$SQL_FILE"
+
+      # ── Run the pgTap suite ───────────────────────────────────────────────────
+      # Env vars match the contract in run_tests.sh exactly.
+      # CI has no .env file, so the env block below is the authoritative source.
+      # SMTA_TARGET=plain causes run_tests.sh to load 00b_plain_pg_shim.sql.
+      - name: Run pgTap suite (plain target, uuid mode)
+        env:
+          SMTA_TARGET: plain
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_USER: ${{ env.DB_USER }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+        run: ./scripts/run_tests.sh
+
+      # ── Cleanup ───────────────────────────────────────────────────────────────
+      # Runner is ephemeral but explicit cleanup avoids port conflicts if the job
+      # retries within the same runner.
+      - name: Stop and remove postgres container
+        if: always()
+        run: docker rm -f "$DB_CONTAINER" || true
