@@ -1,5 +1,5 @@
 -- 01_better_auth_adapter.sql
--- Purpose: Verify @smta/better-auth adapter — auth impl, new-user trigger, and RLS chain.
+-- Purpose: Verify @smta/better-auth adapter (UUID mode) — auth impl, new-user trigger, and RLS chain.
 -- Run standalone against a better-auth-deployed database:
 --   pg_prove -v <db_url> tests/adapters/01_better_auth_adapter.sql
 
