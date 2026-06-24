@@ -9,6 +9,8 @@ node_modules
 
 # Environment variables
 .env
+.env.bak
+
 
 # Completed Script Files are not tracked
 /output/*.sql
