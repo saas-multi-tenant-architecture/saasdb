@@ -108,6 +108,28 @@ export function smtaPlugin(options: SMTAPluginOptions): BetterAuthPlugin {
         }
       ),
 
+      smtaCancelInvitation: createAuthEndpoint(
+        '/smta/invitation/:id/cancel',
+        { method: 'POST', use: [sessionMiddleware] },
+        async (ctx) => {
+          const session = ctx.context.session;
+          const result = await handlers.cancelInvitation(session.user.id, ctx.params.id);
+          return ctx.json(result);
+        }
+      ),
+
+      // The response body contains a fresh invitation token. Callers should send
+      // it in an email and not persist or log it.
+      smtaResendInvitation: createAuthEndpoint(
+        '/smta/invitation/:id/resend',
+        { method: 'POST', use: [sessionMiddleware] },
+        async (ctx) => {
+          const session = ctx.context.session;
+          const result = await handlers.resendInvitation(session.user.id, ctx.params.id);
+          return ctx.json(result as Record<string, unknown>[]);
+        }
+      ),
+
       smtaListOrgMembers: createAuthEndpoint(
         '/smta/organization/:orgId/members',
         { method: 'GET', use: [sessionMiddleware] },

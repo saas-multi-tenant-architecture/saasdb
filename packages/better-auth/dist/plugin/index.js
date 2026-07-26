@@ -55,6 +55,18 @@ function smtaPlugin(options) {
                 const result = await handlers.listInvitations(session.user.id, ctx.params.orgId, ctx.query?.status);
                 return ctx.json(result);
             }),
+            smtaCancelInvitation: (0, api_1.createAuthEndpoint)('/smta/invitation/:id/cancel', { method: 'POST', use: [api_1.sessionMiddleware] }, async (ctx) => {
+                const session = ctx.context.session;
+                const result = await handlers.cancelInvitation(session.user.id, ctx.params.id);
+                return ctx.json(result);
+            }),
+            // The response body contains a fresh invitation token. Callers should send
+            // it in an email and not persist or log it.
+            smtaResendInvitation: (0, api_1.createAuthEndpoint)('/smta/invitation/:id/resend', { method: 'POST', use: [api_1.sessionMiddleware] }, async (ctx) => {
+                const session = ctx.context.session;
+                const result = await handlers.resendInvitation(session.user.id, ctx.params.id);
+                return ctx.json(result);
+            }),
             smtaListOrgMembers: (0, api_1.createAuthEndpoint)('/smta/organization/:orgId/members', { method: 'GET', use: [api_1.sessionMiddleware] }, async (ctx) => {
                 const session = ctx.context.session;
                 const result = await handlers.listOrgMembers(session.user.id, ctx.params.orgId);

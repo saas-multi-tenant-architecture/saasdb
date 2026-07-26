@@ -86,6 +86,29 @@ export function createSMTAHandlers(pool: Pool) {
       );
     },
 
+    async cancelInvitation(userId: string, invitationId: string) {
+      // public.cancel_invitation returns void, but callPublicFn always runs
+      // SELECT * FROM fn(...), which for a void function yields one row with one
+      // meaningless column. Passing that through would put
+      // [{"cancel_invitation": ""}] in this endpoint's public contract, so
+      // normalize — same as handleSetActiveOrg does.
+      await withSMTA(pool, userId, (client) =>
+        callPublicFn(client, 'public.cancel_invitation', [invitationId])
+      );
+      return { success: true };
+    },
+
+    // NOTE: unlike list_invitations, this response carries the invitation TOKEN.
+    // resend_invitation mints a fresh one, resets expires_at, and flips an
+    // expired invitation back to pending, so the caller can re-send the email.
+    // list_invitations deliberately does not re-expose tokens; this must.
+    // Treat the response as a secret — do not log it.
+    async resendInvitation(userId: string, invitationId: string) {
+      return withSMTA(pool, userId, (client) =>
+        callPublicFn(client, 'public.resend_invitation', [invitationId])
+      );
+    },
+
     async listOrgMembers(userId: string, orgId: string) {
       return withSMTA(pool, userId, (client) =>
         callPublicFn(client, 'public.list_organization_members', [orgId])

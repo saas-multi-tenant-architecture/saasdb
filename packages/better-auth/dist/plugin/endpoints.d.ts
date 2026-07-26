@@ -10,6 +10,10 @@ export declare function createSMTAHandlers(pool: Pool): {
     acceptInvitation(userId: string, token: string): Promise<unknown>;
     getInvitationDetails(token: string): Promise<unknown>;
     listInvitations(userId: string, orgId: string, status?: string): Promise<unknown>;
+    cancelInvitation(userId: string, invitationId: string): Promise<{
+        success: boolean;
+    }>;
+    resendInvitation(userId: string, invitationId: string): Promise<unknown>;
     listOrgMembers(userId: string, orgId: string): Promise<unknown>;
     getUserPermissions(userId: string, orgId: string): Promise<unknown>;
     setActiveOrg(sessionId: string, orgId: string | null, sessionTable?: string): Promise<void>;
