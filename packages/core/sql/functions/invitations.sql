@@ -389,6 +389,10 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, public, extensions;
 -- statuses allowed by the invitations.valid_status CHECK constraint; anything
 -- else raises. Without that check the filter is a plain equality, so a typo
 -- would return zero rows and look identical to "no invitations exist".
+-- CREATE OR REPLACE cannot change a return type, so the old signature must go
+-- first. Drop signatures omit DEFAULT clauses.
+DROP FUNCTION IF EXISTS core.list_organization_invitations(UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION core.list_organization_invitations(
   p_organization_id UUID,
   p_status TEXT DEFAULT NULL
@@ -398,6 +402,7 @@ CREATE OR REPLACE FUNCTION core.list_organization_invitations(
   organization_id UUID,
   unit_id UUID,
   role_name TEXT,
+  role_label TEXT,
   invited_by_email TEXT,
   status TEXT,
   expires_at TIMESTAMPTZ,
@@ -423,6 +428,10 @@ BEGIN
     i.organization_id,
     i.unit_id,
     r.name AS role_name,
+    -- Emitted raw, not COALESCEd to r.name: description is nullable and roles
+    -- are seeded per deployment, so NULL genuinely means "no label was given".
+    -- Falling back to the identifier would render 'super_admin' to an end user.
+    r.description AS role_label,
     um.email AS invited_by_email,
     i.status,
     i.expires_at,
@@ -442,6 +451,8 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core;
 -- ========================================
 -- Retrieves invitation details by token (for landing page display)
 -- This is public-safe - does not require authentication
+DROP FUNCTION IF EXISTS core.get_invitation_by_token(TEXT);
+
 CREATE OR REPLACE FUNCTION core.get_invitation_by_token(
   p_token TEXT
 ) RETURNS TABLE (
@@ -450,6 +461,7 @@ CREATE OR REPLACE FUNCTION core.get_invitation_by_token(
   organization_name TEXT,
   unit_name TEXT,
   role_name TEXT,
+  role_label TEXT,
   invited_by_name TEXT,
   expires_at TIMESTAMPTZ,
   status TEXT
@@ -462,6 +474,7 @@ BEGIN
     o.name AS organization_name,
     u.name AS unit_name,
     r.name AS role_name,
+    r.description AS role_label,
     COALESCE(um.first_name || ' ' || um.last_name, um.email) AS invited_by_name,
     i.expires_at,
     i.status

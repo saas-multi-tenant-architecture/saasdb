@@ -150,6 +150,8 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 --
 --   -- List only pending invitations
 --   SELECT * FROM public.list_invitations('org-uuid', 'pending');
+DROP FUNCTION IF EXISTS public.list_invitations(UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION public.list_invitations(
   p_organization_id UUID,
   p_status TEXT DEFAULT NULL
@@ -159,6 +161,7 @@ CREATE OR REPLACE FUNCTION public.list_invitations(
   organization_id UUID,
   unit_id UUID,
   role_name TEXT,
+  role_label TEXT,
   invited_by_email TEXT,
   status TEXT,
   expires_at TIMESTAMPTZ,
@@ -187,6 +190,8 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 --
 -- Example:
 --   SELECT * FROM public.get_invitation_details('invitation-token');
+DROP FUNCTION IF EXISTS public.get_invitation_details(TEXT);
+
 CREATE OR REPLACE FUNCTION public.get_invitation_details(
   p_token TEXT
 ) RETURNS TABLE (
@@ -195,6 +200,7 @@ CREATE OR REPLACE FUNCTION public.get_invitation_details(
   organization_name TEXT,
   unit_name TEXT,
   role_name TEXT,
+  role_label TEXT,
   invited_by_name TEXT,
   expires_at TIMESTAMPTZ,
   status TEXT
