@@ -21,6 +21,18 @@ export declare const invitationResponseSchema: z.ZodObject<{
 export declare const acceptInvitationInputSchema: z.ZodObject<{
     token: z.ZodString;
 }, z.core.$strip>;
+export declare const cancelInvitationInputSchema: z.ZodObject<{
+    invitation_id: z.ZodUUID;
+}, z.core.$strip>;
+export declare const resendInvitationInputSchema: z.ZodObject<{
+    invitation_id: z.ZodUUID;
+}, z.core.$strip>;
+export declare const resendInvitationResponseSchema: z.ZodObject<{
+    id: z.ZodUUID;
+    token: z.ZodString;
+    email: z.ZodEmail;
+    expires_at: z.ZodCoercedDate<unknown>;
+}, z.core.$strip>;
 export declare const invitationDetailsSchema: z.ZodObject<{
     id: z.ZodUUID;
     email: z.ZodEmail;
@@ -57,5 +69,8 @@ export declare const invitationListItemSchema: z.ZodObject<{
 export type InvitationStatus = z.infer<typeof invitationStatusSchema>;
 export type CreateInvitationInput = z.infer<typeof createInvitationInputSchema>;
 export type InvitationResponse = z.infer<typeof invitationResponseSchema>;
+export type CancelInvitationInput = z.infer<typeof cancelInvitationInputSchema>;
+export type ResendInvitationInput = z.infer<typeof resendInvitationInputSchema>;
+export type ResendInvitationResponse = z.infer<typeof resendInvitationResponseSchema>;
 export type InvitationDetails = z.infer<typeof invitationDetailsSchema>;
 export type InvitationListItem = z.infer<typeof invitationListItemSchema>;

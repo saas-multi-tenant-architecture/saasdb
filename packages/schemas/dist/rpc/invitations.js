@@ -6,7 +6,7 @@
 // SYNC-CHECK: public.list_invitations(p_organization_id UUID, p_status TEXT)
 // SYNC-CHECK: public.get_invitation_details(p_token TEXT)
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.invitationListItemSchema = exports.invitationDetailsSchema = exports.acceptInvitationInputSchema = exports.invitationResponseSchema = exports.createInvitationInputSchema = exports.invitationStatusSchema = void 0;
+exports.invitationListItemSchema = exports.invitationDetailsSchema = exports.resendInvitationResponseSchema = exports.resendInvitationInputSchema = exports.cancelInvitationInputSchema = exports.acceptInvitationInputSchema = exports.invitationResponseSchema = exports.createInvitationInputSchema = exports.invitationStatusSchema = void 0;
 const zod_1 = require("zod");
 exports.invitationStatusSchema = zod_1.z.enum(['pending', 'accepted', 'expired', 'cancelled']);
 exports.createInvitationInputSchema = zod_1.z.object({
@@ -25,6 +25,23 @@ exports.invitationResponseSchema = zod_1.z.object({
 exports.acceptInvitationInputSchema = zod_1.z.object({
     token: zod_1.z.string().min(1, 'Invitation token is required'),
 });
+exports.cancelInvitationInputSchema = zod_1.z.object({
+    invitation_id: zod_1.z.uuid(),
+});
+// public.cancel_invitation returns void, so it has no output schema. The
+// better-auth adapter normalizes that void row to { success: true } at the HTTP
+// layer — an adapter contract rather than a public.* RPC contract, so it does
+// not belong in this package.
+exports.resendInvitationInputSchema = zod_1.z.object({
+    invitation_id: zod_1.z.uuid(),
+});
+// public.resend_invitation mints a FRESH token so the caller can re-send the
+// invitation email, and returns exactly create_invitation's shape. Aliased
+// rather than redeclared so the two cannot drift apart.
+//
+// Unlike list_invitations — which deliberately never re-exposes tokens — a value
+// parsed by this schema carries a secret. Do not log or persist it.
+exports.resendInvitationResponseSchema = exports.invitationResponseSchema;
 exports.invitationDetailsSchema = zod_1.z.object({
     id: zod_1.z.uuid(),
     email: zod_1.z.email(),

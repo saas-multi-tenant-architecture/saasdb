@@ -25,6 +25,8 @@ Purely additive — the existing `role` / `role_name` columns are unchanged, and
 
 Both are `sessionMiddleware`-guarded; the SQL layer enforces organization membership, not role-based permission — `core.cancel_invitation` requires the inviter or any org member, and `core.resend_invitation` requires only org membership. Consumers who want these restricted to admins or the original inviter must apply their own CASL check in the application layer. **The resend response carries an invitation token** — `resend_invitation` mints a fresh one so the caller can re-send the email. Unlike `list_invitations`, which deliberately never re-exposes tokens, this response is a secret: do not log or persist it.
 
+`@smta/schemas` gains the matching contracts: `cancelInvitationInputSchema`, `resendInvitationInputSchema`, and `resendInvitationResponseSchema` (aliased to `invitationResponseSchema`, since `resend_invitation` returns exactly `create_invitation`'s shape). `cancel_invitation` returns `void` and so has no output schema — the adapter's `{ success: true }` is an HTTP-layer contract, not a `public.*` one.
+
 **Applying this release:** re-apply exactly these five files, **in one transaction**, in this order (the `packages/core/sql-scripts.json` order):
 
 ```

@@ -28,6 +28,26 @@ export const acceptInvitationInputSchema = z.object({
   token: z.string().min(1, 'Invitation token is required'),
 });
 
+export const cancelInvitationInputSchema = z.object({
+  invitation_id: z.uuid(),
+});
+// public.cancel_invitation returns void, so it has no output schema. The
+// better-auth adapter normalizes that void row to { success: true } at the HTTP
+// layer — an adapter contract rather than a public.* RPC contract, so it does
+// not belong in this package.
+
+export const resendInvitationInputSchema = z.object({
+  invitation_id: z.uuid(),
+});
+
+// public.resend_invitation mints a FRESH token so the caller can re-send the
+// invitation email, and returns exactly create_invitation's shape. Aliased
+// rather than redeclared so the two cannot drift apart.
+//
+// Unlike list_invitations — which deliberately never re-exposes tokens — a value
+// parsed by this schema carries a secret. Do not log or persist it.
+export const resendInvitationResponseSchema = invitationResponseSchema;
+
 export const invitationDetailsSchema = z.object({
   id: z.uuid(),
   email: z.email(),
@@ -61,5 +81,8 @@ export const invitationListItemSchema = z.object({
 export type InvitationStatus = z.infer<typeof invitationStatusSchema>;
 export type CreateInvitationInput = z.infer<typeof createInvitationInputSchema>;
 export type InvitationResponse = z.infer<typeof invitationResponseSchema>;
+export type CancelInvitationInput = z.infer<typeof cancelInvitationInputSchema>;
+export type ResendInvitationInput = z.infer<typeof resendInvitationInputSchema>;
+export type ResendInvitationResponse = z.infer<typeof resendInvitationResponseSchema>;
 export type InvitationDetails = z.infer<typeof invitationDetailsSchema>;
 export type InvitationListItem = z.infer<typeof invitationListItemSchema>;
