@@ -13,7 +13,7 @@
 
 BEGIN;
 
-SELECT plan(4);
+SELECT plan(9);
 
 -- ========================================
 -- SETUP: an invitation carrying the manager role
@@ -68,6 +68,61 @@ SELECT is(
      current_setting('test.label_invitation_token'))),
   'manager',
   'get_invitation_details still returns the role identifier'
+);
+
+-- ========================================
+-- public.list_my_organizations  (acting user: maria, super_admin)
+-- ========================================
+-- NOTE: `description` here is the ORGANIZATION's description; `role_label` is
+-- the ROLE's. Two different columns, distinctly aliased. Do not conflate them.
+SELECT is(
+  (SELECT role_label FROM public.list_my_organizations()
+   WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid),
+  'Organization owner with full administrative access',
+  'list_my_organizations returns the role label'
+);
+
+SELECT is(
+  (SELECT role FROM public.list_my_organizations()
+   WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid),
+  'super_admin',
+  'list_my_organizations still returns the role identifier'
+);
+
+-- ========================================
+-- public.get_user_organizations
+-- ========================================
+-- This function is literally RETURN QUERY SELECT * FROM list_my_organizations().
+-- If its RETURNS TABLE did not gain role_label in the same position, this call
+-- raises a structure mismatch. That failure happens at CALL time, not deploy
+-- time — which is exactly why this assertion exists.
+SELECT is(
+  (SELECT role_label FROM public.get_user_organizations()
+   WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid),
+  'Organization owner with full administrative access',
+  'get_user_organizations returns the role label through its delegate'
+);
+
+-- ========================================
+-- public.list_organization_members
+-- ========================================
+-- The most important of the eight: this is the function that renders an
+-- organisation's Owner. super_admin -> "Owner" is precisely the mapping no
+-- consumer can derive, and invitations can never carry super_admin at all.
+SELECT is(
+  (SELECT role_label FROM public.list_organization_members(
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)
+   WHERE email = 'maria@test.bellaitalia.com'),
+  'Organization owner with full administrative access',
+  'list_organization_members returns the label for the org owner'
+);
+
+SELECT is(
+  (SELECT role_label FROM public.list_organization_members(
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)
+   WHERE email = 'carlos@test.bellaitalia.com'),
+  'Location manager with administrative access to assigned units',
+  'list_organization_members returns the label for a manager'
 );
 
 SELECT * FROM finish();

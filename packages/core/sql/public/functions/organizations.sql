@@ -5,16 +5,20 @@
 -- FUNCTION: public.list_my_organizations()
 -- ========================================
 -- List organizations the current user belongs to
+DROP FUNCTION IF EXISTS public.list_my_organizations();
+
 CREATE OR REPLACE FUNCTION public.list_my_organizations()
 RETURNS TABLE (
   id UUID,
   name TEXT,
   description TEXT,
-  role TEXT
+  role TEXT,
+  role_label TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT o.id, o.name, o.description, r.name AS role
+  -- o.description is the organization's; r.description is the role's label.
+  SELECT o.id, o.name, o.description, r.name AS role, r.description AS role_label
   FROM core.organizations o
   JOIN core.memberships m ON m.organization_id = o.id
   JOIN core.roles r ON r.id = m.role_id
@@ -54,6 +58,8 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.list_organization_members()
 -- ========================================
 -- List members of an organization
+DROP FUNCTION IF EXISTS public.list_organization_members(UUID);
+
 CREATE OR REPLACE FUNCTION public.list_organization_members(p_id UUID)
 RETURNS TABLE (
   user_id UUID,
@@ -61,6 +67,7 @@ RETURNS TABLE (
   first_name TEXT,
   last_name TEXT,
   role TEXT,
+  role_label TEXT,
   is_super_admin BOOLEAN
 ) AS $$
 BEGIN
@@ -70,6 +77,7 @@ BEGIN
          um.first_name,
          um.last_name,
          r.name AS role,
+         r.description AS role_label,
          m.is_super_admin
   FROM core.memberships m
   JOIN core.users_meta um ON um.id = m.user_id

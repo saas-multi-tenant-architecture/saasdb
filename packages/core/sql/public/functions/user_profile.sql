@@ -71,14 +71,19 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.get_user_organizations()
 -- ========================================
 -- Returns all active organizations the current user belongs to.
+DROP FUNCTION IF EXISTS public.get_user_organizations();
+
 CREATE OR REPLACE FUNCTION public.get_user_organizations()
 RETURNS TABLE (
   id UUID,
   name TEXT,
   description TEXT,
-  role TEXT
+  role TEXT,
+  role_label TEXT
 ) AS $$
 BEGIN
+  -- SELECT * from the delegate: this RETURNS TABLE must match
+  -- public.list_my_organizations() column-for-column, in order.
   RETURN QUERY SELECT * FROM public.list_my_organizations();
 END;
 $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
