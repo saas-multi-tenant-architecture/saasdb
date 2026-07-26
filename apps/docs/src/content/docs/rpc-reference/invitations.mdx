@@ -66,6 +66,7 @@ RETURNS TABLE (
   organization_name TEXT,
   unit_name        TEXT,
   role_name        TEXT,
+  role_label       TEXT,
   invited_by_name  TEXT,
   expires_at       TIMESTAMPTZ,
   status           TEXT
@@ -127,12 +128,15 @@ RETURNS TABLE (
   organization_id  UUID,
   unit_id          UUID,
   role_name        TEXT,
+  role_label       TEXT,
   invited_by_email TEXT,
   status           TEXT,
   expires_at       TIMESTAMPTZ,
   created_at       TIMESTAMPTZ
 )
 ```
+
+**`role_name` vs `role_label`**: `role_name` is the stable identifier (`core.roles.name`) — key your logic on it. `role_label` is the human-readable display name (`core.roles.description`) — render that. **Do not derive one from the other**: `super_admin`'s label is `Owner`, so de-slugifying the identifier yields "Super Admin", a role that does not exist. `role_label` is nullable, because a deployment may seed a role without a description.
 
 **`p_status` values**: `'pending'`, `'accepted'`, `'expired'`, `'cancelled'`
 

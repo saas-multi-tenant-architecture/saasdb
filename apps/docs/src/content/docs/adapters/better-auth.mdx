@@ -124,6 +124,8 @@ import { smtaPlugin, withSMTA } from '@smta/better-auth'
 | `smtaAcceptInvitation` | POST | Accept an invitation by token |
 | `smtaGetInvitationDetails` | GET | Get invitation details (public — no auth required) |
 | `smtaListInvitations` | GET | List invitations for an organization; optional `?status=` filter (all statuses if omitted) |
+| `smtaCancelInvitation` | POST | Cancel a pending invitation — `POST /smta/invitation/:id/cancel`, returns `{ success: true }` |
+| `smtaResendInvitation` | POST | Resend an invitation with a fresh token and reset expiry — `POST /smta/invitation/:id/resend`. **The response contains an invitation token; treat it as a secret.** |
 | `smtaListOrgMembers` | GET | List members of an organization |
 | `smtaGetUserPermissions` | GET | Get the current user's permissions within an org |
 | `smtaSetActiveOrg` | POST | Set the active organization in the session |

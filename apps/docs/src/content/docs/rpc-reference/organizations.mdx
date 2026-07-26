@@ -20,9 +20,12 @@ RETURNS TABLE (
   id          UUID,
   name        TEXT,
   description TEXT,
-  role        TEXT
+  role        TEXT,
+  role_label  TEXT
 )
 ```
+
+`description` is the **organization's** description; `role_label` is the **role's** display name (`core.roles.description`), nullable. `role` remains the stable identifier — key logic on it, render `role_label`.
 
 **Usage**
 ```ts
@@ -74,9 +77,12 @@ RETURNS TABLE (
   first_name     TEXT,
   last_name      TEXT,
   role           TEXT,
+  role_label     TEXT,
   is_super_admin BOOLEAN
 )
 ```
+
+`role_label` is the role's display name, nullable. Render it rather than `role` — deriving a label from the identifier gets the owner wrong, since `super_admin`'s label is `Owner`, not "Super Admin".
 
 **Usage**
 ```ts
