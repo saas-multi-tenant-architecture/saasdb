@@ -13,7 +13,7 @@
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(14);
 
 -- ========================================
 -- SETUP: an invitation carrying the manager role
@@ -164,6 +164,40 @@ SELECT is(
    WHERE email = 'sam@test.bellaitalia.com'),
   'Team member with read access and limited write access',
   'list_unit_members returns the role label'
+);
+
+-- ========================================
+-- NULL passthrough
+-- ========================================
+-- core.roles.description is nullable and roles are seeded per deployment, so
+-- NULL is a real state meaning "this deployment gave the role no label".
+-- The functions must NOT COALESCE it to r.name: doing so would render
+-- 'super_admin' to an end user in exactly the case nobody tests, which is the
+-- original bug reappearing somewhere harder to find.
+--
+-- This UPDATE is safe: tests wrap in BEGIN/ROLLBACK, and nothing anywhere
+-- asserts an exact core.roles count (only existence and > 0).
+SELECT test_helpers.set_service_role();
+
+UPDATE core.roles SET description = NULL WHERE name = 'manager';
+
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+SELECT is(
+  (SELECT role_label FROM public.list_organization_members(
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)
+   WHERE email = 'carlos@test.bellaitalia.com'),
+  NULL,
+  'A role with no description yields NULL role_label, not the identifier'
+);
+
+-- The identifier must be unaffected by the missing label.
+SELECT is(
+  (SELECT role FROM public.list_organization_members(
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)
+   WHERE email = 'carlos@test.bellaitalia.com'),
+  'manager',
+  'The role identifier is unaffected by a NULL label'
 );
 
 SELECT * FROM finish();
