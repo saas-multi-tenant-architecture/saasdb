@@ -122,6 +122,31 @@ export PGSSLMODE="$DB_SSLMODE"
 # Suppress NOTICE/INFO messages from PostgreSQL (reduces noise like "SQL function X statement Y")
 export PGOPTIONS="-c client_min_messages=WARNING"
 
+# ========================================
+# Static adapter guards (shell, not pgTap)
+# ========================================
+# These compare source files against each other or against the live catalog,
+# which pg_prove cannot do from inside SQL. A failure here is recorded and
+# reported at the end so the pgTap suite and cleanup still run.
+GUARD_EXIT=0
+echo -e "${YELLOW}=== Adapter guards ===${NC}"
+echo "=== Adapter guards ===" >> "$LOG_FILE"
+for guard in tests/adapters/*.sh; do
+  [ -f "$guard" ] || continue
+  echo "--- $guard" | tee -a "$LOG_FILE"
+  # Check PIPESTATUS[0], not the pipeline's exit code — that would be tee's.
+  DB_URL="$DB_URL" bash "$guard" 2>&1 | tee -a "$LOG_FILE"
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+    GUARD_EXIT=1
+  fi
+done
+if [ $GUARD_EXIT -eq 0 ]; then
+  echo -e "${GREEN}✓ Adapter guards passed${NC}"
+else
+  echo -e "${RED}✗ Adapter guards failed${NC}"
+fi
+echo ""
+
 # Run tests in logical order
 # Using -v for verbose output, pipe to tee to save and display
 pg_prove -v \
@@ -189,12 +214,22 @@ echo ""
 echo "Full output saved to: $LOG_FILE"
 echo ""
 
-if [ $TEST_EXIT_CODE -eq 0 ]; then
+if [ $TEST_EXIT_CODE -eq 0 ] && [ $GUARD_EXIT -eq 0 ]; then
   echo -e "${GREEN}=== All tests passed! ===${NC}"
   echo "=== All tests passed! ===" >> "$LOG_FILE"
   exit 0
 else
-  echo -e "${RED}=== Some tests failed ===${NC}"
-  echo "=== Some tests failed ===" >> "$LOG_FILE"
-  exit $TEST_EXIT_CODE
+  if [ $GUARD_EXIT -ne 0 ]; then
+    echo -e "${RED}=== Adapter guards failed (see 'Adapter guards' above) ===${NC}"
+    echo "=== Adapter guards failed ===" >> "$LOG_FILE"
+  fi
+  if [ $TEST_EXIT_CODE -ne 0 ]; then
+    echo -e "${RED}=== Some tests failed ===${NC}"
+    echo "=== Some tests failed ===" >> "$LOG_FILE"
+  fi
+  if [ $TEST_EXIT_CODE -ne 0 ]; then
+    exit $TEST_EXIT_CODE
+  fi
+  # pgTap passed but a guard failed — still a failing run.
+  exit 1
 fi

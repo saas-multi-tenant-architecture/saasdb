@@ -123,7 +123,7 @@ import { smtaPlugin, withSMTA } from '@smta/better-auth'
 | `smtaCreateInvitation` | POST | Invite a user to an organization |
 | `smtaAcceptInvitation` | POST | Accept an invitation by token |
 | `smtaGetInvitationDetails` | GET | Get invitation details (public — no auth required) |
-| `smtaListInvitations` | GET | List pending invitations for an organization |
+| `smtaListInvitations` | GET | List invitations for an organization (all statuses — filter client-side) |
 | `smtaListOrgMembers` | GET | List members of an organization |
 | `smtaGetUserPermissions` | GET | Get the current user's permissions within an org |
 | `smtaSetActiveOrg` | POST | Set the active organization in the session |

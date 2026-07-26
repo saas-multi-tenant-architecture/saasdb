@@ -51,8 +51,12 @@ export function createSMTAHandlers(pool: Pool) {
     },
 
     async createInvitation(userId: string, orgId: string, email: string, roleId: string) {
+      // Argument order follows the SQL signature, which takes email FIRST:
+      //   public.create_invitation(p_email, p_organization_id, p_role_id, ...)
+      // Do not reorder to match this handler's parameter list — callPublicFn
+      // binds positionally. See tests/adapters/04_endpoint_arg_order.sh.
       return withSMTA(pool, userId, (client) =>
-        callPublicFn(client, 'public.create_invitation', [orgId, email, roleId])
+        callPublicFn(client, 'public.create_invitation', [email, orgId, roleId])
       );
     },
 

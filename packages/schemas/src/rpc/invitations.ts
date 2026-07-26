@@ -1,8 +1,8 @@
-// SYNC-CHECK: public.create_invitation(p_email TEXT, p_org_id UUID, p_role_id UUID, p_unit_id UUID, p_metadata JSONB)
+// SYNC-CHECK: public.create_invitation(p_email TEXT, p_organization_id UUID, p_role_id UUID, p_unit_id UUID, p_metadata JSONB)
 // SYNC-CHECK: public.accept_invitation(p_token TEXT)
 // SYNC-CHECK: public.cancel_invitation(p_invitation_id UUID)
 // SYNC-CHECK: public.resend_invitation(p_invitation_id UUID)
-// SYNC-CHECK: public.list_invitations(p_org_id UUID, p_status TEXT)
+// SYNC-CHECK: public.list_invitations(p_organization_id UUID, p_status TEXT)
 // SYNC-CHECK: public.get_invitation_details(p_token TEXT)
 
 import { z } from 'zod';
