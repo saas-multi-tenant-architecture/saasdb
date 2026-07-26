@@ -26,6 +26,7 @@ export const userUnitSchema = z.object({
   organization_id: z.uuid(),
   name: z.string(),
   role: z.string(),
+  role_label: z.string().nullable(),
 });
 
 export type UserProfile = z.infer<typeof userProfileSchema>;

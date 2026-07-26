@@ -34,6 +34,12 @@ export const invitationDetailsSchema = z.object({
   organization_name: z.string(),
   unit_name: z.string().nullable(),
   role_name: z.string(),
+  // core.roles.description. Nullable: roles are seeded per deployment, so a
+  // deployment may give a role no label. Required (not .optional()) — all
+  // @smta/* packages share one Changesets fixed group and always publish at
+  // the same version, so a missing key means the SQL was never applied. That
+  // should raise at the first call, not render as a blank label in production.
+  role_label: z.string().nullable(),
   invited_by_name: z.string(),
   expires_at: z.coerce.date(),
   status: invitationStatusSchema,
@@ -45,6 +51,7 @@ export const invitationListItemSchema = z.object({
   organization_id: z.uuid(),
   unit_id: z.uuid().nullable(),
   role_name: z.string(),
+  role_label: z.string().nullable(),
   invited_by_email: z.email(),
   status: invitationStatusSchema,
   expires_at: z.coerce.date(),

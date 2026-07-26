@@ -20,6 +20,7 @@ export declare const userUnitSchema: z.ZodObject<{
     organization_id: z.ZodUUID;
     name: z.ZodString;
     role: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 export type UserProfile = z.infer<typeof userProfileSchema>;
 export type UserUnit = z.infer<typeof userUnitSchema>;

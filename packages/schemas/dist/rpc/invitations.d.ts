@@ -27,6 +27,7 @@ export declare const invitationDetailsSchema: z.ZodObject<{
     organization_name: z.ZodString;
     unit_name: z.ZodNullable<z.ZodString>;
     role_name: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
     invited_by_name: z.ZodString;
     expires_at: z.ZodCoercedDate<unknown>;
     status: z.ZodEnum<{
@@ -42,6 +43,7 @@ export declare const invitationListItemSchema: z.ZodObject<{
     organization_id: z.ZodUUID;
     unit_id: z.ZodNullable<z.ZodUUID>;
     role_name: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
     invited_by_email: z.ZodEmail;
     status: z.ZodEnum<{
         pending: "pending";

@@ -37,8 +37,9 @@ exports.getOrganizationOutputSchema = zod_1.z.object({
 exports.listMyOrganizationsItemSchema = zod_1.z.object({
     id: zod_1.z.uuid(),
     name: zod_1.z.string(),
-    description: zod_1.z.string().nullable(),
+    description: zod_1.z.string().nullable(), // the ORGANIZATION's description
     role: zod_1.z.string(),
+    role_label: zod_1.z.string().nullable(), // the ROLE's label
 });
 exports.listMyOrganizationsOutputSchema = zod_1.z.array(exports.listMyOrganizationsItemSchema);
 exports.updateOrganizationInputSchema = zod_1.z.object({
@@ -61,6 +62,7 @@ exports.organizationMemberSchema = zod_1.z.object({
     first_name: zod_1.z.string().nullable(),
     last_name: zod_1.z.string().nullable(),
     role: zod_1.z.string(),
+    role_label: zod_1.z.string().nullable(),
     is_super_admin: zod_1.z.boolean(),
 });
 exports.listOrganizationMembersOutputSchema = zod_1.z.array(exports.organizationMemberSchema);

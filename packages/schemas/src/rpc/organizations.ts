@@ -38,8 +38,9 @@ export const getOrganizationOutputSchema = z.object({
 export const listMyOrganizationsItemSchema = z.object({
   id: z.uuid(),
   name: z.string(),
-  description: z.string().nullable(),
+  description: z.string().nullable(),   // the ORGANIZATION's description
   role: z.string(),
+  role_label: z.string().nullable(),    // the ROLE's label
 });
 export const listMyOrganizationsOutputSchema = z.array(listMyOrganizationsItemSchema);
 
@@ -64,6 +65,7 @@ export const organizationMemberSchema = z.object({
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   role: z.string(),
+  role_label: z.string().nullable(),
   is_super_admin: z.boolean(),
 });
 export const listOrganizationMembersOutputSchema = z.array(organizationMemberSchema);

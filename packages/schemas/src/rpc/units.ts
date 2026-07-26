@@ -35,6 +35,7 @@ export const unitMemberSchema = z.object({
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   role: z.string(),
+  role_label: z.string().nullable(),
 });
 
 export type Unit = z.infer<typeof unitSchema>;

@@ -25,4 +25,5 @@ exports.userUnitSchema = zod_1.z.object({
     organization_id: zod_1.z.uuid(),
     name: zod_1.z.string(),
     role: zod_1.z.string(),
+    role_label: zod_1.z.string().nullable(),
 });

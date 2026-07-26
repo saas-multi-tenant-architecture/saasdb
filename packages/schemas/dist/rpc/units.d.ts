@@ -34,6 +34,7 @@ export declare const unitMemberSchema: z.ZodObject<{
     first_name: z.ZodNullable<z.ZodString>;
     last_name: z.ZodNullable<z.ZodString>;
     role: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 export type Unit = z.infer<typeof unitSchema>;
 export type UnitMember = z.infer<typeof unitMemberSchema>;

@@ -28,12 +28,14 @@ export declare const listMyOrganizationsItemSchema: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodNullable<z.ZodString>;
     role: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 export declare const listMyOrganizationsOutputSchema: z.ZodArray<z.ZodObject<{
     id: z.ZodUUID;
     name: z.ZodString;
     description: z.ZodNullable<z.ZodString>;
     role: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>>;
 export declare const updateOrganizationInputSchema: z.ZodObject<{
     p_id: z.ZodUUID;
@@ -55,6 +57,7 @@ export declare const organizationMemberSchema: z.ZodObject<{
     first_name: z.ZodNullable<z.ZodString>;
     last_name: z.ZodNullable<z.ZodString>;
     role: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
     is_super_admin: z.ZodBoolean;
 }, z.core.$strip>;
 export declare const listOrganizationMembersOutputSchema: z.ZodArray<z.ZodObject<{
@@ -63,6 +66,7 @@ export declare const listOrganizationMembersOutputSchema: z.ZodArray<z.ZodObject
     first_name: z.ZodNullable<z.ZodString>;
     last_name: z.ZodNullable<z.ZodString>;
     role: z.ZodString;
+    role_label: z.ZodNullable<z.ZodString>;
     is_super_admin: z.ZodBoolean;
 }, z.core.$strip>>;
 export declare const addMemberInputSchema: z.ZodObject<{

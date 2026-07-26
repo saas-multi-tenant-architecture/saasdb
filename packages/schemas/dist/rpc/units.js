@@ -33,4 +33,5 @@ exports.unitMemberSchema = zod_1.z.object({
     first_name: zod_1.z.string().nullable(),
     last_name: zod_1.z.string().nullable(),
     role: zod_1.z.string(),
+    role_label: zod_1.z.string().nullable(),
 });
