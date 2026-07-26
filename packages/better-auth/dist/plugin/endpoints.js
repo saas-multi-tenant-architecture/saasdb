@@ -53,8 +53,11 @@ function createSMTAHandlers(pool) {
                 client.release();
             }
         },
-        async listInvitations(userId, orgId) {
-            return (0, inject_user_context_1.withSMTA)(pool, userId, (client) => callPublicFn(client, 'public.list_invitations', [orgId]));
+        // status is passed through opaquely — the accepted values live in SQL
+        // (core.list_organization_invitations), so adding one there needs no change
+        // here. Omit it to get invitations of every status.
+        async listInvitations(userId, orgId, status) {
+            return (0, inject_user_context_1.withSMTA)(pool, userId, (client) => callPublicFn(client, 'public.list_invitations', [orgId, status ?? null]));
         },
         async listOrgMembers(userId, orgId) {
             return (0, inject_user_context_1.withSMTA)(pool, userId, (client) => callPublicFn(client, 'public.list_organization_members', [orgId]));

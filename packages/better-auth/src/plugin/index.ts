@@ -89,10 +89,21 @@ export function smtaPlugin(options: SMTAPluginOptions): BetterAuthPlugin {
 
       smtaListInvitations: createAuthEndpoint(
         '/smta/organization/:orgId/invitations',
-        { method: 'GET', use: [sessionMiddleware] },
+        {
+          method: 'GET',
+          // Optional ?status= filter. Deliberately a plain string rather than an
+          // enum: the accepted values are owned by SQL, so listing them here
+          // would drift the moment a status is added.
+          query: z.object({ status: z.string().optional() }).optional(),
+          use: [sessionMiddleware],
+        },
         async (ctx) => {
           const session = ctx.context.session;
-          const result = await handlers.listInvitations(session.user.id, ctx.params.orgId);
+          const result = await handlers.listInvitations(
+            session.user.id,
+            ctx.params.orgId,
+            ctx.query?.status
+          );
           return ctx.json(result as Record<string, unknown>[]);
         }
       ),

@@ -3,7 +3,7 @@
 
 BEGIN;
 
-SELECT plan(14);
+SELECT plan(16);
 
 -- ========================================
 -- SETUP: Create test invitations
@@ -140,6 +140,21 @@ SELECT ok(
 );
 
 -- ========================================
+-- TEST: Invalid status is rejected, not silently empty
+-- ========================================
+-- The filter is a plain equality (p_status IS NULL OR i.status = p_status), so
+-- without validation a typo returns zero rows and is indistinguishable from
+-- "this organization has no invitations".
+SELECT throws_ok(
+  $$SELECT * FROM public.list_invitations(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      'PENDING'
+    )$$,
+  'Invalid status. Must be "pending", "accepted", "expired", or "cancelled".',
+  'Invalid status raises instead of returning an empty set'
+);
+
+-- ========================================
 -- TEST: Non-member cannot list invitations
 -- ========================================
 SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('luigi@test.pizzapalace.com'));
@@ -148,6 +163,17 @@ SELECT throws_ok(
   $$SELECT * FROM public.list_invitations('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)$$,
   'You are not authorized to view invitations for this organization',
   'Non-member cannot list invitations'
+);
+
+-- Authorization must be decided BEFORE input validation, so a non-member
+-- cannot use the error message to probe which status values are valid.
+SELECT throws_ok(
+  $$SELECT * FROM public.list_invitations(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      'PENDING'
+    )$$,
+  'You are not authorized to view invitations for this organization',
+  'Non-member gets the authorization error, not the status error'
 );
 
 -- ========================================

@@ -138,6 +138,7 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- Parameters:
 --   p_organization_id: Organization to list invitations for
 --   p_status: (Optional) Filter by status ('pending', 'accepted', 'expired', 'cancelled')
+--             Omit or pass NULL for every status. Any other value raises.
 --
 -- Returns: Table of invitation records
 --

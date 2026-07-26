@@ -382,8 +382,13 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = core, public, extensions;
 -- ========================================
 -- FUNCTION: core.list_organization_invitations()
 -- ========================================
--- Lists invitations for an organization
+-- Lists invitations for an organization, optionally filtered by status
 -- Authorization: Must be a member of the organization
+--
+-- p_status: NULL returns every status. A non-NULL value must be one of the
+-- statuses allowed by the invitations.valid_status CHECK constraint; anything
+-- else raises. Without that check the filter is a plain equality, so a typo
+-- would return zero rows and look identical to "no invitations exist".
 CREATE OR REPLACE FUNCTION core.list_organization_invitations(
   p_organization_id UUID,
   p_status TEXT DEFAULT NULL
@@ -399,9 +404,16 @@ CREATE OR REPLACE FUNCTION core.list_organization_invitations(
   created_at TIMESTAMPTZ
 ) AS $$
 BEGIN
-  -- Authorization: Must be a member of the organization
+  -- Authorization: Must be a member of the organization.
+  -- Checked BEFORE validating p_status so a non-member cannot use the error
+  -- message to probe which status values are accepted.
   IF NOT core.is_org_member(p_organization_id) THEN
     RAISE EXCEPTION 'You are not authorized to view invitations for this organization';
+  END IF;
+
+  -- Validate the optional status filter (mirrors invitations.valid_status)
+  IF p_status IS NOT NULL AND p_status NOT IN ('pending', 'accepted', 'expired', 'cancelled') THEN
+    RAISE EXCEPTION 'Invalid status. Must be "pending", "accepted", "expired", or "cancelled".';
   END IF;
 
   RETURN QUERY

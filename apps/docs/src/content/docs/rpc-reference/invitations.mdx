@@ -136,6 +136,8 @@ RETURNS TABLE (
 
 **`p_status` values**: `'pending'`, `'accepted'`, `'expired'`, `'cancelled'`
 
+Omit `p_status` (or pass `NULL`) to get every status. Any other value raises `Invalid status. Must be "pending", "accepted", "expired", or "cancelled".` — the filter is an exact match, so an unvalidated typo would otherwise return an empty set that looks like "no invitations".
+
 **Usage**
 ```ts
 // All invitations
