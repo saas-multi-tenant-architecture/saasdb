@@ -92,16 +92,19 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.get_user_units()
 -- ========================================
 -- Returns units the current user belongs to within a specific organization.
+DROP FUNCTION IF EXISTS public.get_user_units(UUID);
+
 CREATE OR REPLACE FUNCTION public.get_user_units(p_org_id UUID)
 RETURNS TABLE (
   id UUID,
   organization_id UUID,
   name TEXT,
-  role TEXT
+  role TEXT,
+  role_label TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT u.id, u.organization_id, u.name, r.name AS role
+  SELECT u.id, u.organization_id, u.name, r.name AS role, r.description AS role_label
   FROM core.units u
   JOIN core.unit_memberships um ON um.unit_id = u.id
   JOIN core.roles r ON r.id = um.role_id

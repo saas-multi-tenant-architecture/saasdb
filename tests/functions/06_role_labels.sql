@@ -13,7 +13,7 @@
 
 BEGIN;
 
-SELECT plan(9);
+SELECT plan(12);
 
 -- ========================================
 -- SETUP: an invitation carrying the manager role
@@ -123,6 +123,47 @@ SELECT is(
    WHERE email = 'carlos@test.bellaitalia.com'),
   'Location manager with administrative access to assigned units',
   'list_organization_members returns the label for a manager'
+);
+
+-- ========================================
+-- public.list_my_units  (self-scoped: must act as carlos)
+-- ========================================
+-- list_my_units filters on core.get_current_user_id(), so the acting user has
+-- to be the one whose units we assert on. Carlos is manager at Downtown.
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('carlos@test.bellaitalia.com'));
+
+SELECT is(
+  (SELECT role_label FROM public.list_my_units()
+   WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid),
+  'Location manager with administrative access to assigned units',
+  'list_my_units returns the role label'
+);
+
+-- ========================================
+-- public.get_user_units
+-- ========================================
+SELECT is(
+  (SELECT role_label FROM public.get_user_units(
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid)
+   WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid),
+  'Location manager with administrative access to assigned units',
+  'get_user_units returns the role label'
+);
+
+-- ========================================
+-- public.list_unit_members
+-- ========================================
+-- Back to maria: unit_memberships_select allows any org member to read the
+-- unit memberships of their org's units, and she is the org owner.
+-- Sam is team at Downtown.
+SELECT test_helpers.set_auth_user(test_helpers.get_test_user_id('maria@test.bellaitalia.com'));
+
+SELECT is(
+  (SELECT role_label FROM public.list_unit_members(
+     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid)
+   WHERE email = 'sam@test.bellaitalia.com'),
+  'Team member with read access and limited write access',
+  'list_unit_members returns the role label'
 );
 
 SELECT * FROM finish();

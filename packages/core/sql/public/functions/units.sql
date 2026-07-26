@@ -6,16 +6,19 @@
 -- FUNCTION: public.list_my_units()
 -- ========================================
 -- List units for the current user
+DROP FUNCTION IF EXISTS public.list_my_units();
+
 CREATE OR REPLACE FUNCTION public.list_my_units()
 RETURNS TABLE (
   id UUID,
   organization_id UUID,
   name TEXT,
-  role TEXT
+  role TEXT,
+  role_label TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT u.id, u.organization_id, u.name, r.name AS role
+  SELECT u.id, u.organization_id, u.name, r.name AS role, r.description AS role_label
   FROM core.units u
   JOIN core.unit_memberships um ON um.unit_id = u.id
   JOIN core.roles r ON r.id = um.role_id
@@ -51,13 +54,16 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- FUNCTION: public.list_unit_members()
 -- ========================================
 -- List members of a unit
+DROP FUNCTION IF EXISTS public.list_unit_members(UUID);
+
 CREATE OR REPLACE FUNCTION public.list_unit_members(p_unit_id UUID)
 RETURNS TABLE (
   user_id UUID,
   email TEXT,
   first_name TEXT,
   last_name TEXT,
-  role TEXT
+  role TEXT,
+  role_label TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -65,7 +71,8 @@ BEGIN
          umeta.email,
          umeta.first_name,
          umeta.last_name,
-         r.name AS role
+         r.name AS role,
+         r.description AS role_label
   FROM core.unit_memberships um
   JOIN core.users_meta umeta ON umeta.id = um.user_id
   JOIN core.roles r ON r.id = um.role_id
