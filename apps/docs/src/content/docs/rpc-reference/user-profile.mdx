@@ -79,6 +79,8 @@ RETURNS TABLE (
 )
 ```
 
+`role` is the stable identifier to key logic on; `role_label` is the role's display name (`core.roles.description`) to render. Neither is derivable from the other — `super_admin`'s label is `Owner`, so de-slugifying yields "Super Admin", a role that does not exist. `role_label` is nullable.
+
 **Usage**
 ```ts
 const { data, error } = await supabase.rpc('get_user_organizations');
@@ -103,6 +105,8 @@ RETURNS TABLE (
   role_label      TEXT
 )
 ```
+
+`role` is the stable identifier to key logic on; `role_label` is the role's display name (`core.roles.description`) to render. Neither is derivable from the other — `super_admin`'s label is `Owner`, so de-slugifying yields "Super Admin", a role that does not exist. `role_label` is nullable.
 
 **Usage**
 ```ts

@@ -23,6 +23,20 @@ Purely additive — the existing `role` / `role_name` columns are unchanged, and
 - `POST /smta/invitation/:id/cancel` → `{ success: true }`
 - `POST /smta/invitation/:id/resend` → `[{ id, token, email, expires_at }]`
 
-Both are `sessionMiddleware`-guarded, with the SQL functions doing their own authorization on top. **The resend response carries an invitation token** — `resend_invitation` mints a fresh one so the caller can re-send the email. Unlike `list_invitations`, which deliberately never re-exposes tokens, this response is a secret: do not log or persist it.
+Both are `sessionMiddleware`-guarded; the SQL layer enforces organization membership, not role-based permission — `core.cancel_invitation` requires the inviter or any org member, and `core.resend_invitation` requires only org membership. Consumers who want these restricted to admins or the original inviter must apply their own CASL check in the application layer. **The resend response carries an invitation token** — `resend_invitation` mints a fresh one so the caller can re-send the email. Unlike `list_invitations`, which deliberately never re-exposes tokens, this response is a secret: do not log or persist it.
 
-**Applying this release:** the SQL must be re-applied. Adding a column to a `RETURNS TABLE` requires dropping and recreating the function, which the shipped SQL does inline. Upgrading the npm packages without re-running the SQL will raise a `ZodError` naming `role_label`.
+**Applying this release:** re-apply exactly these five files, **in one transaction**, in this order (the `packages/core/sql-scripts.json` order):
+
+```
+sql/functions/invitations.sql
+sql/public/functions/user_profile.sql
+sql/public/functions/organizations.sql
+sql/public/functions/units.sql
+sql/public/functions/invitations.sql
+```
+
+Do not re-run the full script list — `@smta/core` ships raw SQL with no migration mechanism, and tables are declared with bare `CREATE TABLE` (no `IF NOT EXISTS`), so replaying every script against a live database fails on the first table. A single transaction matters because `public.get_user_organizations` delegates to `public.list_my_organizations` via `SELECT *`: `user_profile.sql` is applied before `organizations.sql`, so between those two files the delegator has the new 5-column shape while the delegate still has the old 4-column one, and every call to `get_user_organizations` in that window raises a structure mismatch. On a fresh install this window doesn't exist; on a live re-apply it's a real (if brief) outage if not wrapped in one transaction.
+
+Because these functions are dropped and recreated rather than replaced in place, `public.get_invitation_details` is `SECURITY DEFINER` and its owner becomes whichever role applies the SQL — apply as the same role that owns the existing functions (the docs already say to run migrations as a role inheriting `app_admin`). For a definer function the owner is the privilege boundary, so this is not cosmetic.
+
+Upgrading the npm packages without re-running the SQL will raise a `ZodError` naming `role_label`.

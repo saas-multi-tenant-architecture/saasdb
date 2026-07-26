@@ -29,7 +29,7 @@ BEGIN
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
     '00000000-0000-0000-0000-000000000002'::uuid  -- manager
   );
-  PERFORM set_config('test.label_invitation_token', v_result.token, false);
+  PERFORM set_config('test.label_invitation_token', v_result.token, true);
 END $$;
 
 -- ========================================

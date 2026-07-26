@@ -130,6 +130,8 @@ import { smtaPlugin, withSMTA } from '@smta/better-auth'
 | `smtaGetUserPermissions` | GET | Get the current user's permissions within an org |
 | `smtaSetActiveOrg` | POST | Set the active organization in the session |
 
+`smtaCancelInvitation` and `smtaResendInvitation` authorize on organization membership only at the SQL layer — neither requires the caller to be an admin or the original inviter; applications that want that restriction must enforce it themselves via CASL.
+
 `smtaPlugin()` also adds `activeOrgId` to the better-auth session schema — a nullable string that tracks which organization is currently in context for multi-org users. It is set by the client via `smtaSetActiveOrg` and cleared by passing `null`.
 
 ## Connecting Roles & RLS
