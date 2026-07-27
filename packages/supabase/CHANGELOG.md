@@ -1,5 +1,12 @@
 # @smta/supabase
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [700f06e]
+  - @smta/core@0.7.0
+
 ## 0.6.2
 
 ### Patch Changes
