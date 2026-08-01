@@ -134,13 +134,18 @@ const { data, error } = await supabase.rpc('update_file_metadata', {
 
 ## `delete_file(p_file_id)`
 
-Soft-deletes a file record. Sets `is_deleted = true` on the record. The file URL and external storage object are not affected.
+Soft-deletes a file record. Sets `is_deleted = true` on the record. The file URL and external storage object are not affected. Available to any member of the organization that owns the file.
 
 **Signature**
 ```sql
 public.delete_file(p_file_id UUID)
 RETURNS VOID
 ```
+
+**Raises**
+| Condition | Message |
+|---|---|
+| File does not exist, is already deleted, or caller is not a member of the owning org | `File not found` |
 
 **Usage**
 ```ts

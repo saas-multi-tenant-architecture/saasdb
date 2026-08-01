@@ -180,7 +180,9 @@ SMTA provides two functions for assigning users to units, with different paramet
 
 ### `assign_user_to_unit(p_user_id, p_unit_id, p_role_id)`
 
-Assigns an org member to a unit. **No elevated permissions required.** Available to any authorized org member.
+Assigns an org member to a unit. **No super_admin required** — available to any member of the organization that owns the unit.
+
+The target user must already be a member of that organization. Re-adding someone who was previously removed from the unit is supported: the existing membership row is reactivated rather than duplicated.
 
 **Signature**
 ```sql
@@ -191,6 +193,12 @@ public.assign_user_to_unit(
 )
 RETURNS VOID
 ```
+
+**Raises**
+| Condition | Message |
+|---|---|
+| Unit does not exist, or caller is not a member of the owning org | `Unit not found` |
+| Target user is not a member of the owning org | `User is not a member of the organization` |
 
 **Usage**
 ```ts
@@ -205,7 +213,7 @@ await supabase.rpc('assign_user_to_unit', {
 
 ### `remove_user_from_unit(p_user_id, p_unit_id)`
 
-Soft-deletes a user's membership in a unit. Sets `is_deleted = true` on the membership record.
+Soft-deletes a user's membership in a unit. Sets `is_deleted = true` on the membership record. **No super_admin required** — available to any member of the organization that owns the unit.
 
 **Signature**
 ```sql
@@ -215,6 +223,12 @@ public.remove_user_from_unit(
 )
 RETURNS VOID
 ```
+
+**Raises**
+| Condition | Message |
+|---|---|
+| Unit does not exist, or caller is not a member of the owning org | `Unit not found` |
+| The user has no live membership in that unit | `Member not found` |
 
 ---
 
@@ -248,13 +262,19 @@ select * from public.update_unit('unit-uuid', 'Engineering', 'Backend team');
 
 ### `delete_unit(p_id)`
 
-Soft-deletes the unit and all of its memberships. Sets `is_deleted = true` on the unit and cascades to membership records.
+Soft-deletes the unit and all of its memberships. Sets `is_deleted = true` on the unit and cascades to membership records. **Super admin only.**
 
 **Signature**
 ```sql
 public.delete_unit(p_id UUID)
 RETURNS VOID
 ```
+
+**Raises**
+| Condition | Message |
+|---|---|
+| Unit does not exist, or caller is not a member of the owning org | `Unit not found` |
+| Caller is an org member but not a super_admin | `Only a super_admin can delete a unit` |
 
 **Usage**
 ```sql
@@ -332,5 +352,7 @@ RETURNS VOID
 |---|---|---|---|---|
 | `assign_user_to_unit` | `p_user_id` | `p_unit_id` | `p_role_id` | No |
 | `add_member_to_unit` | `p_unit_id` | `p_user_id` | `p_role_id` | Yes |
+| `remove_user_from_unit` | `p_user_id` | `p_unit_id` | — | No |
+| `remove_member_from_unit` | `p_unit_id` | `p_user_id` | — | Yes |
 
-Always double-check the parameter order when calling these two functions, as the `p_user_id` and `p_unit_id` positions are swapped.
+Always double-check the parameter order when calling these functions, as the `p_user_id` and `p_unit_id` positions are swapped between each pair. Both pairs take the same arguments and both accept two UUIDs, so a transposed call will not fail on type — it will act on the wrong records or raise `Unit not found`.
