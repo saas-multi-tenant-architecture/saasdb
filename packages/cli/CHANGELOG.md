@@ -1,5 +1,12 @@
 # @smta/cli
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies [b3c7e94]
+  - @smta/core@0.8.0
+
 ## 0.7.0
 
 ### Patch Changes
