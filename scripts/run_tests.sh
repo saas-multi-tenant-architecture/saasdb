@@ -176,6 +176,7 @@ pg_prove -v \
   tests/functions/04_user_functions.sql \
   tests/functions/05_permissions_functions.sql \
   tests/functions/06_role_labels.sql \
+  tests/functions/07_soft_delete_rpcs.sql \
   tests/invitations/01_create_invitation.sql \
   tests/invitations/02_accept_invitation.sql \
   tests/invitations/03_manage_invitations.sql \

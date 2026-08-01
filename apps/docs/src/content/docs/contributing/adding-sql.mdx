@@ -88,6 +88,50 @@ CREATE POLICY "my_table_select"
 
 Do not skip RLS. A table without policies will be inaccessible to all non-superusers once RLS is enabled, which will surface as test failures.
 
+### Soft Deletes Cannot Run as `SECURITY INVOKER`
+
+If a table's `SELECT` policy filters `is_deleted = false` — as every SMTA entity table's does — then a function that soft-deletes a row **must** be `SECURITY DEFINER`.
+
+When an `UPDATE` needs read access to the table (any `WHERE` clause referencing a column, or a `RETURNING` clause), PostgreSQL also checks the `SELECT` policy against the **post-update** row, so that a caller cannot update a row into a state they could not see. Setting `is_deleted = true` produces exactly such a row, and the write is refused:
+
+```
+ERROR: new row violates row-level security policy for table "units"
+```
+
+This is unconditional — it fails even for an org super_admin acting on a row plainly visible to them. Widening the `UPDATE` policy's `WITH CHECK` does not help, because the `UPDATE` policy is not what rejects the row.
+
+The same applies to reactivating a tombstone via `INSERT ... ON CONFLICT DO UPDATE`: the conflicting row is soft-deleted, so it fails the `UPDATE` policy's `USING` clause.
+
+So a soft-delete RPC must:
+
+1. Be declared `SECURITY DEFINER ... SET search_path = public, core`.
+2. Enforce, in its own body, the authorization its RLS policies would have applied — `SECURITY DEFINER` bypasses RLS entirely, so an omitted check means no check at all.
+3. Be added to `packages/core/sql/public/grants.sql` with `REVOKE EXECUTE ... FROM PUBLIC` followed by a `GRANT` to `app_user, app_admin`.
+4. Ship with a cross-tenant negative test: caller in org A, target in org B, expect a raise.
+
+```sql
+CREATE OR REPLACE FUNCTION public.delete_thing(p_id UUID)
+RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
+BEGIN
+  SELECT organization_id INTO v_org_id
+  FROM core.things WHERE id = p_id AND is_deleted = false;
+
+  -- Do not leak the existence of another tenant's row
+  IF v_org_id IS NULL OR NOT (core.is_org_member(v_org_id) OR core.is_super_admin(v_org_id)) THEN
+    RAISE EXCEPTION 'Thing not found';
+  END IF;
+
+  UPDATE core.things
+  SET is_deleted = true, deleted_at = now(), deleted_by = core.get_current_user_id()
+  WHERE id = p_id AND is_deleted = false;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
+```
+
+Note that clearing the flag (`is_deleted = false`) is the safe direction and is never blocked by this rule.
+
 ## Register the File in `sql-scripts.json`
 
 Open the `sql-scripts.json` in the relevant package and add your file to the `scripts` array at the correct position. Dependencies must come before dependents — a table must be listed before any function or policy that references it.

@@ -125,15 +125,38 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- ========================================
 -- FUNCTION: public.delete_file()
 -- ========================================
+-- SECURITY DEFINER: setting is_deleted = true makes the post-update row fail the
+-- organization_files SELECT policy (which filters is_deleted = false), and Postgres
+-- refuses an UPDATE whose new row the caller could not read back. Running as
+-- INVOKER this function could never succeed for any caller. The authorization the
+-- organization_files UPDATE policy would have applied is enforced explicitly below.
 CREATE OR REPLACE FUNCTION public.delete_file(p_file_id UUID)
 RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
 BEGIN
+  IF p_file_id IS NULL THEN
+    RAISE EXCEPTION 'File id is required';
+  END IF;
+
+  SELECT f.organization_id INTO v_org_id
+  FROM core.organization_files f
+  WHERE f.id = p_file_id
+    AND f.is_deleted = false;
+
+  -- Do not leak the existence of another tenant's file
+  IF v_org_id IS NULL OR NOT (core.is_org_member(v_org_id) OR core.is_super_admin(v_org_id)) THEN
+    RAISE EXCEPTION 'File not found';
+  END IF;
+
   UPDATE core.organization_files
   SET
     is_deleted = true,
     deleted_at = now(),
-    deleted_by = core.get_current_user_id()
-  WHERE id = p_file_id;
+    deleted_by = core.get_current_user_id(),
+    updated_by = core.get_current_user_id()
+  WHERE id = p_file_id
+    AND is_deleted = false;
 
   PERFORM core.log_audit(
     'delete', 'core.organization_files', p_file_id, 'delete_file',
@@ -142,4 +165,4 @@ BEGIN
     )
   );
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;

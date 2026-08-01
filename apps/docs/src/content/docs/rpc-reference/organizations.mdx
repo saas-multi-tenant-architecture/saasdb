@@ -190,7 +190,7 @@ select public.invite_user_to_organization('newuser@example.com', 'role-uuid-here
 
 ### `remove_user_from_organization(p_user_id, p_org_id)`
 
-Removes a user from an organization. Available to members with sufficient permissions.
+Soft-deletes a user's membership in an organization. **No super_admin required** — available to any member of that organization.
 
 **Signature**
 ```sql
@@ -200,6 +200,13 @@ public.remove_user_from_organization(
 )
 RETURNS VOID
 ```
+
+**Raises**
+| Condition | Message |
+|---|---|
+| Caller is not a member of the organization | `Organization not found` |
+| The user has no live membership in that organization | `Member not found` |
+| The target is the organization's super_admin | `Cannot soft-delete super_admin membership. Transfer super_admin status first.` |
 
 ---
 

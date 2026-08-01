@@ -136,37 +136,97 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- ========================================
 -- FUNCTION: public.assign_user_to_unit()
 -- ========================================
--- Assign a user to a unit
--- RLS validates org membership; CASL controls who can assign
+-- Assign an existing org member to a unit. Available to any member of the
+-- owning organization — the non-privileged counterpart to add_member_to_unit.
+--
+-- SECURITY DEFINER: re-adding a previously removed member has to reactivate the
+-- existing tombstone row (the unique constraint on (user_id, unit_id) survives a
+-- soft delete). That ON CONFLICT DO UPDATE targets a row the caller cannot see,
+-- which the unit_memberships UPDATE policy refuses via its USING clause. The
+-- authorization those policies would have applied is enforced explicitly below.
 CREATE OR REPLACE FUNCTION public.assign_user_to_unit(p_user_id UUID, p_unit_id UUID, p_role_id UUID)
 RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
 BEGIN
-  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by)
-  VALUES (p_user_id, p_unit_id, p_role_id, core.get_current_user_id());
+  IF p_user_id IS NULL OR p_unit_id IS NULL OR p_role_id IS NULL THEN
+    RAISE EXCEPTION 'User id, unit id and role id are required';
+  END IF;
+
+  v_org_id := core.get_org_id_for_unit(p_unit_id);
+
+  -- Do not leak the existence of another tenant's unit
+  IF v_org_id IS NULL OR NOT (core.is_org_member(v_org_id) OR core.is_super_admin(v_org_id)) THEN
+    RAISE EXCEPTION 'Unit not found';
+  END IF;
+
+  -- The target must belong to the organization that owns the unit
+  IF NOT EXISTS (
+    SELECT 1 FROM core.memberships
+    WHERE user_id = p_user_id
+      AND organization_id = v_org_id
+      AND is_deleted = false
+  ) THEN
+    RAISE EXCEPTION 'User is not a member of the organization';
+  END IF;
+
+  INSERT INTO core.unit_memberships (user_id, unit_id, role_id, created_by, updated_by)
+  VALUES (p_user_id, p_unit_id, p_role_id, core.get_current_user_id(), core.get_current_user_id())
+  ON CONFLICT (user_id, unit_id) DO UPDATE
+    SET role_id    = EXCLUDED.role_id,
+        is_deleted = false,
+        deleted_at = NULL,
+        deleted_by = NULL,
+        updated_by = core.get_current_user_id(),
+        updated_at = now();
 
   PERFORM core.log_audit('insert', 'core.unit_memberships', p_user_id, 'assign_user_to_unit', jsonb_build_object('unit_id', p_unit_id));
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
 
 -- ========================================
 -- FUNCTION: public.remove_user_from_unit()
 -- ========================================
--- Remove a user from a unit (soft delete)
--- RLS validates org membership; CASL controls who can remove
+-- Remove a user from a unit (soft delete). Available to any member of the
+-- owning organization — the non-privileged counterpart to remove_member_from_unit.
+--
+-- SECURITY DEFINER: setting is_deleted = true makes the post-update row fail the
+-- unit_memberships SELECT policy (which filters is_deleted = false), and Postgres
+-- refuses an UPDATE whose new row the caller could not read back. Running as
+-- INVOKER this function could never succeed for any caller. The authorization the
+-- RLS policies would have applied is enforced explicitly below.
 CREATE OR REPLACE FUNCTION public.remove_user_from_unit(p_user_id UUID, p_unit_id UUID)
 RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
 BEGIN
+  IF p_user_id IS NULL OR p_unit_id IS NULL THEN
+    RAISE EXCEPTION 'User id and unit id are required';
+  END IF;
+
+  v_org_id := core.get_org_id_for_unit(p_unit_id);
+
+  -- Do not leak the existence of another tenant's unit
+  IF v_org_id IS NULL OR NOT (core.is_org_member(v_org_id) OR core.is_super_admin(v_org_id)) THEN
+    RAISE EXCEPTION 'Unit not found';
+  END IF;
+
   UPDATE core.unit_memberships
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = core.get_current_user_id()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE user_id = p_user_id
     AND unit_id = p_unit_id
     AND is_deleted = false;
 
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Member not found';
+  END IF;
+
   PERFORM core.log_audit('delete', 'core.unit_memberships', p_user_id, 'remove_user_from_unit', jsonb_build_object('unit_id', p_unit_id));
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
 
 -- ========================================
 -- FUNCTION: public.list_units()
@@ -238,11 +298,26 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- ========================================
 -- FUNCTION: public.delete_unit()
 -- ========================================
+-- Soft-delete a unit and cascade to its memberships and meta row.
+-- Super admin only, matching add_member_to_unit / remove_member_from_unit.
 CREATE OR REPLACE FUNCTION public.delete_unit(p_id UUID)
 RETURNS VOID AS $$
+DECLARE
+  v_org_id UUID;
 BEGIN
   IF p_id IS NULL THEN
     RAISE EXCEPTION 'Unit id is required';
+  END IF;
+
+  v_org_id := core.get_org_id_for_unit(p_id);
+
+  -- Do not leak the existence of another tenant's unit
+  IF v_org_id IS NULL OR NOT core.is_org_member(v_org_id) THEN
+    RAISE EXCEPTION 'Unit not found';
+  END IF;
+
+  IF NOT core.is_super_admin(v_org_id) THEN
+    RAISE EXCEPTION 'Only a super_admin can delete a unit';
   END IF;
 
   UPDATE core.unit_memberships

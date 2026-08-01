@@ -192,21 +192,40 @@ $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 -- ========================================
 -- Remove a user from an organization (soft delete)
 -- Note: Cannot remove super_admin - must transfer first
+-- SECURITY DEFINER: setting is_deleted = true makes the post-update row fail the
+-- memberships SELECT policy (which filters is_deleted = false), and Postgres
+-- refuses an UPDATE whose new row the caller could not read back. Running as
+-- INVOKER this function could never succeed for any caller. The authorization the
+-- memberships UPDATE policy would have applied is enforced explicitly below; the
+-- protect_super_admin trigger still blocks removing the super_admin.
 CREATE OR REPLACE FUNCTION public.remove_user_from_organization(p_user_id UUID, p_org_id UUID)
 RETURNS VOID AS $$
 BEGIN
-  -- RLS and protect_super_admin trigger will enforce permissions
+  IF p_user_id IS NULL OR p_org_id IS NULL THEN
+    RAISE EXCEPTION 'User id and organization id are required';
+  END IF;
+
+  -- Do not leak the existence of another tenant's organization
+  IF NOT (core.is_org_member(p_org_id) OR core.is_super_admin(p_org_id)) THEN
+    RAISE EXCEPTION 'Organization not found';
+  END IF;
+
   UPDATE core.memberships
   SET is_deleted = true,
       deleted_at = now(),
-      deleted_by = core.get_current_user_id()
+      deleted_by = core.get_current_user_id(),
+      updated_by = core.get_current_user_id()
   WHERE user_id = p_user_id
     AND organization_id = p_org_id
     AND is_deleted = false;
 
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Member not found';
+  END IF;
+
   PERFORM core.log_audit('delete', 'core.memberships', p_user_id, 'remove_user_from_organization', jsonb_build_object('organization_id', p_org_id));
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, core;
 
 -- ========================================
 -- FUNCTION: public.transfer_super_admin()

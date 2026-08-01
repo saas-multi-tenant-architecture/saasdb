@@ -41,6 +41,22 @@ GRANT  EXECUTE ON FUNCTION public.remove_member_from_organization(uuid, uuid) TO
 REVOKE EXECUTE ON FUNCTION public.remove_member_from_unit(uuid, uuid) FROM PUBLIC;
 GRANT  EXECUTE ON FUNCTION public.remove_member_from_unit(uuid, uuid) TO app_user, app_admin;
 
+-- assign_user_to_unit
+REVOKE EXECUTE ON FUNCTION public.assign_user_to_unit(uuid, uuid, uuid) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.assign_user_to_unit(uuid, uuid, uuid) TO app_user, app_admin;
+
+-- remove_user_from_unit
+REVOKE EXECUTE ON FUNCTION public.remove_user_from_unit(uuid, uuid) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.remove_user_from_unit(uuid, uuid) TO app_user, app_admin;
+
+-- remove_user_from_organization
+REVOKE EXECUTE ON FUNCTION public.remove_user_from_organization(uuid, uuid) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.remove_user_from_organization(uuid, uuid) TO app_user, app_admin;
+
+-- delete_file
+REVOKE EXECUTE ON FUNCTION public.delete_file(uuid) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.delete_file(uuid) TO app_user, app_admin;
+
 -- ========================================
 -- INTENTIONAL PUBLIC FUNCTIONS
 -- ========================================
